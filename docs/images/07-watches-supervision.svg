@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .tbl-hdr { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #727785; }
+      .row-txt { font-family: -apple-system, sans-serif; font-size: 13px; fill: #20242d; }
+      .badge-green { fill: #e8f6ef; }
+      .badge-green-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #12805c; }
+      .badge-blue { fill: #ebf3ff; }
+      .badge-blue-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #3974c6; }
+      .badge-amber { fill: #fff4db; }
+      .badge-amber-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #99600b; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="700" class="sidebar" />
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+  <text x="32" y="115" class="text-sidebar">📊 Tableau de bord</text>
+  <text x="32" y="155" class="text-sidebar">🗂️ Catalogue &amp; Annonces</text>
+  <text x="32" y="195" class="text-sidebar">📈 Rentabilité &amp; Cotes</text>
+  <!-- Item 4: Active Watches -->
+  <rect x="14" y="210" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="210" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="235" font-family="-apple-system, sans-serif" font-size="13" font-weight="600" fill="#ffffff">⏱️ Veilles Vinted &amp; LBC</text>
+  <text x="32" y="275" class="text-sidebar">👥 Annuaire Vendeurs</text>
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse <tspan fill="#20242d" font-weight="600">/ Veilles &amp; Supervision</tspan></text>
+
+  <!-- Title -->
+  <text x="270" y="105" class="text-title">Veilles automatiques &amp; Supervision des collecteurs</text>
+  <text x="270" y="125" class="text-sub">Surveillance périodique Vinted et Leboncoin sans compte, avec isolation des erreurs et heartbeat.</text>
+
+  <!-- Supervision Status Bar -->
+  <rect x="270" y="145" width="890" height="85" rx="8" class="surface" />
+  <circle cx="300" cy="187" r="14" fill="#e8f6ef" />
+  <text x="300" y="192" font-size="14" text-anchor="middle">🛡️</text>
+  <text x="330" y="178" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">Supervision des Collecteurs : 2 actifs, 0 bloqué</text>
+  <text x="330" y="198" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">Identité de l'agent : pokebourse-worker@docker-host • IP de sortie : 82.65.x.x • Heartbeat : OK (il y a 5s)</text>
+
+  <rect x="990" y="168" width="150" height="34" rx="6" fill="#efeeff" />
+  <text x="1065" y="190" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#625df5" text-anchor="middle">+ Créer une veille</text>
+
+  <!-- Active Watches Section -->
+  <rect x="270" y="245" width="890" height="435" rx="8" class="surface" />
+  <text x="290" y="278" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">⏱️ Liste des veilles programmées</text>
+
+  <!-- Table Head -->
+  <rect x="290" y="295" width="850" height="32" fill="#f6f7fb" rx="4" />
+  <text x="310" y="315" class="tbl-hdr">NOM DE LA VEILLE</text>
+  <text x="490" y="315" class="tbl-hdr">PLATEFORME</text>
+  <text x="610" y="315" class="tbl-hdr">INTERVALLE</text>
+  <text x="730" y="315" class="tbl-hdr">DERNIÈRE EXÉCUTION</text>
+  <text x="910" y="315" class="tbl-hdr">STATUT</text>
+  <text x="1030" y="315" class="tbl-hdr">ACTIONS</text>
+
+  <!-- Row 1 -->
+  <line x1="290" y1="375" x2="1140" y2="375" stroke="#f0f1f4" />
+  <text x="310" y="352" class="row-txt" font-weight="700">Dracaufeu &amp; Mew Vinted</text>
+  <text x="310" y="367" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Mots-clés: "Carte Pokémon Dracaufeu" • 10€ à 300€</text>
+  <rect x="490" y="344" width="70" height="20" rx="4" class="badge-blue" />
+  <text x="525" y="358" class="badge-blue-txt" text-anchor="middle">VINTED</text>
+  <text x="610" y="355" class="row-txt">300 sec (5m)</text>
+  <text x="730" y="350" class="row-txt">Il y a 2m • 24 annonces</text>
+  <text x="730" y="365" font-family="-apple-system, sans-serif" font-size="10" fill="#12805c">+3 nouvelles annonces</text>
+  <rect x="910" y="344" width="75" height="20" rx="4" class="badge-green" />
+  <text x="947" y="358" class="badge-green-txt" text-anchor="middle">🟢 ACTIF</text>
+  <text x="1040" y="355" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Contrôler ⚡</text>
+
+  <!-- Row 2 -->
+  <line x1="290" y1="440" x2="1140" y2="440" stroke="#f0f1f4" />
+  <text x="310" y="417" class="row-txt" font-weight="700">Pikachu Voltage LBC</text>
+  <text x="310" y="432" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Mots-clés: "Pokemon Pikachu VMAX" • 20€ à 150€</text>
+  <rect x="490" y="409" width="90" height="20" rx="4" class="badge-amber" />
+  <text x="535" y="423" class="badge-amber-txt" text-anchor="middle">LEBONCOIN</text>
+  <text x="610" y="420" class="row-txt">600 sec (10m)</text>
+  <text x="730" y="415" class="row-txt">Il y a 4m • 18 annonces</text>
+  <text x="730" y="430" font-family="-apple-system, sans-serif" font-size="10" fill="#12805c">+1 nouvelle annonce</text>
+  <rect x="910" y="409" width="75" height="20" rx="4" class="badge-green" />
+  <text x="947" y="423" class="badge-green-txt" text-anchor="middle">🟢 ACTIF</text>
+  <text x="1040" y="420" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Contrôler ⚡</text>
+
+  <!-- Row 3 -->
+  <line x1="290" y1="505" x2="1140" y2="505" stroke="#f0f1f4" />
+  <text x="310" y="482" class="row-txt" font-weight="700">Lots &amp; Cartes Anciennes LBC</text>
+  <text x="310" y="497" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Mots-clés: "Lot cartes pokemon 1999" • max 100€</text>
+  <rect x="490" y="474" width="90" height="20" rx="4" class="badge-amber" />
+  <text x="535" y="488" class="badge-amber-txt" text-anchor="middle">LEBONCOIN</text>
+  <text x="610" y="485" class="row-txt">900 sec (15m)</text>
+  <text x="730" y="480" class="row-txt">Il y a 12m • 12 annonces</text>
+  <text x="730" y="495" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">0 nouvelle</text>
+  <rect x="910" y="474" width="75" height="20" rx="4" fill="#f0f1f4" />
+  <text x="947" y="488" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#727785" text-anchor="middle">⏸️ EN PAUSE</text>
+  <text x="1040" y="485" font-family="-apple-system, sans-serif" font-size="12" fill="#12805c">Reprendre ▶️</text>
+
+  <!-- Info Box regarding Anti-bot and Safety -->
+  <rect x="290" y="535" width="850" height="115" rx="6" fill="#fafbfd" stroke="#e2e8f0" />
+  <text x="310" y="562" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#20242d">💡 Architecture éthique &amp; Résilience face aux anti-bots :</text>
+  <text x="310" y="583" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">• Aucun compte marketplace requis, aucun contournement de CAPTCHA / DataDome / Cloudflare.</text>
+  <text x="310" y="602" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">• Concurrence bornée à 1 exécution par plateforme avec backoff exponentiel et jitter aléatoire.</text>
+  <text x="310" y="621" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">• En cas de blocage d'un collecteur, le worker se suspend proprement sans impacter les autres plateformes ni le serveur web.</text>
+  <text x="310" y="640" font-family="-apple-system, sans-serif" font-size="11" fill="#625df5">Astuce : Si une plateforme restreint l'IP de votre serveur, utilisez l'extension Google Chrome Capture incluse dans le projet !</text>
+</svg>

@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .card { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .text-sidebar-active { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; font-weight: 600; fill: #ffffff; }
+      .text-kpi-val { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 24px; font-weight: 700; fill: #20242d; }
+      .text-kpi-lbl { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; font-weight: 500; fill: #727785; }
+      .badge-green { fill: #e8f6ef; }
+      .badge-green-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 700; fill: #12805c; }
+      .badge-blue { fill: #ebf3ff; }
+      .badge-blue-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 700; fill: #3974c6; }
+      .badge-purple { fill: #efeeff; }
+      .badge-purple-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 700; fill: #625df5; }
+      .row-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; fill: #20242d; }
+      .row-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; fill: #727785; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="700" class="sidebar" />
+  
+  <!-- Logo / Brand -->
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+
+  <!-- Navigation -->
+  <!-- Item 1: Active Dashboard -->
+  <rect x="14" y="90" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="90" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="115" class="text-sidebar-active">📊 Tableau de bord</text>
+
+  <!-- Item 2 -->
+  <text x="32" y="155" class="text-sidebar">🗂️ Catalogue &amp; Annonces</text>
+  <!-- Item 3 -->
+  <text x="32" y="195" class="text-sidebar">📈 Rentabilité &amp; Cotes</text>
+  <!-- Item 4 -->
+  <text x="32" y="235" class="text-sidebar">⏱️ Veilles Vinted &amp; LBC</text>
+  <!-- Item 5 -->
+  <text x="32" y="275" class="text-sidebar">👥 Annuaire Vendeurs</text>
+  <!-- Item 6 -->
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <!-- Item 7 -->
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Sidebar Footer -->
+  <line x1="20" y1="620" x2="220" y2="620" stroke="#2c2d40" stroke-width="1" />
+  <circle cx="28" cy="648" r="4" fill="#56c795" />
+  <text x="40" y="652" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#85879a">BASE LOCALE CONNECTÉE</text>
+  <text x="40" y="670" font-family="-apple-system, sans-serif" font-size="10" fill="#6f7186">SQLite WAL • Port 8000</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse <tspan fill="#20242d" font-weight="600">/ Tableau de bord</tspan></text>
+  
+  <rect x="1030" y="18" width="135" height="30" rx="15" fill="#efeeff" />
+  <text x="1097" y="38" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#625df5" text-anchor="middle">⚡ Import JSONL</text>
+
+  <!-- Main Content Header -->
+  <text x="270" y="112" class="text-title">Vue d'ensemble du marché</text>
+  <text x="270" y="132" class="text-sub">Synthèse en temps réel des détections, de la rentabilité et des veilles actives.</text>
+
+  <!-- 4 KPI Cards -->
+  <!-- Card 1 -->
+  <rect x="270" y="155" width="210" height="90" rx="8" class="surface" />
+  <text x="290" y="182" class="text-kpi-lbl">ANNONCES ACTIVES</text>
+  <text x="290" y="215" class="text-kpi-val">1 428</text>
+  <rect x="390" y="196" width="75" height="22" rx="4" class="badge-blue" />
+  <text x="427" y="211" class="badge-blue-txt" text-anchor="middle">+142 ajd</text>
+
+  <!-- Card 2 -->
+  <rect x="500" y="155" width="210" height="90" rx="8" class="surface" />
+  <text x="520" y="182" class="text-kpi-lbl">OPPORTUNITÉS DÉTECTÉES</text>
+  <text x="520" y="215" class="text-kpi-val" fill="#12805c">34</text>
+  <rect x="620" y="196" width="75" height="22" rx="4" class="badge-green" />
+  <text x="657" y="211" class="badge-green-txt" text-anchor="middle">ROI ≥ 25%</text>
+
+  <!-- Card 3 -->
+  <rect x="730" y="155" width="210" height="90" rx="8" class="surface" />
+  <text x="750" y="182" class="text-kpi-lbl">COTES DE RÉFÉRENCE</text>
+  <text x="750" y="215" class="text-kpi-val">846</text>
+  <rect x="850" y="196" width="75" height="22" rx="4" class="badge-purple" />
+  <text x="887" y="211" class="badge-purple-txt" text-anchor="middle">TCGdex / CM</text>
+
+  <!-- Card 4 -->
+  <rect x="960" y="155" width="210" height="90" rx="8" class="surface" />
+  <text x="980" y="182" class="text-kpi-lbl">ACHATS EFFECTUÉS</text>
+  <text x="980" y="215" class="text-kpi-val">12 <tspan font-size="15" font-weight="400" fill="#727785">cartes</tspan></text>
+  <text x="980" y="235" font-family="-apple-system, sans-serif" font-size="11" fill="#12805c">480,00 € investis</text>
+
+  <!-- Section: Opportunités Détectées -->
+  <rect x="270" y="265" width="620" height="405" rx="8" class="surface" />
+  <text x="290" y="298" font-family="-apple-system, sans-serif" font-size="16" font-weight="700" fill="#20242d">🔥 Opportunités prioritaires du moment</text>
+  <text x="290" y="318" class="text-sub">Cartes dont le prix d'achat permet un gain net supérieur aux seuils configurés.</text>
+
+  <!-- Table Header -->
+  <rect x="290" y="335" width="580" height="30" fill="#f6f7fb" rx="4" />
+  <text x="305" y="355" class="text-kpi-lbl">CARTE &amp; EXTENSION</text>
+  <text x="560" y="355" class="text-kpi-lbl">PRIX ACHAT</text>
+  <text x="660" y="355" class="text-kpi-lbl">COTE ESTIMÉE</text>
+  <text x="770" y="355" class="text-kpi-lbl">GAIN NET (ROI)</text>
+
+  <!-- Row 1 -->
+  <line x1="290" y1="410" x2="870" y2="410" stroke="#f0f1f4" />
+  <circle cx="315" cy="388" r="14" fill="#efeeff" />
+  <text x="315" y="393" font-size="12" text-anchor="middle">🐉</text>
+  <text x="340" y="385" class="row-txt" font-weight="600">Dracaufeu Holo (Set de Base #4/102)</text>
+  <text x="340" y="401" class="row-sub">Vinted • Vendeur: PokeMaster92 • État: NM</text>
+  <text x="560" y="392" class="row-txt" font-weight="600">145,00 €</text>
+  <text x="660" y="392" class="row-txt">290,00 €</text>
+  <rect x="765" y="378" width="95" height="22" rx="11" class="badge-green" />
+  <text x="812" y="393" class="badge-green-txt" text-anchor="middle">+114 € (+78%)</text>
+
+  <!-- Row 2 -->
+  <line x1="290" y1="475" x2="870" y2="475" stroke="#f0f1f4" />
+  <circle cx="315" cy="453" r="14" fill="#efeeff" />
+  <text x="315" y="458" font-size="12" text-anchor="middle">⚡</text>
+  <text x="340" y="450" class="row-txt" font-weight="600">Pikachu VMAX Rainbow (Voltage Éclatant)</text>
+  <text x="340" y="466" class="row-sub">Leboncoin • Vendeur: Julien_K • État: Mint</text>
+  <text x="560" y="457" class="row-txt" font-weight="600">65,00 €</text>
+  <text x="660" y="457" class="row-txt">135,00 €</text>
+  <rect x="765" y="443" width="95" height="22" rx="11" class="badge-green" />
+  <text x="812" y="458" class="badge-green-txt" text-anchor="middle">+52 € (+80%)</text>
+
+  <!-- Row 3 -->
+  <line x1="290" y1="540" x2="870" y2="540" stroke="#f0f1f4" />
+  <circle cx="315" cy="518" r="14" fill="#efeeff" />
+  <text x="315" y="523" font-size="12" text-anchor="middle">🦊</text>
+  <text x="340" y="515" class="row-txt" font-weight="600">Noctali V Alternative (Évolution Céleste)</text>
+  <text x="340" y="531" class="row-sub">Vinted • Vendeur: CardsFan • État: EX</text>
+  <text x="560" y="522" class="row-txt" font-weight="600">80,00 €</text>
+  <text x="660" y="522" class="row-txt">140,00 €</text>
+  <rect x="765" y="508" width="95" height="22" rx="11" class="badge-green" />
+  <text x="812" y="523" class="badge-green-txt" text-anchor="middle">+44 € (+55%)</text>
+
+  <!-- Row 4 -->
+  <line x1="290" y1="605" x2="870" y2="605" stroke="#f0f1f4" />
+  <circle cx="315" cy="583" r="14" fill="#efeeff" />
+  <text x="315" y="588" font-size="12" text-anchor="middle">🔮</text>
+  <text x="340" y="580" class="row-txt" font-weight="600">Mew Antique Promos (Promo Wizards #8)</text>
+  <text x="340" y="596" class="row-sub">Extension Chrome Capture • Vendeur: RetroTcg</text>
+  <text x="560" y="587" class="row-txt" font-weight="600">22,00 €</text>
+  <text x="660" y="587" class="row-txt">55,00 €</text>
+  <rect x="765" y="573" width="95" height="22" rx="11" class="badge-green" />
+  <text x="812" y="588" class="badge-green-txt" text-anchor="middle">+26 € (+118%)</text>
+
+  <text x="580" y="645" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#625df5" text-anchor="middle">Voir toutes les 34 opportunités dans le catalogue →</text>
+
+  <!-- Right Panel: Side Status & Quick Actions -->
+  <!-- Box 1: Supervision Status -->
+  <rect x="910" y="265" width="260" height="195" rx="8" class="surface" />
+  <text x="930" y="295" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">📡 Veilles &amp; Supervision</text>
+  
+  <rect x="930" y="315" width="220" height="38" rx="6" fill="#f6f7fb" />
+  <circle cx="945" cy="334" r="5" fill="#12805c" />
+  <text x="960" y="331" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#20242d">Collecteur Vinted</text>
+  <text x="960" y="344" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Actif • dernier contrôle il y a 2m</text>
+
+  <rect x="930" y="360" width="220" height="38" rx="6" fill="#f6f7fb" />
+  <circle cx="945" cy="379" r="5" fill="#12805c" />
+  <text x="960" y="376" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#20242d">Collecteur Leboncoin</text>
+  <text x="960" y="389" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Actif • dernier contrôle il y a 4m</text>
+
+  <rect x="930" y="405" width="220" height="38" rx="6" fill="#f6f7fb" />
+  <circle cx="945" cy="424" r="5" fill="#625df5" />
+  <text x="960" y="421" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#20242d">Extension Chrome</text>
+  <text x="960" y="434" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Prête pour capture en direct</text>
+
+  <!-- Box 2: Quick Import -->
+  <rect x="910" y="475" width="260" height="195" rx="8" class="surface" />
+  <text x="930" y="505" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">📥 Import rapide JSONL</text>
+  
+  <rect x="930" y="525" width="220" height="85" rx="6" fill="#fafbfd" stroke="#d0d3de" stroke-dasharray="4 4" />
+  <text x="1040" y="555" font-family="-apple-system, sans-serif" font-size="20" text-anchor="middle">📄</text>
+  <text x="1040" y="575" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#625df5" text-anchor="middle">Glisser un fichier .jsonl</text>
+  <text x="1040" y="590" font-family="-apple-system, sans-serif" font-size="9" fill="#727785" text-anchor="middle">ou cliquer pour parcourir (max 2 Mo)</text>
+
+  <rect x="930" y="620" width="220" height="32" rx="6" fill="#625df5" />
+  <text x="1040" y="640" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">Lancer l'importation</text>
+</svg>

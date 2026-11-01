@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Agents déployés · Pokébourse{% endblock %}
+{% block breadcrumb %}Agents déployés{% endblock %}
+{% block content %}
+{% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+<meta http-equiv="refresh" content="{{ refresh_seconds }}">
+<section class="page-heading">
+    <div><span class="eyebrow">SUPERVISION</span><h1>Agents déployés</h1><p>État des agents de scraping, leur IP publique de sortie et les incidents de collecte détectés. Page actualisée automatiquement toutes les {{ refresh_seconds }} s.</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/watches">Voir les veilles</a></div>
+</section>
+<section class="panel imports-panel watch-list-panel">
+    <div class="panel-heading"><div><span class="section-kicker">DÉPLOIEMENTS ENREGISTRÉS</span><h2>Agents et collecteurs</h2></div></div>
+    <form class="filters" action="/agents" method="get">
+        <label><span class="filter-label">Site</span>
+            <select name="site">
+                <option value="all" {% if selected_site == 'all' %}selected{% endif %}>Tous les sites</option>
+                {% for site in sites %}<option value="{{ site }}" {% if selected_site == site %}selected{% endif %}>{{ site }}</option>{% endfor %}
+            </select>
+        </label>
+        <label><span class="filter-label">État</span>
+            <select name="state">
+                <option value="all" {% if selected_state == 'all' %}selected{% endif %}>Tous les états</option>
+                {% for key, label in states %}<option value="{{ key }}" {% if selected_state == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <div class="filter-submit"><button class="button secondary" type="submit">Filtrer</button></div>
+        <a class="reset-link" href="/agents">Réinitialiser</a>
+    </form>
+    {% if rows %}
+    <div class="table-wrap responsive-table-wrap">
+        <table class="watch-table">
+            <caption class="visually-hidden">Agents de scraping, site, IP de sortie et état</caption>
+            <thead><tr><th scope="col">AGENT</th><th scope="col">SITE</th><th scope="col">IP DE SORTIE</th><th scope="col">ÉTAT</th><th scope="col">DERNIER SIGNAL DE VIE</th><th scope="col">DERNIÈRE COLLECTE RÉUSSIE</th><th scope="col">DERNIÈRE ERREUR</th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                {% set agent = row.agent %}{% set collector = row.collector %}
+                <tr>
+                    <th scope="row"><div><a href="/agents/{{ agent.id }}"><strong>{{ agent.name }}</strong></a><span class="cell-sub">{{ agent.deployment_id }}</span></div></th>
+                    <td>{{ collector.site }}</td>
+                    <td>{% if collector.public_ip %}{{ collector.public_ip }}{% else %}<span class="unknown">IP inconnue</span>{% endif %}</td>
+                    <td><span class="state-badge {{ state_badge_classes.get(collector.state, 'neutral') }}">{{ state_labels[collector.state] }}</span>{% if collector.suspension_active %}<span class="cell-sub">Suspendu jusqu’à {{ collector.suspended_until|date }}</span>{% endif %}</td>
+                    <td>{% if agent.last_heartbeat_at %}<div>{{ agent.last_heartbeat_at|date }}{% if agent.is_stale %}<span class="cell-sub">Signal vieilli</span>{% endif %}</div>{% else %}<span class="unknown">Aucun signal</span>{% endif %}</td>
+                    <td>{% if collector.last_success_at %}{{ collector.last_success_at|date }}{% else %}<span class="unknown">Aucune</span>{% endif %}</td>
+                    <td>{% if collector.last_error_code %}<div><span class="tag">{{ error_code_labels[collector.last_error_code] }}</span><span class="cell-sub">{{ collector.last_error_message }}</span></div>{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif agents %}
+    <div class="empty-state compact"><h3>Aucun collecteur ne correspond aux filtres</h3><p>Élargissez la sélection de site ou d’état.</p></div>
+    {% else %}
+    <div class="empty-state compact"><h3>Aucun agent enregistré</h3><p>Le worker enregistre son agent automatiquement au démarrage. Lancez le worker pour alimenter cette vue.</p></div>
+    {% endif %}
+</section>
+{% endblock %}

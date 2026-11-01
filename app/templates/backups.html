@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Sauvegardes · Pokébourse{% endblock %}
+{% block breadcrumb %}Sauvegardes{% endblock %}
+{% block content %}
+{% if notice %}
+<div class="alert success" role="status">{{ notice }}</div>
+{% endif %}
+{% if error %}
+<div class="alert error" role="alert"><strong>Action impossible.</strong> {{ error }}</div>
+{% endif %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">SÉCURITÉ DES DONNÉES</span>
+        <h1>Sauvegardes</h1>
+        <p>Créez, téléchargez et restaurez des copies cohérentes de la base SQLite. Chaque fichier est vérifié après création et avant restauration.</p>
+    </div>
+    <form method="post" action="/backups">
+        <button class="button primary" type="submit">Créer une sauvegarde <span>＋</span></button>
+    </form>
+</section>
+<section class="panel">
+    {% if backups %}
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>FICHIER</th><th>DATE</th><th class="align-right">TAILLE</th><th class="align-right">ACTIONS</th></tr></thead>
+            <tbody>
+            {% for backup in backups %}
+                <tr>
+                    <td class="mono">{{ backup.name }}</td>
+                    <td>{{ backup.modified_at|date }}</td>
+                    <td class="align-right">{{ backup.size_bytes|filesize }}</td>
+                    <td class="align-right nowrap">
+                        <a class="button secondary small" href="/backups/download?name={{ backup.name|urlencode }}">Télécharger</a>
+                        <form class="inline-form" method="post" action="/backups/restore">
+                            <input type="hidden" name="name" value="{{ backup.name }}">
+                            <input type="hidden" name="confirm" value="yes">
+                            <button class="button danger small" type="submit" data-confirm="Restaurer cette sauvegarde ? Les données actuelles seront remplacées. Une sauvegarde de sécurité sera créée au préalable.">Restaurer…</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">▣</div>
+        <h2>Aucune sauvegarde pour le moment</h2>
+        <p>La première sauvegarde sera stockée dans le dossier <code>backups/</code> à côté de la base, avec un nom horodaté.</p>
+    </div>
+    {% endif %}
+</section>
+<p class="table-note">La restauration crée d’abord une sauvegarde de sécurité de la base courante, puis vérifie l’intégrité du fichier choisi et réapplique les migrations nécessaires. Elle exige une confirmation explicite.</p>
+{% endblock %}

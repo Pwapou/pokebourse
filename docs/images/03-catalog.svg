@@ -1,0 +1,209 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .text-sidebar-active { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; fill: #ffffff; }
+      .pill-active { fill: #20242d; rx: 14px; }
+      .pill-active-txt { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #ffffff; }
+      .pill-idle { fill: #ffffff; stroke: #d0d3de; stroke-width: 1; rx: 14px; }
+      .pill-idle-txt { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #4b5563; }
+      .badge-ident { fill: #e8f6ef; }
+      .badge-ident-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #12805c; }
+      .badge-ambig { fill: #fff4db; }
+      .badge-ambig-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #99600b; }
+      .badge-lot { fill: #ebf3ff; }
+      .badge-lot-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #3974c6; }
+      .badge-unident { fill: #f0f1f4; }
+      .badge-unident-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #6b7280; }
+      .row-txt { font-family: -apple-system, sans-serif; font-size: 13px; fill: #20242d; }
+      .row-sub { font-family: -apple-system, sans-serif; font-size: 11px; fill: #727785; }
+      .tbl-hdr { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #727785; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="700" class="sidebar" />
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+
+  <!-- Nav Items -->
+  <text x="32" y="115" class="text-sidebar">📊 Tableau de bord</text>
+  <!-- Item 2: Active Catalog -->
+  <rect x="14" y="130" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="130" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="155" class="text-sidebar-active">🗂️ Catalogue &amp; Annonces</text>
+  <text x="32" y="195" class="text-sidebar">📈 Rentabilité &amp; Cotes</text>
+  <text x="32" y="235" class="text-sidebar">⏱️ Veilles Vinted &amp; LBC</text>
+  <text x="32" y="275" class="text-sidebar">👥 Annuaire Vendeurs</text>
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse <tspan fill="#20242d" font-weight="600">/ Catalogue des annonces</tspan></text>
+  
+  <!-- Search input -->
+  <rect x="760" y="18" width="230" height="32" rx="6" fill="#f6f7fb" stroke="#e7e8ed" />
+  <text x="780" y="39" font-family="-apple-system, sans-serif" font-size="12" fill="#8f91a3">🔍 Rechercher une carte...</text>
+
+  <!-- CSV Export -->
+  <rect x="1010" y="18" width="150" height="32" rx="6" fill="#ffffff" stroke="#20242d" />
+  <text x="1085" y="39" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#20242d" text-anchor="middle">📥 Exporter en CSV</text>
+
+  <!-- Title & Intro -->
+  <text x="270" y="105" class="text-title">Catalogue consolidé (1 428 annonces)</text>
+  <text x="270" y="125" class="text-sub">Répertoire dédupliqué des annonces collectées, réconciliées avec le catalogue TCGdex.</text>
+
+  <!-- Filters Row -->
+  <!-- Status Filters -->
+  <rect x="270" y="145" width="60" height="28" class="pill-active" />
+  <text x="300" y="163" class="pill-active-txt" text-anchor="middle">Tous (1428)</text>
+
+  <rect x="340" y="145" width="125" height="28" class="pill-idle" />
+  <text x="402" y="163" class="pill-idle-txt" text-anchor="middle">🟢 Identifiées (840)</text>
+
+  <rect x="475" y="145" width="115" height="28" class="pill-idle" />
+  <text x="532" y="163" class="pill-idle-txt" text-anchor="middle">🟡 À vérifier (120)</text>
+
+  <rect x="600" y="145" width="120" height="28" class="pill-idle" />
+  <text x="660" y="163" class="pill-idle-txt" text-anchor="middle">🔵 Lots / Coffrets (74)</text>
+
+  <rect x="730" y="145" width="135" height="28" class="pill-idle" />
+  <text x="797" y="163" class="pill-idle-txt" text-anchor="middle">⚪ Non identifiées (394)</text>
+
+  <!-- Sort Dropdown on the right -->
+  <rect x="980" y="145" width="180" height="28" rx="6" fill="#ffffff" stroke="#d0d3de" />
+  <text x="995" y="163" font-family="-apple-system, sans-serif" font-size="11" fill="#20242d">Tri : Plus récentes d'abord ▼</text>
+
+  <!-- Main Table Surface -->
+  <rect x="270" y="188" width="890" height="455" rx="8" class="surface" />
+
+  <!-- Table Head -->
+  <rect x="270" y="188" width="890" height="36" fill="#f6f7fb" rx="8 8 0 0" />
+  <text x="290" y="210" class="tbl-hdr">CARTE DÉTECTÉE &amp; EXTENSION</text>
+  <text x="590" y="210" class="tbl-hdr">STATUT TCGDEX</text>
+  <text x="730" y="210" class="tbl-hdr">VENDEUR &amp; AVIS</text>
+  <text x="880" y="210" class="tbl-hdr">PRIX ACHAT</text>
+  <text x="990" y="210" class="tbl-hdr">RENTABILITÉ</text>
+  <text x="1110" y="210" class="tbl-hdr">ACTION</text>
+
+  <!-- Row 1 -->
+  <line x1="270" y1="285" x2="1160" y2="285" stroke="#f0f1f4" />
+  <circle cx="305" cy="255" r="15" fill="#efeeff" />
+  <text x="305" y="260" font-size="14" text-anchor="middle">🐉</text>
+  <text x="330" y="250" class="row-txt" font-weight="700">Dracaufeu Holo (#4/102)</text>
+  <text x="330" y="267" class="row-sub">Set de Base • Langue: FR • État: NM</text>
+
+  <rect x="590" y="244" width="90" height="22" rx="4" class="badge-ident" />
+  <text x="635" y="259" class="badge-ident-txt" text-anchor="middle">🟢 Identifiée (95%)</text>
+
+  <text x="730" y="251" class="row-txt">PokeMaster92</text>
+  <text x="730" y="266" font-family="-apple-system, sans-serif" font-size="11" fill="#f59e0b">★★★★★ <tspan fill="#727785">(48)</tspan></text>
+
+  <text x="880" y="258" class="row-txt" font-weight="700">145,00 €</text>
+
+  <rect x="980" y="244" width="85" height="22" rx="4" class="badge-ident" />
+  <text x="1022" y="259" class="badge-ident-txt" text-anchor="middle">+114 € (+78%)</text>
+
+  <rect x="1090" y="244" width="55" height="24" rx="4" fill="#625df5" />
+  <text x="1117" y="260" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Détail</text>
+
+  <!-- Row 2 -->
+  <line x1="270" y1="345" x2="1160" y2="345" stroke="#f0f1f4" />
+  <circle cx="305" cy="315" r="15" fill="#efeeff" />
+  <text x="305" y="320" font-size="14" text-anchor="middle">⚡</text>
+  <text x="330" y="310" class="row-txt" font-weight="700">Pikachu VMAX Rainbow (#188/185)</text>
+  <text x="330" y="327" class="row-sub">Voltage Éclatant • Langue: FR • Secret Rare</text>
+
+  <rect x="590" y="304" width="90" height="22" rx="4" class="badge-ident" />
+  <text x="635" y="319" class="badge-ident-txt" text-anchor="middle">🟢 Identifiée (90%)</text>
+
+  <text x="730" y="311" class="row-txt">Julien_K</text>
+  <text x="730" y="326" font-family="-apple-system, sans-serif" font-size="11" fill="#f59e0b">★★★★☆ <tspan fill="#727785">(14)</tspan></text>
+
+  <text x="880" y="318" class="row-txt" font-weight="700">65,00 €</text>
+
+  <rect x="980" y="304" width="85" height="22" rx="4" class="badge-ident" />
+  <text x="1022" y="319" class="badge-ident-txt" text-anchor="middle">+52 € (+80%)</text>
+
+  <rect x="1090" y="304" width="55" height="24" rx="4" fill="#625df5" />
+  <text x="1117" y="320" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Détail</text>
+
+  <!-- Row 3: Ambiguous Card -->
+  <line x1="270" y1="405" x2="1160" y2="405" stroke="#f0f1f4" />
+  <circle cx="305" cy="375" r="15" fill="#fff4db" />
+  <text x="305" y="380" font-size="14" text-anchor="middle">❓</text>
+  <text x="330" y="370" class="row-txt" font-weight="700">Tortank Holographique</text>
+  <text x="330" y="387" class="row-sub">Numéro non précisé • Édition ambiguë (Base Set ou Évolutions ?)</text>
+
+  <rect x="590" y="364" width="90" height="22" rx="4" class="badge-ambig" />
+  <text x="635" y="379" class="badge-ambig-txt" text-anchor="middle">🟡 À vérifier</text>
+
+  <text x="730" y="371" class="row-txt">Brocante77</text>
+  <text x="730" y="386" font-family="-apple-system, sans-serif" font-size="11" fill="#9ca3af">★★★☆☆ <tspan fill="#727785">(3)</tspan></text>
+
+  <text x="880" y="378" class="row-txt" font-weight="700">45,00 €</text>
+
+  <text x="1022" y="378" font-family="-apple-system, sans-serif" font-size="11" fill="#727785" text-anchor="middle">Cote inconnue</text>
+
+  <rect x="1090" y="364" width="55" height="24" rx="4" fill="#625df5" />
+  <text x="1117" y="380" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Détail</text>
+
+  <!-- Row 4: Lot -->
+  <line x1="270" y1="465" x2="1160" y2="465" stroke="#f0f1f4" />
+  <circle cx="305" cy="435" r="15" fill="#ebf3ff" />
+  <text x="305" y="440" font-size="14" text-anchor="middle">📦</text>
+  <text x="330" y="430" class="row-txt" font-weight="700">Lot 150 Cartes Pokémon + Boîte Métal</text>
+  <text x="330" y="447" class="row-sub">Vrac, sans carte unitaire discriminante</text>
+
+  <rect x="590" y="424" width="90" height="22" rx="4" class="badge-lot" />
+  <text x="635" y="439" class="badge-lot-txt" text-anchor="middle">🔵 Lot / Coffret</text>
+
+  <text x="730" y="431" class="row-txt">MamanVideGrenier</text>
+  <text x="730" y="446" font-family="-apple-system, sans-serif" font-size="11" fill="#f59e0b">★★★★★ <tspan fill="#727785">(89)</tspan></text>
+
+  <text x="880" y="438" class="row-txt" font-weight="700">30,00 €</text>
+
+  <text x="1022" y="438" font-family="-apple-system, sans-serif" font-size="11" fill="#727785" text-anchor="middle">Exclu arbitrage</text>
+
+  <rect x="1090" y="424" width="55" height="24" rx="4" fill="#625df5" />
+  <text x="1117" y="440" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Détail</text>
+
+  <!-- Row 5: Unidentified -->
+  <line x1="270" y1="525" x2="1160" y2="525" stroke="#f0f1f4" />
+  <circle cx="305" cy="495" r="15" fill="#f0f1f4" />
+  <text x="305" y="500" font-size="14" text-anchor="middle">⚪</text>
+  <text x="330" y="490" class="row-txt" font-weight="700">Carte pokemon brillante ancienne</text>
+  <text x="330" y="507" class="row-sub">Titre trop vague, réexamen possible à la demande</text>
+
+  <rect x="590" y="484" width="90" height="22" rx="4" class="badge-unident" />
+  <text x="635" y="499" class="badge-unident-txt" text-anchor="middle">⚪ Non identifiée</text>
+
+  <text x="730" y="491" class="row-txt">VendeurInconnu</text>
+  <text x="730" y="506" font-family="-apple-system, sans-serif" font-size="11" fill="#9ca3af">Non évalué</text>
+
+  <text x="880" y="498" class="row-txt" font-weight="700">15,00 €</text>
+
+  <text x="1022" y="498" font-family="-apple-system, sans-serif" font-size="11" fill="#727785" text-anchor="middle">-</text>
+
+  <rect x="1090" y="484" width="55" height="24" rx="4" fill="#625df5" />
+  <text x="1117" y="500" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Détail</text>
+
+  <!-- Pagination Bottom -->
+  <line x1="270" y1="585" x2="1160" y2="585" stroke="#e7e8ed" />
+  <text x="290" y="618" class="row-sub">Affichage de 1 à 25 sur 1 428 annonces</text>
+  <rect x="990" y="600" width="70" height="28" rx="4" fill="#ffffff" stroke="#d0d3de" />
+  <text x="1025" y="618" font-family="-apple-system, sans-serif" font-size="11" fill="#727785" text-anchor="middle">Précédent</text>
+  <rect x="1070" y="600" width="70" height="28" rx="4" fill="#ffffff" stroke="#d0d3de" />
+  <text x="1105" y="618" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#20242d" text-anchor="middle">Suivant →</text>
+</svg>

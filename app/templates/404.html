@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Page introuvable · Pokébourse{% endblock %}
+{% block breadcrumb %}Introuvable{% endblock %}
+{% block content %}
+<section class="panel">
+    <div class="empty-state">
+        <div class="empty-icon">?</div>
+        <h2>Page introuvable</h2>
+        <p>{{ message|default("La page demandée n'existe pas.") }}</p>
+        <a class="button primary" href="/catalog">Retour au catalogue</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Lot d’import #{{ '%04d'|format(batch.id) }} · Pokébourse{% endblock %}
+{% block breadcrumb %}Lot d’import #{{ '%04d'|format(batch.id) }}{% endblock %}
+{% block content %}
+{% if error %}
+<div class="alert error" role="alert"><strong>Action impossible.</strong> {{ error }}</div>
+{% endif %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">TRAÇABILITÉ DE L’IMPORT</span>
+        <h1>Lot #{{ '%04d'|format(batch.id) }}</h1>
+        <p>{{ items|length }} annonce{{ 's' if items|length != 1 else '' }} importée{{ 's' if items|length != 1 else '' }} via la source « {{ batch.source_name }} ».</p>
+    </div>
+    <form method="post" action="/imports/{{ batch.id }}/delete" class="delete-form">
+        <input type="hidden" name="confirm" value="yes">
+        <button class="button danger" type="submit" data-confirm="Supprimer définitivement ce lot et toutes ses annonces ? Cette action est irréversible.">Supprimer ce lot…</button>
+    </form>
+</section>
+<div class="stack">
+    <section class="panel">
+        <dl class="fact-grid">
+            <div><dt>SOURCE</dt><dd>{{ batch.source_name }}</dd></div>
+            <div><dt>DATE</dt><dd>{{ batch.imported_at|date }}</dd></div>
+            <div><dt>STATUT</dt><dd><span class="status-badge">{{ 'Terminé' if batch.status == 'completed' else batch.status }}</span></dd></div>
+            <div><dt>EMPREINTE SHA-256</dt><dd class="mono" title="{{ batch.input_checksum }}">{{ batch.input_checksum[:16] }}…</dd></div>
+        </dl>
+    </section>
+    <section class="panel">
+        <div class="panel-heading"><div><span class="section-kicker">CONTENU DU LOT</span><h2>Annonces associées</h2></div></div>
+        {% if items %}
+        <div class="table-wrap">
+            <table class="catalog-table">
+                <thead><tr><th>CARTE</th><th>EXTENSION</th><th>ÉTAT</th><th>LANGUE</th><th>VENDEUR</th><th class="align-right">PRIX</th><th></th></tr></thead>
+                <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td><div class="catalog-card-name"><div class="card-placeholder small"><span>{{ item.name[0]|upper }}</span></div><div><strong><a class="row-link" href="/catalog/{{ item.id }}">{{ item.name }}</a></strong><span>{% if item.card_number %}N° {{ item.card_number }} · {% endif %}{{ item.external_id }}</span></div></div></td>
+                        <td>{{ item.set_name }}</td>
+                        <td>{% if item.condition %}<span class="tag">{{ item.condition }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td><span class="language">{{ item.language|upper }}</span></td>
+                        <td>{{ item.seller or '—' }}</td>
+                        <td class="align-right price">{{ item.price_cents|money(item.currency) }}</td>
+                        <td class="align-right">{% if item.url %}<a class="external-link" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir l’annonce {{ item.name }}">↗</a>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-copy">Ce lot ne contient aucune annonce.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

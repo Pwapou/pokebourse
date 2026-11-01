@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .tbl-hdr { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #727785; }
+      .row-txt { font-family: -apple-system, sans-serif; font-size: 13px; fill: #20242d; }
+      .badge-green { fill: #e8f6ef; }
+      .badge-green-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #12805c; }
+      .badge-blue { fill: #ebf3ff; }
+      .badge-blue-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #3974c6; }
+      .badge-amber { fill: #fff4db; }
+      .badge-amber-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #99600b; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="700" class="sidebar" />
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+  <text x="32" y="115" class="text-sidebar">📊 Tableau de bord</text>
+  <text x="32" y="155" class="text-sidebar">🗂️ Catalogue &amp; Annonces</text>
+  <text x="32" y="195" class="text-sidebar">📈 Rentabilité &amp; Cotes</text>
+  <text x="32" y="235" class="text-sidebar">⏱️ Veilles Vinted &amp; LBC</text>
+  <!-- Item 5: Active Sellers -->
+  <rect x="14" y="250" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="250" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="275" font-family="-apple-system, sans-serif" font-size="13" font-weight="600" fill="#ffffff">👥 Annuaire Vendeurs</text>
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse <tspan fill="#20242d" font-weight="600">/ Vendeurs &amp; Suivi des Achats</tspan></text>
+
+  <!-- Title -->
+  <text x="270" y="105" class="text-title">Répertoire vendeurs &amp; Carnet d'achats</text>
+  <text x="270" y="125" class="text-sub">Évaluez la réputation de vos contacts, ciblez vos vendeurs favoris et suivez l'avancement de vos achats.</text>
+
+  <!-- Section 1: Sellers Cards Row (3 Cards) -->
+  <!-- Card 1 -->
+  <rect x="270" y="145" width="285" height="150" rx="8" class="surface" />
+  <text x="290" y="172" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">⭐ PokeMaster92</text>
+  <text x="535" y="172" font-size="16" fill="#f59e0b" text-anchor="end">★ Favori</text>
+  <text x="290" y="195" font-family="-apple-system, sans-serif" font-size="16" fill="#f59e0b">★★★★★</text>
+  <text x="385" y="195" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#12805c">48 avis (98% pos.)</text>
+  <text x="290" y="222" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">Plateforme : Vinted • 6 annonces actives</text>
+  <text x="290" y="242" font-family="-apple-system, sans-serif" font-size="11" fill="#20242d">Note : <tspan font-style="italic">"Envoi très soigné sous toploader et bulle."</tspan></text>
+  <rect x="290" y="258" width="80" height="22" rx="4" fill="#efeeff" />
+  <text x="330" y="273" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#625df5" text-anchor="middle">3 achats faits</text>
+
+  <!-- Card 2 -->
+  <rect x="572" y="145" width="285" height="150" rx="8" class="surface" />
+  <text x="592" y="172" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">Julien_K</text>
+  <text x="592" y="195" font-family="-apple-system, sans-serif" font-size="16" fill="#f59e0b">★★★★☆</text>
+  <text x="687" y="195" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#12805c">14 avis (100% pos.)</text>
+  <text x="592" y="222" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">Plateforme : Leboncoin • Réponses rapides</text>
+  <text x="592" y="242" font-family="-apple-system, sans-serif" font-size="11" fill="#20242d">Note : <tspan font-style="italic">"Paiement sécurisé LBC accepté sans souci."</tspan></text>
+  <rect x="592" y="258" width="80" height="22" rx="4" fill="#efeeff" />
+  <text x="632" y="273" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#625df5" text-anchor="middle">1 achat fait</text>
+
+  <!-- Card 3 -->
+  <rect x="875" y="145" width="285" height="150" rx="8" class="surface" />
+  <text x="895" y="172" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">Brocante77</text>
+  <text x="895" y="195" font-family="-apple-system, sans-serif" font-size="16" fill="#9ca3af">★★★☆☆</text>
+  <text x="990" y="195" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#99600b">3 avis (faible vol.)</text>
+  <text x="895" y="222" font-family="-apple-system, sans-serif" font-size="11" fill="#727785">Plateforme : Vinted • Particulier occasionnel</text>
+  <text x="895" y="242" font-family="-apple-system, sans-serif" font-size="11" fill="#20242d">Note : <tspan font-style="italic">"Demander des photos supplémentaires avant achat."</tspan></text>
+  <rect x="895" y="258" width="95" height="22" rx="4" fill="#fff4db" />
+  <text x="942" y="273" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#99600b" text-anchor="middle">À surveiller</text>
+
+  <!-- Section 2: Carnet d'achats / Portefeuille -->
+  <rect x="270" y="315" width="890" height="365" rx="8" class="surface" />
+  <text x="290" y="348" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">📦 Carnet des achats effectués &amp; Arbitrages en cours</text>
+  <text x="290" y="366" class="text-sub">Historique réel de vos transactions d'achat et suivi de statut (Commandé → Reçu → En vente → Vendu).</text>
+
+  <!-- Table Head -->
+  <rect x="290" y="385" width="850" height="32" fill="#f6f7fb" rx="4" />
+  <text x="310" y="405" class="tbl-hdr">CARTE ACHETÉE</text>
+  <text x="530" y="405" class="tbl-hdr">VENDEUR</text>
+  <text x="680" y="405" class="tbl-hdr">PRIX PAYÉ</text>
+  <text x="800" y="405" class="tbl-hdr">STATUT</text>
+  <text x="930" y="405" class="tbl-hdr">DATE D'ACHAT</text>
+  <text x="1050" y="405" class="tbl-hdr">ACTIONS</text>
+
+  <!-- Purchase Row 1 -->
+  <line x1="290" y1="455" x2="1140" y2="455" stroke="#f0f1f4" />
+  <text x="310" y="440" class="row-txt" font-weight="700">Dracaufeu Holo (Set de Base)</text>
+  <text x="530" y="440" class="row-txt">PokeMaster92</text>
+  <text x="680" y="440" class="row-txt" font-weight="700">145,00 €</text>
+  <rect x="795" y="425" width="80" height="22" rx="4" class="badge-amber" />
+  <text x="835" y="440" class="badge-amber-txt" text-anchor="middle">📦 Commandé</text>
+  <text x="930" y="440" class="row-txt">01/11/2026</text>
+  <text x="1070" y="440" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Éditer ✏️</text>
+
+  <!-- Purchase Row 2 -->
+  <line x1="290" y1="510" x2="1140" y2="510" stroke="#f0f1f4" />
+  <text x="310" y="495" class="row-txt" font-weight="700">Pikachu VMAX Rainbow</text>
+  <text x="530" y="495" class="row-txt">Julien_K</text>
+  <text x="680" y="495" class="row-txt" font-weight="700">65,00 €</text>
+  <rect x="795" y="480" width="80" height="22" rx="4" class="badge-blue" />
+  <text x="835" y="495" class="badge-blue-txt" text-anchor="middle">📬 Reçu</text>
+  <text x="930" y="495" class="row-txt">29/10/2026</text>
+  <text x="1070" y="495" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Éditer ✏️</text>
+
+  <!-- Purchase Row 3 -->
+  <line x1="290" y1="565" x2="1140" y2="565" stroke="#f0f1f4" />
+  <text x="310" y="550" class="row-txt" font-weight="700">Noctali V Alternative</text>
+  <text x="530" y="550" class="row-txt">CardsFan</text>
+  <text x="680" y="550" class="row-txt" font-weight="700">80,00 €</text>
+  <rect x="795" y="535" width="80" height="22" rx="4" fill="#ede9fe" />
+  <text x="835" y="550" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#6d28d9" text-anchor="middle">🏷️ En vente</text>
+  <text x="930" y="550" class="row-txt">24/10/2026</text>
+  <text x="1070" y="550" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Éditer ✏️</text>
+
+  <!-- Purchase Row 4 -->
+  <line x1="290" y1="620" x2="1140" y2="620" stroke="#f0f1f4" />
+  <text x="310" y="605" class="row-txt" font-weight="700">Mew Antique Promos</text>
+  <text x="530" y="605" class="row-txt">RetroTcg</text>
+  <text x="680" y="605" class="row-txt" font-weight="700">22,00 €</text>
+  <rect x="795" y="590" width="80" height="22" rx="4" class="badge-green" />
+  <text x="835" y="605" class="badge-green-txt" text-anchor="middle">💰 Vendu (52 €)</text>
+  <text x="930" y="605" class="row-txt">18/10/2026</text>
+  <text x="1070" y="605" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">Éditer ✏️</text>
+</svg>

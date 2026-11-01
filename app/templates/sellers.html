@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Vendeurs · Pokébourse{% endblock %}
+{% block breadcrumb %}Vendeurs{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">RÉPERTOIRE & CRM</span>
+        <h1>Vendeurs</h1>
+        <p>{{ total }} vendeur{{ 's' if total != 1 else '' }} répertorié{{ 's' if total != 1 else '' }} · identifiez les profils fiables, dénichez les meilleures opportunités et suivez vos achats.</p>
+    </div>
+    <div class="heading-actions">
+        <a class="button secondary" href="/catalog">Explorer le catalogue</a>
+    </div>
+</section>
+
+{% if notice %}
+<div class="alert info" role="status">
+    <p>{{ notice }}</p>
+</div>
+{% endif %}
+
+<section class="panel catalog-panel">
+    <form class="filters" method="get" action="/sellers">
+        <label class="search-field" for="seller-q">
+            <span class="filter-label">Recherche</span>
+            <input type="search" id="seller-q" name="q" value="{{ query }}" placeholder="Pseudo, identifiant..." autocorrect="off" autocapitalize="off" spellcheck="false">
+        </label>
+        <label for="seller-platform">
+            <span class="filter-label">Plateforme</span>
+            <select id="seller-platform" name="platform">
+                <option value="all" {{ 'selected' if selected_platform == 'all' else '' }}>Toutes</option>
+                <option value="vinted" {{ 'selected' if selected_platform == 'vinted' else '' }}>Vinted</option>
+                <option value="leboncoin" {{ 'selected' if selected_platform == 'leboncoin' else '' }}>Leboncoin</option>
+            </select>
+        </label>
+        <label for="seller-sort">
+            <span class="filter-label">Classement</span>
+            <select id="seller-sort" name="sort">
+                <option value="reputation" {{ 'selected' if selected_sort == 'reputation' else '' }}>⭐ Les plus fiables (Avis & Note)</option>
+                <option value="opportunities" {{ 'selected' if selected_sort == 'opportunities' else '' }}>🏆 Meilleures pépites (Opportunités)</option>
+                <option value="purchases" {{ 'selected' if selected_sort == 'purchases' else '' }}>💳 Mes fournisseurs clés (Achats faits)</option>
+                <option value="name" {{ 'selected' if selected_sort == 'name' else '' }}>Nom (A → Z)</option>
+            </select>
+        </label>
+        <label class="checkbox-field" for="seller-fav">
+            <input type="checkbox" id="seller-fav" name="favorites" value="1" {{ 'checked' if only_favorites else '' }}>
+            <span>Favoris seulement ❤️</span>
+        </label>
+        <button class="button secondary filter-submit" type="submit">Appliquer</button>
+        {% if query or selected_platform != 'all' or selected_sort != 'reputation' or only_favorites %}
+        <a class="reset-link" href="/sellers">Effacer les filtres</a>
+        {% endif %}
+    </form>
+
+    {% if sellers %}
+    <div class="product-list" role="list" aria-label="Liste des vendeurs répertoriés">
+        {% for seller in sellers %}
+        <article class="product-row" role="listitem">
+            <div class="product-identity">
+                <div class="card-thumb" aria-hidden="true">{{ (seller.login or seller.seller_external_id)[0]|upper }}</div>
+                <div class="product-name">
+                    <strong>
+                        <a class="row-link" href="/sellers/{{ seller.id }}">{{ seller.login or seller.seller_external_id }}</a>
+                        {% if seller.is_favorite %}<span title="Vendeur favori" aria-label="Favori">❤️</span>{% endif %}
+                    </strong>
+                    <span>
+                        {{ seller.platform|title }} · ID: {{ seller.seller_external_id }}
+                        {% if seller.account_type in ('business', 'pro') %}<span class="badge blue">Pro</span>{% endif %}
+                        {% if seller.is_banned %}<span class="badge red">Banni</span>{% endif %}
+                    </span>
+                    {% if seller.user_notes %}
+                    <span class="cell-sub" style="font-style: italic;">« {{ seller.user_notes|truncate(80) }} »</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <span class="cell-label">FIABILITÉ</span>
+                <b class="cell-value">{{ seller.rating.stars_text() }}</b>
+                <span class="cell-sub">
+                    {{ seller.rating.label }}
+                    {% if seller.feedback_count is not none %} · {{ seller.feedback_count }} avis{% endif %}
+                </span>
+            </div>
+            <div>
+                <span class="cell-label">SOURCING & PÉPITES</span>
+                {% if seller.opportunities_count > 0 %}
+                <b class="cell-value profit-figure positive">{{ seller.opportunities_count }} pépite{{ 's' if seller.opportunities_count > 1 else '' }}</b>
+                {% else %}
+                <b class="cell-value unknown">0 opportunité</b>
+                {% endif %}
+                <span class="cell-sub">{{ seller.total_listings }} annonce{{ 's' if seller.total_listings != 1 else '' }} en base</span>
+            </div>
+            <div>
+                <span class="cell-label">MES ACHATS</span>
+                {% if seller.purchases_count > 0 %}
+                <b class="cell-value positive">{{ seller.purchases_count }} achat{{ 's' if seller.purchases_count > 1 else '' }}</b>
+                <span class="cell-sub">{{ seller.total_spent_cents|money }} dépensés</span>
+                {% else %}
+                <span class="cell-value unknown">Aucun achat</span>
+                <span class="cell-sub">0,00 €</span>
+                {% endif %}
+            </div>
+            <div class="decision-wrap">
+                <a class="button secondary small" href="/sellers/{{ seller.id }}">Fiche vendeur ›</a>
+                {% if seller.profile_url %}
+                <a class="external-link" href="{{ seller.profile_url }}" target="_blank" rel="noopener noreferrer" title="Voir le profil sur {{ seller.platform|title }}">↗</a>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p><strong>Aucun vendeur ne correspond aux critères sélectionnés.</strong></p>
+        <p>Les vendeurs sont automatiquement indexés et enrichis lors des collectes de veilles ou des imports d'annonces.</p>
+        <a class="button secondary" href="/sellers">Réinitialiser les filtres</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

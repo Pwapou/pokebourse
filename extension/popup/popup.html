@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pokébourse Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- En-tête -->
+    <header class="popup-header">
+      <div class="brand">
+        <div class="brand-icon">P</div>
+        <div class="brand-info">
+          <h1>Pokébourse</h1>
+          <span class="badge-tag">ASSISTANT CAPTURE</span>
+        </div>
+      </div>
+      <div class="status-toggle" title="Activer / désactiver la capture automatique">
+        <label class="switch">
+          <input type="checkbox" id="toggle-auto-capture" checked>
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label" id="toggle-label">Auto</span>
+      </div>
+    </header>
+
+    <!-- Synthèse et Compteur -->
+    <section class="summary-section">
+      <div class="count-display">
+        <span class="count-number" id="listing-count">0</span>
+        <span class="count-label">carte(s) capturée(s)</span>
+      </div>
+
+      <!-- Barre de sélection -->
+      <div class="selection-bar">
+        <label class="select-all-label">
+          <input type="checkbox" id="checkbox-select-all" checked>
+          <span>Tout sélectionner</span>
+        </label>
+        <span class="selection-count" id="selection-count">0 sélectionnée(s)</span>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" id="btn-send-pokebourse" title="Transmettre les cartes sélectionnées à Pokébourse locale">
+          🚀 Envoyer (<span id="send-count">0</span>) à Pokébourse
+        </button>
+        <button class="btn btn-secondary" id="btn-export-jsonl" title="Télécharger le fichier .jsonl pour les cartes sélectionnées">
+          Exporter JSONL
+        </button>
+        <button class="btn btn-secondary" id="btn-copy-jsonl" title="Copier les lignes JSONL sélectionnées dans le presse-papier">
+          Copier
+        </button>
+        <button class="btn btn-danger-icon" id="btn-clear-all" title="Vider toute la liste">
+          ✕
+        </button>
+      </div>
+      <div id="status-message" class="status-banner" style="display: none;"></div>
+    </section>
+
+    <!-- Liste des annonces capturées -->
+    <main class="listings-container" id="listings-container">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>Aucune annonce capturée</h3>
+        <p>Naviguez sur Vinted, Leboncoin ou d'autres sites avec des cartes Pokémon. Elles apparaîtront ici automatiquement.</p>
+      </div>
+      <div class="listings-list" id="listings-list"></div>
+    </main>
+
+    <!-- Pied de page -->
+    <footer class="popup-footer">
+      <a href="http://localhost:8000/catalog" target="_blank" rel="noopener noreferrer" class="footer-link">
+        Ouvrir Pokébourse locale ↗
+      </a>
+      <span class="version-tag">v1.0.0</span>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

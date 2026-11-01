@@ -1,0 +1,83 @@
+/* Styles du toast flottant de Pokébourse Capture */
+
+.pokebourse-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background: #171827;
+  color: #ffffff;
+  border: 1px solid rgba(98, 93, 245, 0.4);
+  padding: 12px 16px;
+  min-width: 280px;
+  max-width: 380px;
+  animation: pokebourse-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: auto;
+}
+
+.pokebourse-toast-fadeout {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.pokebourse-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pokebourse-toast-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #625df5;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.pokebourse-toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.pokebourse-toast-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #aeb0bf;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pokebourse-toast-desc {
+  font-size: 13px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pokebourse-toast-desc b {
+  color: #4ade80;
+}
+
+@keyframes pokebourse-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

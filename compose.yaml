@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    init: true
+    environment: &pokebourse-environment
+      POKEMON_DATABASE_PATH: /data/pokemon-arbitrage.db
+      POKEMON_LOG_LEVEL: INFO
+      POKEMON_MIN_WATCH_INTERVAL_SECONDS: 120
+      POKEMON_WATCH_POLL_SECONDS: 5
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - .:/opt/pokemon-arbitrage
+      - pokemon-data:/data
+    command: ["uvicorn", "app.web:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  worker:
+    build:
+      context: .
+      target: development
+    init: true
+    environment: *pokebourse-environment
+    volumes:
+      - .:/opt/pokemon-arbitrage
+      - pokemon-data:/data
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pokemon-data:

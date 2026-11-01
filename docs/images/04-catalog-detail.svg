@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .badge-green { fill: #e8f6ef; }
+      .badge-green-txt { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; fill: #12805c; }
+      .badge-purple { fill: #efeeff; }
+      .badge-purple-txt { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; fill: #625df5; }
+      .row-txt { font-family: -apple-system, sans-serif; font-size: 13px; fill: #20242d; }
+      .row-sub { font-family: -apple-system, sans-serif; font-size: 11px; fill: #727785; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="750" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="750" class="sidebar" />
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+  <text x="32" y="115" class="text-sidebar">📊 Tableau de bord</text>
+  <rect x="14" y="130" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="130" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="155" font-family="-apple-system, sans-serif" font-size="13" font-weight="600" fill="#ffffff">🗂️ Catalogue &amp; Annonces</text>
+  <text x="32" y="195" class="text-sidebar">📈 Rentabilité &amp; Cotes</text>
+  <text x="32" y="235" class="text-sidebar">⏱️ Veilles Vinted &amp; LBC</text>
+  <text x="32" y="275" class="text-sidebar">👥 Annuaire Vendeurs</text>
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse / Catalogue <tspan fill="#20242d" font-weight="600">/ Annonce #42 (Dracaufeu)</tspan></text>
+  
+  <rect x="1050" y="18" width="110" height="30" rx="6" fill="#ffffff" stroke="#d0d3de" />
+  <text x="1105" y="38" font-family="-apple-system, sans-serif" font-size="12" fill="#20242d" text-anchor="middle">← Retour liste</text>
+
+  <!-- Left Column: Annonce & Vendeur -->
+  <rect x="270" y="90" width="410" height="630" rx="8" class="surface" />
+  
+  <!-- Image placeholder -->
+  <rect x="290" y="110" width="370" height="210" rx="8" fill="#f0f2f5" />
+  <text x="475" y="210" font-size="48" text-anchor="middle">🐉</text>
+  <rect x="305" y="125" width="85" height="22" rx="4" fill="#171827" />
+  <text x="347" y="140" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">VINTED #894</text>
+
+  <!-- Listing Title & Price -->
+  <text x="290" y="348" font-family="-apple-system, sans-serif" font-size="16" font-weight="700" fill="#20242d">Carte Pokémon Dracaufeu Holo 4/102</text>
+  <text x="290" y="378" font-family="-apple-system, sans-serif" font-size="24" font-weight="800" fill="#12805c">145,00 € <tspan font-size="12" font-weight="400" fill="#727785">+ 4,50 € port estimé</tspan></text>
+
+  <!-- Metadata Table -->
+  <line x1="290" y1="395" x2="660" y2="395" stroke="#f0f1f4" />
+  <text x="290" y="420" class="row-sub">État annoncé :</text>
+  <text x="430" y="420" class="row-txt" font-weight="600">Near Mint (Très bon état)</text>
+
+  <text x="290" y="445" class="row-sub">Langue &amp; Édition :</text>
+  <text x="430" y="445" class="row-txt">Français (FR) • Édition 1</text>
+
+  <text x="290" y="470" class="row-sub">Première détection :</text>
+  <text x="430" y="470" class="row-txt">Il y a 14 minutes</text>
+
+  <text x="290" y="495" class="row-sub">Lien source officiel :</text>
+  <text x="430" y="495" font-family="-apple-system, sans-serif" font-size="12" fill="#625df5">vinted.fr/items/498210 ↗</text>
+
+  <!-- Seller Reliability Box -->
+  <rect x="290" y="520" width="370" height="180" rx="8" fill="#f8fafc" stroke="#e2e8f0" />
+  <text x="310" y="546" font-family="-apple-system, sans-serif" font-size="13" font-weight="700" fill="#20242d">👤 Fiabilité du vendeur : PokeMaster92</text>
+  
+  <text x="310" y="575" font-family="-apple-system, sans-serif" font-size="18" fill="#f59e0b">★★★★★</text>
+  <rect x="390" y="560" width="60" height="20" rx="10" class="badge-green" />
+  <text x="420" y="574" class="badge-green-txt" text-anchor="middle">FIABLE</text>
+  
+  <text x="310" y="605" class="row-sub">Avis positifs : <tspan font-weight="700" fill="#20242d">47 / 48 (98%)</tspan></text>
+  <text x="310" y="625" class="row-sub">Type de compte : <tspan fill="#20242d">Particulier (aucun signalement)</tspan></text>
+  
+  <rect x="310" y="645" width="160" height="32" rx="6" fill="#ffffff" stroke="#d0d3de" />
+  <text x="390" y="665" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#20242d" text-anchor="middle">★ Ajouter aux favoris</text>
+
+  <rect x="480" y="645" width="160" height="32" rx="6" fill="#ffffff" stroke="#d0d3de" />
+  <text x="560" y="665" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#625df5" text-anchor="middle">Fiche vendeur ↗</text>
+
+  <!-- Right Column Top: TCGdex Reconciliation -->
+  <rect x="700" y="90" width="460" height="250" rx="8" class="surface" />
+  <rect x="720" y="105" width="105" height="24" rx="4" class="badge-green" />
+  <text x="772" y="121" class="badge-green-txt" text-anchor="middle">🟢 IDENTIFIÉE</text>
+  <text x="835" y="122" font-family="-apple-system, sans-serif" font-size="12" fill="#727785">Score de confiance : <tspan font-weight="700" fill="#12805c">95%</tspan></text>
+
+  <text x="720" y="155" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">Liaison Catalogue TCGdex Officiel</text>
+  <text x="720" y="173" class="row-sub">Carte officielle rattachée sans ambiguïté par numéro &amp; nom d'extension.</text>
+
+  <rect x="720" y="188" width="420" height="60" rx="6" fill="#f6f7fb" />
+  <text x="735" y="210" class="row-txt" font-weight="700">Dracaufeu • Set de Base (BS-004)</text>
+  <text x="735" y="230" class="row-sub">Illustrateur : Mitsuhiro Arita • Rareté : Rare Holographique</text>
+
+  <rect x="720" y="260" width="230" height="30" rx="6" fill="#efeeff" />
+  <text x="835" y="280" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#625df5" text-anchor="middle">🔄 Réexaminer l'identification</text>
+
+  <!-- Right Column Middle: Profitability Engine Breakdown -->
+  <rect x="700" y="355" width="460" height="245" rx="8" class="surface" />
+  <text x="720" y="385" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">Calcul de Rentabilité &amp; Arbitrage</text>
+
+  <!-- Formula box -->
+  <rect x="720" y="402" width="420" height="115" rx="6" fill="#fafbfd" stroke="#e2e8f0" />
+  <text x="735" y="425" class="row-sub">Prix de revente estimé (Cardmarket NM) :</text>
+  <text x="1080" y="425" class="row-txt" font-weight="700" text-anchor="end">290,00 €</text>
+
+  <text x="735" y="447" class="row-sub">- Coût d'achat total (145 € + 4,50 € port) :</text>
+  <text x="1080" y="447" class="row-txt" fill="#b54242" text-anchor="end">- 149,50 €</text>
+
+  <text x="735" y="469" class="row-sub">- Frais plateforme &amp; emballage (5% + 2 €) :</text>
+  <text x="1080" y="469" class="row-txt" fill="#b54242" text-anchor="end">- 16,50 €</text>
+
+  <line x1="735" y1="482" x2="1080" y2="482" stroke="#d0d3de" />
+
+  <text x="735" y="503" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#12805c">GAIN NET ESTIMÉ :</text>
+  <text x="1080" y="503" font-family="-apple-system, sans-serif" font-size="15" font-weight="800" fill="#12805c" text-anchor="end">+ 124,00 €</text>
+
+  <rect x="720" y="530" width="420" height="55" rx="6" fill="#e8f6ef" />
+  <text x="735" y="555" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#12805c">🔥 OPPORTUNITÉ VALIDÉE</text>
+  <text x="735" y="572" font-family="-apple-system, sans-serif" font-size="11" fill="#12805c">ROI net calculé à +82,9% (Seuils : min 10 € &amp; 15% ROI respectés)</text>
+
+  <!-- Right Column Bottom: Purchase Action Button -->
+  <rect x="700" y="615" width="460" height="105" rx="8" class="surface" />
+  <text x="720" y="640" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#20242d">Vous avez acheté cette carte ?</text>
+  <text x="720" y="658" class="row-sub">Ajoutez-la en 1 clic à votre carnet de suivi d'achats et de revente.</text>
+
+  <rect x="720" y="672" width="420" height="36" rx="6" fill="#20242d" />
+  <text x="930" y="695" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">🛒 Enregistrer dans mon carnet d'achats (145,00 €)</text>
+</svg>

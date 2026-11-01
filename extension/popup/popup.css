@@ -1,0 +1,652 @@
+/* Styles de l'interface popup Pokébourse Capture */
+
+:root {
+  --bg-primary: #171827;
+  --bg-card: #202234;
+  --bg-hover: #2b2a4b;
+  --border-color: #2e3047;
+  --text-main: #ffffff;
+  --text-muted: #8f91a3;
+  --primary: #625df5;
+  --primary-hover: #4e49d8;
+  --green: #10b981;
+  --green-bg: rgba(16, 185, 129, 0.15);
+  --red: #ef4444;
+  --red-bg: rgba(239, 68, 68, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 440px;
+  height: 580px;
+  background: var(--bg-primary);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+.popup-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* En-tête */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #11121d;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+}
+
+.brand-info h1 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.badge-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+}
+
+/* Toggle Switch */
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #3b3d54;
+  transition: 0.2s;
+  border-radius: 18px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
+/* Synthèse et Actions */
+.summary-section {
+  padding: 12px 16px;
+  background: #171827;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.count-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.count-number {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.count-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Barre de sélection */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 4px 6px;
+  background: #1e2030;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.select-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #cfd2e6;
+  font-weight: 500;
+  user-select: none;
+}
+
+.select-all-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--primary);
+  width: 14px;
+  height: 14px;
+}
+
+.selection-count {
+  font-size: 11px;
+  color: #9ea0b8;
+  font-weight: 600;
+}
+
+.actions-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: #232538;
+  color: #c9cad5;
+  border-color: #33364d;
+}
+
+.btn-secondary:hover {
+  background: #2b2e45;
+  color: #ffffff;
+  border-color: #4a4d6b;
+}
+
+.btn-danger-icon {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.btn-danger-icon:hover {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
+.status-banner {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: var(--green-bg);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+/* Liste des annonces */
+.listings-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px;
+  background: #141522;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  font-size: 14px;
+  color: #e2e4ed;
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.listings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  position: relative;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.listing-card:hover {
+  border-color: #3e4161;
+  background: #25283d;
+}
+
+.listing-card-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.item-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Encart d'évaluation financière et revente */
+.eval-box {
+  background: #191b2b;
+  border: 1px solid #2e3149;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.eval-box.opportunite {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.eval-box.surveiller {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.eval-box.non_rentable {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.eval-box.sans_cote {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.eval-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.eval-verdict-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.eval-verdict-badge.opportunite {
+  background: #10b981;
+  color: #064e3b;
+}
+
+.eval-verdict-badge.surveiller {
+  background: #f59e0b;
+  color: #78350f;
+}
+
+.eval-verdict-badge.non_rentable {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.eval-verdict-badge.sans_cote {
+  background: #3b4261;
+  color: #c7cbdf;
+}
+
+.eval-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e4f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex: 1;
+}
+
+.eval-prices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.eval-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.eval-lbl {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.eval-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.eval-val.has-price {
+  color: #38bdf8;
+}
+
+.eval-val.no-price {
+  color: #8b8ea8;
+  font-size: 10px;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.eval-source {
+  font-size: 9px;
+  font-weight: normal;
+  color: #8f92ab;
+  margin-left: 2px;
+}
+
+.eval-profit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.profit-pos {
+  color: #34d399;
+}
+
+.profit-neg {
+  color: #f87171;
+}
+
+.eval-no-cote-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #a5b4fc;
+  font-size: 10px;
+}
+
+.eval-link-cote {
+  display: inline-block;
+  color: #818cf8;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.eval-link-cote:hover {
+  color: #c7d2fe;
+}
+
+.eval-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.eval-link-detail {
+  font-size: 10px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.eval-link-detail:hover {
+  text-decoration: underline;
+  color: #818cf8;
+}
+
+.listing-thumb {
+  width: 44px;
+  height: 52px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: #191b29;
+  flex-shrink: 0;
+  border: 1px solid #2d3047;
+}
+
+.listing-thumb-placeholder {
+  width: 44px;
+  height: 52px;
+  border-radius: 5px;
+  background: #191b29;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  border: 1px solid #2d3047;
+}
+
+.listing-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.listing-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+
+.listing-title:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.listing-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listing-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.listing-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.source-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  background: #2d3047;
+  color: #aeb0bf;
+}
+
+.source-badge.vinted {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.source-badge.leboncoin {
+  background: rgba(249, 115, 22, 0.18);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.btn-card-del {
+  background: transparent;
+  border: 0;
+  color: #636780;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.btn-card-del:hover {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
+/* Pied de page */
+.popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #11121d;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+.version-tag {
+  font-size: 10px;
+  color: #5c5e73;
+}

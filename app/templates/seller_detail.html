@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.login or profile.seller_external_id }} · Vendeur · Pokébourse{% endblock %}
+{% block breadcrumb %}<a href="/sellers">Vendeurs</a> / {{ profile.login or profile.seller_external_id }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">FICHE VENDEUR & HISTORIQUE</span>
+        <h1>
+            {{ profile.login or profile.seller_external_id }}
+            {% if profile.is_favorite %}<span title="Vendeur favori">❤️</span>{% endif %}
+        </h1>
+        <p>
+            Vendeur {{ profile.platform|title }} · Profil ID : {{ profile.seller_external_id }}
+            {% if profile.account_type in ('business', 'pro') %}<span class="badge blue">Professionnel</span>{% else %}<span class="badge neutral">Particulier</span>{% endif %}
+            {% if profile.is_banned %}<span class="badge red">Compte banni</span>{% endif %}
+        </p>
+    </div>
+    <div class="heading-actions">
+        <form method="post" action="/sellers/{{ raw_profile.id }}/favorite" style="display: inline-block;">
+            <input type="hidden" name="is_favorite" value="{{ '0' if profile.is_favorite else '1' }}">
+            <button class="button {{ 'secondary' if profile.is_favorite else 'primary' }}" type="submit">
+                {{ 'Retirer des favoris 💔' if profile.is_favorite else 'Ajouter aux favoris ❤️' }}
+            </button>
+        </form>
+        {% if profile.profile_url %}
+        <a class="button secondary" href="{{ profile.profile_url }}" target="_blank" rel="noopener noreferrer">Profil officiel ↗</a>
+        {% endif %}
+    </div>
+</section>
+
+{% if notice %}
+<div class="alert info" role="status">
+    <p>{{ notice }}</p>
+</div>
+{% endif %}
+
+<section class="metrics-grid">
+    <div class="metric-card">
+        <span class="metric-label">FIABILITÉ VENDEUR</span>
+        <b class="metric-value">{{ rating.stars_text() }}</b>
+        <span class="metric-sub">{{ rating.label }}{% if profile.feedback_count is not none %} · {{ profile.feedback_count }} avis{% endif %}</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-label">ANNONCES EN BASE</span>
+        <b class="metric-value">{{ total_listings }}</b>
+        <span class="metric-sub">Cartes collectées du vendeur</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-label">OPPORTUNITÉS DÉTECTÉES</span>
+        <b class="metric-value {{ 'positive' if opportunities_count > 0 else '' }}">{{ opportunities_count }}</b>
+        <span class="metric-sub">{{ watches_count }} carte{{ 's' if watches_count > 1 else '' }} à surveiller</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-label">MES ACHATS CONCLUS</span>
+        <b class="metric-value {{ 'positive' if purchases_count > 0 else '' }}">{{ purchases_count }}</b>
+        <span class="metric-sub">{{ total_spent_cents|money }} dépensés au total</span>
+    </div>
+</section>
+
+<div class="two-columns-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Panneau Réputation détaillée -->
+    <section class="panel">
+        <header class="panel-header">
+            <h2>Détails de réputation plateforme</h2>
+        </header>
+        <dl class="detail-list">
+            <div class="detail-row"><dt>Avis positifs</dt><dd>{{ profile.positive_count if profile.positive_count is not none else '—' }}</dd></div>
+            <div class="detail-row"><dt>Avis neutres</dt><dd>{{ profile.neutral_count if profile.neutral_count is not none else '—' }}</dd></div>
+            <div class="detail-row"><dt>Avis négatifs</dt><dd>{{ profile.negative_count if profile.negative_count is not none else '—' }}</dd></div>
+            <div class="detail-row"><dt>Réputation globale</dt><dd>{% if profile.reputation_bps is not none %}{{ (profile.reputation_bps / 100)|round(1) }} %{% else %}—{% endif %}</dd></div>
+            <div class="detail-row"><dt>Taux de réponse</dt><dd>{% if profile.response_rate_percent is not none %}{{ profile.response_rate_percent }} %{% else %}—{% endif %}</dd></div>
+            <div class="detail-row"><dt>Dernière actualisation</dt><dd>{{ profile.fetched_at|date }}</dd></div>
+        </dl>
+        {% if rating.notes %}
+        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-surface-alt, #1f2937); border-radius: 6px;">
+            <p style="font-size: 0.85rem; margin: 0; color: var(--text-muted, #9ca3af);">
+                <strong>Avertissements fiabilité :</strong>
+                {% for note in rating.notes %}<br>• {{ note }}{% endfor %}
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Panneau Notes personnelles -->
+    <section class="panel">
+        <header class="panel-header">
+            <h2>Notes & Avis personnel</h2>
+        </header>
+        <form method="post" action="/sellers/{{ raw_profile.id }}/notes">
+            <label for="seller-notes-input" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                Consignez vos remarques sur ce vendeur (emballage, rapidité, réductions de lot accordées, sérieux...) :
+            </label>
+            <textarea id="seller-notes-input" name="notes" rows="5" style="width: 100%; border-radius: 6px; padding: 0.75rem; background: var(--bg-surface-alt, #111827); color: inherit; border: 1px solid var(--border-color, #374151);" placeholder="Ex: Très bon emballage sous double sleeve + toploader. Répond vite et accepte les négociations de 10% sur les lots.">{{ profile.user_notes or '' }}</textarea>
+            <div style="margin-top: 0.75rem; text-align: right;">
+                <button class="button secondary" type="submit">Enregistrer mes notes</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- Panneau Historique des achats réels -->
+<section class="panel" style="margin-top: 1.5rem;">
+    <header class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>Mes achats conclus chez ce vendeur ({{ purchases_count }})</h2>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total dépensé : {{ total_spent_cents|money }}</p>
+        </div>
+    </header>
+
+    {% if purchases %}
+    <div class="product-list" role="list">
+        {% for purchase in purchases %}
+        <article class="product-row" role="listitem">
+            <div class="product-identity">
+                <div class="card-thumb" aria-hidden="true">💳</div>
+                <div class="product-name">
+                    <strong>{{ purchase.card_name }}</strong>
+                    <span>
+                        {{ purchase.set_name or 'Extension non précisée' }}
+                        {% if purchase.card_number %} · N° {{ purchase.card_number }}{% endif %}
+                        {% if purchase.condition %} · {{ purchase.condition }}{% endif %}
+                    </span>
+                    {% if purchase.notes %}
+                    <span class="cell-sub" style="font-style: italic;">Note : {{ purchase.notes }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <span class="cell-label">DATE D'ACHAT</span>
+                <b class="cell-value">{{ purchase.purchased_at|date }}</b>
+            </div>
+            <div>
+                <span class="cell-label">PRIX PAYÉ</span>
+                <b class="cell-value">{{ purchase.price_paid_cents|money(purchase.currency) }}</b>
+                {% if purchase.shipping_paid_cents %}<span class="cell-sub">+ {{ purchase.shipping_paid_cents|money(purchase.currency) }} port</span>{% endif %}
+            </div>
+            <div>
+                <span class="cell-label">STATUT</span>
+                <span class="badge {{ 'green' if purchase.status == 'recu' else 'blue' }}">
+                    {% if purchase.status == 'recu' %}Reçu{% elif purchase.status == 'commande' %}Commandé{% elif purchase.status == 'en_vente' %}En vente{% elif purchase.status == 'vendu' %}Vendu{% else %}{{ purchase.status }}{% endif %}
+                </span>
+            </div>
+            {% if purchase.catalog_item_id %}
+            <div class="decision-wrap">
+                <a class="button secondary small" href="/catalog/{{ purchase.catalog_item_id }}">Voir l'annonce ›</a>
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="padding: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+        Vous n'avez pas encore enregistré d'achat auprès de ce vendeur. Vous pouvez marquer une annonce comme achetée depuis sa fiche produit.
+    </p>
+    {% endif %}
+
+    <!-- Formulaire d'enregistrement manuel d'achat -->
+    <details style="margin-top: 1rem; padding: 1rem; background: var(--bg-surface-alt, #1f2937); border-radius: 6px;">
+        <summary style="cursor: pointer; font-weight: 600; color: var(--text-main);">+ Enregistrer manuellement un achat pour ce vendeur</summary>
+        <form method="post" action="/sellers/{{ raw_profile.id }}/purchase" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <label>
+                <span class="filter-label">Nom de la carte *</span>
+                <input type="text" name="card_name" required placeholder="Ex: Dracaufeu VMAX">
+            </label>
+            <label>
+                <span class="filter-label">Extension</span>
+                <input type="text" name="set_name" placeholder="Ex: Destinées Radieuses">
+            </label>
+            <label>
+                <span class="filter-label">Numéro</span>
+                <input type="text" name="card_number" placeholder="Ex: SV107/SV122">
+            </label>
+            <label>
+                <span class="filter-label">État</span>
+                <input type="text" name="condition" placeholder="Ex: Near Mint">
+            </label>
+            <label>
+                <span class="filter-label">Prix payé (€) *</span>
+                <input type="number" step="0.01" min="0" name="price_paid" required placeholder="Ex: 45.00">
+            </label>
+            <label>
+                <span class="filter-label">Frais de port (€)</span>
+                <input type="number" step="0.01" min="0" name="shipping_paid" value="0.00" placeholder="0.00">
+            </label>
+            <label>
+                <span class="filter-label">Statut</span>
+                <select name="status">
+                    <option value="recu" selected>Reçu</option>
+                    <option value="commande">Commandé</option>
+                    <option value="en_vente">En vente</option>
+                    <option value="vendu">Revendu</option>
+                </select>
+            </label>
+            <label style="grid-column: 1 / -1;">
+                <span class="filter-label">Notes</span>
+                <input type="text" name="notes" placeholder="Commentaire sur cet achat...">
+            </label>
+            <div style="grid-column: 1 / -1; text-align: right;">
+                <button class="button primary" type="submit">Valider cet achat</button>
+            </div>
+        </form>
+    </details>
+</section>
+
+<!-- Panneau Annonces actives du vendeur dans le catalogue -->
+<section class="panel" style="margin-top: 1.5rem;">
+    <header class="panel-header">
+        <h2>Annonces de ce vendeur en base ({{ total_listings }})</h2>
+        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Annonces consolidées dans votre catalogue local.</p>
+    </header>
+
+    {% if listings %}
+    <div class="product-list" role="list">
+        {% for item in listings %}
+        <article class="product-row" role="listitem">
+            <div class="product-identity">
+                <div class="card-thumb" aria-hidden="true">{{ item.name[0]|upper }}</div>
+                <div class="product-name">
+                    <strong><a class="row-link" href="/catalog/{{ item.id }}">{{ item.name }}</a></strong>
+                    <span>{{ item.set_name }}{% if item.card_number %} · N° {{ item.card_number }}{% endif %}</span>
+                </div>
+            </div>
+            <div>
+                <span class="cell-label">ACHAT</span>
+                <b class="cell-value">{{ item.total_cost_cents|money(item.currency) }}</b>
+            </div>
+            <div>
+                <span class="cell-label">REVENTE ESTIMÉE</span>
+                {% if item.reference_price_cents is not none %}
+                <b class="cell-value">{{ item.reference_price_cents|money(item.currency) }}</b>
+                {% else %}
+                <span class="cell-value unknown">Inconnue</span>
+                {% endif %}
+            </div>
+            <div>
+                <span class="cell-label">GAIN NET</span>
+                {% if item.net_profit_cents is not none %}
+                <b class="cell-value profit-figure {{ 'positive' if item.net_profit_cents > 0 else 'negative' }}">{{ item.net_profit_cents|signed_money(item.currency) }}</b>
+                {% else %}
+                <span class="cell-value unknown">—</span>
+                {% endif %}
+            </div>
+            <div>
+                <span class="cell-label">ROI</span>
+                {% if item.roi_bps is not none %}
+                <b class="cell-value roi-figure {{ 'positive' if item.roi_bps > 0 else 'negative' }}">{{ item.roi_bps|bps_percent(True) }}</b>
+                {% else %}
+                <span class="cell-value unknown">—</span>
+                {% endif %}
+            </div>
+            <div class="decision-wrap">
+                {% if item.verdict == 'opportunite' %}
+                <span class="verdict-badge verdict-opportunite">Opportunité</span>
+                {% elif item.verdict == 'surveiller' %}
+                <span class="verdict-badge verdict-surveiller">À examiner</span>
+                {% elif item.verdict == 'sans_cote' %}
+                <span class="verdict-badge verdict-sans_cote">Sans cote</span>
+                {% else %}
+                <span class="verdict-badge verdict-non_rentable">Non rentable</span>
+                {% endif %}
+                {% if item.url %}
+                <a class="external-link" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">↗</a>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="padding: 1rem; color: var(--text-muted); font-size: 0.9rem;">Aucune annonce en cours pour ce vendeur.</p>
+    {% endif %}
+</section>
+{% endblock %}

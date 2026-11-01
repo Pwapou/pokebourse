@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .sidebar { fill: #171827; }
+      .surface { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; rx: 8px; }
+      .topbar { fill: #ffffff; stroke: #e7e8ed; stroke-width: 1; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 700; fill: #20242d; }
+      .text-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #727785; }
+      .text-sidebar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; fill: #aeb0bf; }
+      .tbl-hdr { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #727785; }
+      .input-box { fill: #ffffff; stroke: #d0d3de; stroke-width: 1; rx: 6px; }
+      .input-lbl { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; fill: #4b5563; }
+      .input-val { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: #20242d; }
+      .row-txt { font-family: -apple-system, sans-serif; font-size: 13px; fill: #20242d; }
+      .badge-green { fill: #e8f6ef; }
+      .badge-green-txt { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; fill: #12805c; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" class="bg" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="700" class="sidebar" />
+  <rect x="24" y="24" width="34" height="34" rx="8" fill="#625df5" />
+  <text x="41" y="47" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" fill="#ffffff" text-anchor="middle">⚡</text>
+  <text x="68" y="40" font-family="-apple-system, sans-serif" font-size="17" font-weight="800" fill="#ffffff">Pokébourse</text>
+  <text x="68" y="54" font-family="-apple-system, sans-serif" font-size="10" font-weight="500" fill="#8f91a3">AIDE À L'ARBITRAGE</text>
+  <text x="32" y="115" class="text-sidebar">📊 Tableau de bord</text>
+  <text x="32" y="155" class="text-sidebar">🗂️ Catalogue &amp; Annonces</text>
+  <!-- Item 3: Active Rentabilité -->
+  <rect x="14" y="170" width="212" height="40" rx="6" fill="#2b2a4b" />
+  <rect x="14" y="170" width="3" height="40" rx="1.5" fill="#625df5" />
+  <text x="32" y="195" font-family="-apple-system, sans-serif" font-size="13" font-weight="600" fill="#ffffff">📈 Rentabilité &amp; Cotes</text>
+  <text x="32" y="235" class="text-sidebar">⏱️ Veilles Vinted &amp; LBC</text>
+  <text x="32" y="275" class="text-sidebar">👥 Annuaire Vendeurs</text>
+  <text x="32" y="315" class="text-sidebar">🤖 Supervision Scraping</text>
+  <text x="32" y="355" class="text-sidebar">💾 Sauvegardes SQLite</text>
+
+  <!-- Topbar -->
+  <rect x="240" y="0" width="960" height="66" class="topbar" />
+  <text x="270" y="38" font-family="-apple-system, sans-serif" font-size="13" fill="#727785">Pokébourse <tspan fill="#20242d" font-weight="600">/ Moteur de Rentabilité</tspan></text>
+
+  <!-- Title -->
+  <text x="270" y="105" class="text-title">Paramétrage financier &amp; Cotes de marché</text>
+  <text x="270" y="125" class="text-sub">Ajustez vos frais de revente et consultez le référentiel des prix du marché.</text>
+
+  <!-- Card 1: Fee Configuration Form -->
+  <rect x="270" y="145" width="890" height="175" rx="8" class="surface" />
+  <text x="290" y="175" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">⚙️ Profil de frais &amp; Seuils d'opportunité</text>
+  <text x="290" y="193" class="text-sub">Tout calcul net déduit strictement ces coûts. Les seuils qualifient une annonce en « Opportunité ».</text>
+
+  <!-- Inputs Grid -->
+  <!-- Col 1 -->
+  <text x="290" y="222" class="input-lbl">COMMISSION REVENTE (%)</text>
+  <rect x="290" y="230" width="130" height="34" class="input-box" />
+  <text x="305" y="252" class="input-val">5,00 %</text>
+
+  <!-- Col 2 -->
+  <text x="435" y="222" class="input-lbl">EMBALLAGE / EXPÉDITION (€)</text>
+  <rect x="435" y="230" width="130" height="34" class="input-box" />
+  <text x="450" y="252" class="input-val">2,00 €</text>
+
+  <!-- Col 3 -->
+  <text x="580" y="222" class="input-lbl">PORT ACHETEUR DÉFAUT (€)</text>
+  <rect x="580" y="230" width="130" height="34" class="input-box" />
+  <text x="595" y="252" class="input-val">4,50 €</text>
+
+  <!-- Col 4 -->
+  <text x="725" y="222" class="input-lbl">MIN. GAIN NET (€)</text>
+  <rect x="725" y="230" width="125" height="34" class="input-box" />
+  <text x="740" y="252" class="input-val">10,00 €</text>
+
+  <!-- Col 5 -->
+  <text x="865" y="222" class="input-lbl">MIN. ROI (%)</text>
+  <rect x="865" y="230" width="115" height="34" class="input-box" />
+  <text x="880" y="252" class="input-val">15,00 %</text>
+
+  <!-- Save Button -->
+  <rect x="995" y="230" width="145" height="34" rx="6" fill="#625df5" />
+  <text x="1067" y="252" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Enregistrer</text>
+
+  <!-- Card 2: Market References Table -->
+  <rect x="270" y="335" width="890" height="345" rx="8" class="surface" />
+  <text x="290" y="368" font-family="-apple-system, sans-serif" font-size="15" font-weight="700" fill="#20242d">📊 Cotes de référence du marché (Cardmarket, Ventes vérifiées)</text>
+  
+  <rect x="950" y="350" width="190" height="30" rx="6" fill="#efeeff" />
+  <text x="1045" y="370" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#625df5" text-anchor="middle">+ Importer des cotes JSONL</text>
+
+  <!-- Table Head -->
+  <rect x="290" y="395" width="850" height="32" fill="#f6f7fb" rx="4" />
+  <text x="310" y="415" class="tbl-hdr">CARTE OFFICIELLE &amp; NUMÉRO</text>
+  <text x="590" y="415" class="tbl-hdr">ÉTAT CIBLÉ</text>
+  <text x="700" y="415" class="tbl-hdr">PRIX DE RÉFÉRENCE</text>
+  <text x="870" y="415" class="tbl-hdr">SOURCE &amp; DATE</text>
+  <text x="1060" y="415" class="tbl-hdr">ACTIONS</text>
+
+  <!-- Row 1 -->
+  <line x1="290" y1="465" x2="1140" y2="465" stroke="#f0f1f4" />
+  <text x="310" y="450" class="row-txt" font-weight="700">Dracaufeu • Set de Base #4/102</text>
+  <text x="590" y="450" class="row-txt">Near Mint (NM)</text>
+  <text x="700" y="450" class="row-txt" font-weight="800" fill="#12805c">290,00 €</text>
+  <text x="870" y="445" class="row-txt">Cardmarket (ventes 30j)</text>
+  <text x="870" y="460" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Obs: 2026-10-31 • 14 ventes</text>
+  <text x="1080" y="450" font-family="-apple-system, sans-serif" font-size="12" fill="#b54242">Supprimer</text>
+
+  <!-- Row 2 -->
+  <line x1="290" y1="520" x2="1140" y2="520" stroke="#f0f1f4" />
+  <text x="310" y="505" class="row-txt" font-weight="700">Pikachu VMAX Rainbow #188/185</text>
+  <text x="590" y="505" class="row-txt">Mint / NM</text>
+  <text x="700" y="505" class="row-txt" font-weight="800" fill="#12805c">135,00 €</text>
+  <text x="870" y="500" class="row-txt">Cardmarket</text>
+  <text x="870" y="515" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Obs: 2026-10-28 • 8 ventes</text>
+  <text x="1080" y="505" font-family="-apple-system, sans-serif" font-size="12" fill="#b54242">Supprimer</text>
+
+  <!-- Row 3 -->
+  <line x1="290" y1="575" x2="1140" y2="575" stroke="#f0f1f4" />
+  <text x="310" y="560" class="row-txt" font-weight="700">Noctali V Alternative #189/203</text>
+  <text x="590" y="560" class="row-txt">Excellent (EX)</text>
+  <text x="700" y="560" class="row-txt" font-weight="800" fill="#12805c">140,00 €</text>
+  <text x="870" y="555" class="row-txt">eBay Ventes Réelles</text>
+  <text x="870" y="570" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Obs: 2026-10-25 • 5 ventes</text>
+  <text x="1080" y="560" font-family="-apple-system, sans-serif" font-size="12" fill="#b54242">Supprimer</text>
+
+  <!-- Row 4 -->
+  <line x1="290" y1="630" x2="1140" y2="630" stroke="#f0f1f4" />
+  <text x="310" y="615" class="row-txt" font-weight="700">Mew Antique Promo Wizards #8</text>
+  <text x="590" y="615" class="row-txt">Tous états</text>
+  <text x="700" y="615" class="row-txt" font-weight="800" fill="#12805c">55,00 €</text>
+  <text x="870" y="610" class="row-txt">Estimation manuelle</text>
+  <text x="870" y="625" font-family="-apple-system, sans-serif" font-size="10" fill="#727785">Obs: 2026-10-30</text>
+  <text x="1080" y="615" font-family="-apple-system, sans-serif" font-size="12" fill="#b54242">Supprimer</text>
+</svg>

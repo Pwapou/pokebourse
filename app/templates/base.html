@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pokébourse, votre espace local d'analyse du marché des cartes Pokémon.">
+    <title>{% block title %}Pokébourse{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261104">
+    <script src="{{ url_for('static', path='/forms.js') }}?v=20261104" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar" aria-label="Navigation latérale">
+            <a class="brand" href="/" aria-label="Pokébourse, accueil">
+                <span class="brand-mark" aria-hidden="true">P</span>
+                <span><strong>Pokébourse</strong><small>ACHAT-REVENTE</small></span>
+            </a>
+            <nav class="main-nav" aria-label="Navigation principale">
+                <span class="nav-label">PILOTAGE</span>
+                <a class="nav-item {{ 'active' if page == 'dashboard' else '' }}" href="/">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></svg>
+                    Tableau de bord
+                </a>
+                <a class="nav-item {{ 'active' if page == 'catalog' else '' }}" href="/catalog">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2Z"/></svg>
+                    Annonces
+                </a>
+                <a class="nav-item {{ 'active' if page == 'profitability' else '' }}" href="/profitability">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 18.5 9.5 12.5l4 4L22 6.9 20.6 5.5l-7.1 8-4-4-7.5 7.5 1.5 1.5Z"/></svg>
+                    Analyse
+                </a>
+                <a class="nav-item {{ 'active' if page == 'sellers' else '' }}" href="/sellers">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    Vendeurs
+                </a>
+                <span class="nav-label">GESTION</span>
+                <a class="nav-item {{ 'active' if page == 'watches' else '' }}" href="/watches">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 0 0-8 8h3a5 5 0 0 1 10 0h3a8 8 0 0 0-8-8Zm7 9a7 7 0 0 1-14 0H2a10 10 0 0 0 20 0h-3Zm-7 4a3 3 0 0 0 3-3h-6a3 3 0 0 0 3 3Z"/></svg>
+                    Veilles
+                </a>
+                <a class="nav-item {{ 'active' if page == 'agents' else '' }}" href="/agents">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7v2h20V7L12 2Zm-8 6v8H2v2h20v-2h-2V8h-3v8h-3V8h-4v8H7V8H4Z"/></svg>
+                    Agents
+                </a>
+                <a class="nav-item {{ 'active' if page == 'backups' else '' }}" href="/backups">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 6v3h16V6l-8-4Zm-8 9v9H2v2h20v-2h-2v-9h-3v9h-3v-9h-4v9H7v-9H4Z"/></svg>
+                    Sauvegardes
+                </a>
+                <a class="nav-item" href="/#import">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 16V5.8L7.4 9.4 6 8l6-6 6 6-1.4 1.4L13 5.8V16h-2Zm-6 4v-5h2v3h10v-3h2v5H5Z"/></svg>
+                    Importer des données
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="local-indicator"><span aria-hidden="true"></span> ENVIRONNEMENT LOCAL</div>
+                <p>Vos données restent sur votre machine.</p>
+                <span class="version">POKÉBOURSE · V0.1</span>
+            </div>
+        </aside>
+        <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+        <div class="workspace">
+            <header class="topbar">
+                <button class="menu-button" id="menu-button" type="button" aria-expanded="false" aria-controls="sidebar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></svg>
+                    Menu
+                </button>
+                <div class="breadcrumb"><span>Pokébourse</span><b>/</b>{% block breadcrumb %}Vue d’ensemble{% endblock %}</div>
+                <div class="database-status"><span aria-hidden="true"></span> Base opérationnelle</div>
+            </header>
+            <main class="main-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>

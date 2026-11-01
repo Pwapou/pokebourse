@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Agent · Pokébourse{% endblock %}
+{% block breadcrumb %}<a href="/agents">Agents déployés</a> / {{ agent.name }}{% endblock %}
+{% block content %}
+{% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+<meta http-equiv="refresh" content="{{ refresh_seconds }}">
+<section class="page-heading">
+    <div><span class="eyebrow">FICHE AGENT</span><h1>{{ agent.name }}</h1><p>Déploiement {{ agent.deployment_id }} · état du processus : <span class="state-badge {{ state_badge_classes.get(agent.process_state, 'neutral') }}">{{ state_labels[agent.process_state] }}</span>{% if agent.stop_reason == 'voluntary' %} · arrêt volontaire{% elif agent.stop_reason == 'lost' %} · arrêt après perte de signal{% endif %}</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/agents">Tous les agents</a></div>
+</section>
+<div class="config-grid">
+    <section class="panel config-panel">
+        <div class="panel-heading"><div><span class="section-kicker">IDENTITÉ RÉSEAU</span><h2>Sortie publique</h2></div></div>
+        <div class="watch-help">
+            <ul>
+                <li>IP publique de l’agent : {% if agent.public_ip %}<code>{{ agent.public_ip }}</code>{% else %}<span class="unknown">IP inconnue</span>{% endif %}</li>
+                <li>Dernier signal de vie : {% if agent.last_heartbeat_at %}{{ agent.last_heartbeat_at|date }}{% else %}<span class="unknown">Aucun</span>{% endif %}</li>
+                <li>Démarré le : {{ agent.started_at|date }}</li>
+            </ul>
+        </div>
+    </section>
+    <section class="panel config-panel">
+        <div class="panel-heading"><div><span class="section-kicker">INCIDENTS ACTIFS</span><h2>Erreurs en cours</h2></div></div>
+        {% if agent.active_incidents %}
+        <div class="table-wrap">
+            <table class="watch-table">
+                <caption class="visually-hidden">Incidents actifs de l’agent</caption>
+                <thead><tr><th scope="col">CODE</th><th scope="col">MESSAGE</th><th scope="col">RÉPÉTITIONS</th><th scope="col">DEPUIS</th></tr></thead>
+                <tbody>
+                    {% for incident in agent.active_incidents %}
+                    <tr>
+                        <td><span class="tag">{{ error_code_labels.get(incident.error_code, incident.error_code) }}</span>{% if incident.http_status %}<span class="cell-sub">HTTP {{ incident.http_status }}</span>{% endif %}</td>
+                        <td>{{ incident.message }}<span class="cell-sub">corrélation {{ incident.correlation_id }}</span></td>
+                        <td>{{ incident.occurrence_count }}</td>
+                        <td>{{ incident.first_seen_at|date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state compact"><p>Aucun incident actif.</p></div>
+        {% endif %}
+    </section>
+</div>
+<section class="panel imports-panel watch-list-panel">
+    <div class="panel-heading"><div><span class="section-kicker">COLLECTEURS</span><h2>État par site</h2></div></div>
+    {% if agent.collectors %}
+    <div class="table-wrap responsive-table-wrap">
+        <table class="watch-table">
+            <caption class="visually-hidden">Collecteurs de l’agent par site</caption>
+            <thead><tr><th scope="col">SITE</th><th scope="col">IP DE SORTIE</th><th scope="col">ÉTAT</th><th scope="col">DERNIÈRE RÉUSSITE</th><th scope="col">DERNIÈRE ERREUR</th><th scope="col" class="align-right">ACTIONS</th></tr></thead>
+            <tbody>
+                {% for collector in agent.collectors %}
+                <tr>
+                    <th scope="row"><strong>{{ collector.site }}</strong></th>
+                    <td>{% if collector.public_ip %}{{ collector.public_ip }}{% else %}<span class="unknown">IP inconnue</span>{% endif %}</td>
+                    <td><span class="state-badge {{ state_badge_classes.get(collector.state, 'neutral') }}">{{ state_labels[collector.state] }}</span>{% if collector.suspension_active %}<span class="cell-sub">Suspendu jusqu’à {{ collector.suspended_until|date }}</span>{% endif %}</td>
+                    <td>{% if collector.last_success_at %}{{ collector.last_success_at|date }}{% else %}<span class="unknown">Aucune</span>{% endif %}</td>
+                    <td>{% if collector.last_error_code %}<div><span class="tag">{{ error_code_labels.get(collector.last_error_code, collector.last_error_code) }}</span><span class="cell-sub">{{ collector.last_error_message }}</span></div>{% else %}—{% endif %}</td>
+                    <td class="align-right">{% if collector.state == 'blocked' %}<form class="inline-form" action="/agents/{{ agent.id }}/collectors/{{ collector.collector_key }}/resume" method="post"><button class="button small primary" type="submit">Reprendre</button></form>{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact"><p>Aucun collecteur enregistré pour cet agent.</p></div>
+    {% endif %}
+</section>
+<section class="panel imports-panel watch-list-panel">
+    <div class="panel-heading"><div><span class="section-kicker">HISTORIQUE</span><h2>Transitions et événements</h2></div></div>
+    {% if agent.history %}
+    <div class="table-wrap responsive-table-wrap">
+        <table class="watch-table">
+            <caption class="visually-hidden">Historique des événements de supervision</caption>
+            <thead><tr><th scope="col">DATE (UTC)</th><th scope="col">TYPE</th><th scope="col">COLLECTEUR</th><th scope="col">DÉTAIL</th></tr></thead>
+            <tbody>
+                {% for event in agent.history %}
+                <tr>
+                    <td class="nowrap">{{ event.occurred_at|date }}</td>
+                    <td>{% if event.event_type == 'state_change' %}<span class="state-badge {{ state_badge_classes.get(event.to_state, 'neutral') }}">{{ state_labels.get(event.to_state, event.to_state) }}</span>{% if event.from_state %}<span class="cell-sub">depuis {{ state_labels.get(event.from_state, event.from_state) }}</span>{% endif %}{% elif event.event_type == 'error' %}<span class="tag">{{ error_code_labels.get(event.error_code, event.error_code or 'Événement') }}</span>{% else %}<span class="tag">{{ 'Signal de vie' if event.event_type == 'heartbeat' else 'Cycle de vie' }}</span>{% endif %}</td>
+                    <td>{{ event.collector_key or '—' }}</td>
+                    <td>{{ event.message or '—' }}{% if event.received_at and event.received_at != event.occurred_at %}<span class="cell-sub">reçu {{ event.received_at|date }}</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact"><p>Aucun événement consigné.</p></div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pokébourse — Maquette Mosaic × Flowbite</title>
+  <link rel="stylesheet" href="/static/prototype.css">
+  <script src="/static/prototype.js?v=2" defer></script>
+</head>
+<body>
+  <div class="demo-banner">MAQUETTE FONCTIONNELLE · Données fictives de démonstration</div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" data-view-link="dashboard" aria-label="Pokébourse, tableau de bord"><span class="brand-symbol">P</span><span>Pokébourse<small>Collection &amp; revente</small></span></a>
+      <nav class="nav" aria-label="Navigation de la maquette">
+        <span class="nav-title">PILOTAGE</span>
+        <button class="nav-link active" data-view="dashboard"><span class="nav-icon">▦</span>Vue d’ensemble</button>
+        <button class="nav-link" data-view="purchases"><span class="nav-icon">↘</span>Mes achats<span class="nav-count">8</span></button>
+        <button class="nav-link" data-view="listings"><span class="nav-icon">⌕</span>Annonces à analyser</button>
+        <span class="nav-title">GESTION</span>
+        <button class="nav-link" data-view="references"><span class="nav-icon">◇</span>Prix de référence</button>
+        <button class="nav-link" data-view="imports"><span class="nav-icon">↥</span>Imports &amp; sauvegardes</button>
+      </nav>
+      <div class="portfolio-mini"><span>VALEUR ESTIMÉE DU PORTEFEUILLE</span><strong>1 284,00 €</strong><small><b>+18,4 %</b> sur le coût d’achat</small></div>
+      <div class="sidebar-foot"><span class="local-dot"></span>Données locales</div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="menu-button" id="menu-button" aria-label="Ouvrir la navigation">☰</button>
+        <div class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Rechercher une carte, un achat…" aria-label="Recherche globale"></div>
+        <button class="button secondary compact" id="import-demo">Importer</button>
+        <button class="avatar" aria-label="Profil local">M</button>
+      </header>
+
+      <main>
+        <section class="view active" id="view-dashboard">
+          <div class="page-head"><div><p class="overline">LUNDI 1 NOVEMBRE</p><h1>Bonjour Mathieu</h1><p>Voici l’état de votre collection et les annonces à examiner.</p></div><button class="button primary" data-go="listings">Analyser les annonces</button></div>
+          <div class="metrics">
+            <article class="metric"><div><span>PORTEFEUILLE</span><span class="metric-mark violet">◇</span></div><strong>1 284,00 €</strong><p><b class="positive">+18,4 %</b> de plus-value estimée</p></article>
+            <article class="metric"><div><span>CARTES DÉTENUES</span><span class="metric-mark blue">▤</span></div><strong>8</strong><p>5 à vendre · 3 en collection</p></article>
+            <article class="metric"><div><span>OPPORTUNITÉS</span><span class="metric-mark green">↗</span></div><strong>3</strong><p><a href="#listings" data-view-link="listings">À examiner maintenant →</a></p></article>
+            <article class="metric"><div><span>EN VENTE</span><span class="metric-mark amber">◷</span></div><strong>2</strong><p>Depuis 6 jours en moyenne</p></article>
+          </div>
+          <div class="dashboard-grid">
+            <section class="panel portfolio-panel"><div class="panel-head"><div><h2>Suivi du portefeuille</h2><p>Valeur estimée et performance par statut</p></div><select aria-label="Période"><option>30 jours</option><option>90 jours</option></select></div><div class="chart-summary"><strong>1 284,00 €</strong><span class="trend">↗ 199,50 €</span></div><div class="chart" aria-label="Évolution fictive du portefeuille sur 30 jours"><svg viewBox="0 0 700 190" preserveAspectRatio="none" role="img"><defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#625df5" stop-opacity=".20"/><stop offset="1" stop-color="#625df5" stop-opacity="0"/></linearGradient></defs><path class="gridline" d="M0 35H700M0 90H700M0 145H700"/><path class="area" d="M0 155L70 149L140 152L210 130L280 135L350 108L420 115L490 82L560 70L630 45L700 29V190H0Z"/><path class="line" d="M0 155L70 149L140 152L210 130L280 135L350 108L420 115L490 82L560 70L630 45L700 29"/><circle cx="700" cy="29" r="5"/></svg><div class="chart-labels"><span>3 oct.</span><span>10 oct.</span><span>17 oct.</span><span>24 oct.</span><span>1 nov.</span></div></div></section>
+            <section class="panel status-panel"><div class="panel-head"><div><h2>État de la collection</h2><p>Répartition des 8 cartes</p></div></div><div class="donut-wrap"><div class="donut"><span><strong>8</strong>cartes</span></div><ul class="legend"><li><i class="dot for-sale"></i><span>À vendre</span><b>5</b></li><li><i class="dot listed"></i><span>En vente</span><b>2</b></li><li><i class="dot kept"></i><span>Collection</span><b>1</b></li></ul></div><button class="button secondary full" data-go="purchases">Gérer mes achats</button></section>
+          </div>
+          <section class="panel"><div class="panel-head"><div><h2>À examiner en priorité</h2><p>Les meilleurs gains nets estimés</p></div><button class="text-button" data-go="listings">Toutes les annonces →</button></div><div id="dashboard-opportunities" class="compact-list"></div></section>
+        </section>
+
+        <section class="view" id="view-purchases">
+          <div class="page-head"><div><p class="overline">PORTEFEUILLE</p><h1>Mes achats</h1><p>Suivez chaque carte, du prix payé à la revente.</p></div><button class="button primary" id="add-purchase">+ Ajouter un achat</button></div>
+          <div class="purchase-summary"><div><span>INVESTISSEMENT TOTAL</span><strong>1 084,50 €</strong></div><div><span>VALEUR ESTIMÉE</span><strong>1 284,00 €</strong></div><div><span>PLUS-VALUE LATENTE</span><strong class="positive">+199,50 €</strong></div></div>
+          <section class="panel"><div class="toolbar"><div class="tabs" role="tablist" aria-label="Filtrer les achats"><button class="tab active" data-purchase-filter="all">Toutes <b>8</b></button><button class="tab" data-purchase-filter="to_sell">À vendre <b>5</b></button><button class="tab" data-purchase-filter="listed">En vente <b>2</b></button><button class="tab" data-purchase-filter="collection">Collection <b>1</b></button></div><select id="purchase-sort" aria-label="Trier les achats"><option value="recent">Achat récent</option><option value="profit">Plus-value estimée</option><option value="name">Nom</option></select></div><div class="product-list" id="purchase-list"></div></section>
+        </section>
+
+        <section class="view" id="view-listings">
+          <div class="page-head"><div><p class="overline">RECHERCHE D’OPPORTUNITÉS</p><h1>Annonces à analyser</h1><p>Comparez le coût total à une revente estimée, nette de frais.</p></div><button class="button secondary">Exporter la sélection</button></div>
+          <section class="panel listing-panel"><form class="filters" id="listing-filters"><label class="search-input"><span>Recherche</span><input id="listing-search" type="search" placeholder="Carte, extension, vendeur…"></label><label><span>Statut</span><select id="listing-status"><option value="all">Tous les statuts</option><option value="opportunity">Opportunité</option><option value="review">À examiner</option><option value="insufficient">Données insuffisantes</option></select></label><label><span>Extension</span><select><option>Toutes les extensions</option><option>151</option><option>Évolutions</option><option>Base Set</option></select></label><button type="reset" class="text-button reset">Réinitialiser</button></form><div class="list-meta"><span id="listing-count"></span><label>Trier par <select id="listing-sort"><option value="profit">Gain net décroissant</option><option value="roi">ROI décroissant</option><option value="price">Prix croissant</option></select></label></div><div class="product-list" id="listing-list"></div></section>
+        </section>
+
+        <section class="view" id="view-references"><div class="page-head"><div><p class="overline">DONNÉES DE MARCHÉ</p><h1>Prix de référence</h1><p>Documentez l’origine et la fraîcheur de chaque estimation.</p></div><button class="button primary">+ Ajouter une référence</button></div><section class="panel"><div class="panel-head"><div><h2>Références récentes</h2><p>Ventes conclues, annonces ou estimations manuelles</p></div></div><div class="reference-list" id="reference-list"></div></section></section>
+
+        <section class="view" id="view-imports"><div class="page-head"><div><p class="overline">DONNÉES LOCALES</p><h1>Imports &amp; sauvegardes</h1><p>Ajoutez des annonces et conservez une copie de votre base.</p></div><button class="button primary">Créer une sauvegarde</button></div><div class="two-panels"><section class="panel padded"><h2>Importer des annonces</h2><p class="muted">Fichier JSONL, 2 Mo maximum. Aucune donnée ne sera ajoutée dans cette maquette.</p><label class="upload-zone">Choisir un fichier JSONL<input type="file" accept=".jsonl"></label><div class="notice" id="import-notice" hidden></div></section><section class="panel padded"><h2>Dernière sauvegarde</h2><p class="muted">Aujourd’hui à 17:53 · 92 Kio</p><button class="button secondary">Télécharger</button></section></div></section>
+      </main>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" aria-label="Détail du produit" aria-modal="true" role="dialog" hidden><div id="drawer-content"></div></aside>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
