@@ -117,7 +117,7 @@ class TcgdexCache:
         return inserted
 
     def upsert_set(self, set_obj: TcgdexSet) -> None:
-        with self.connection:
+        with self.connection if not self.connection.in_transaction else nullcontext():
             self.connection.execute(
                 """
                 INSERT INTO pokemon_reference_sets (
@@ -125,13 +125,14 @@ class TcgdexCache:
                     release_date, logo_url, symbol_url
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
-                    name = excluded.name,
-                    series = excluded.series,
-                    card_count_total = excluded.card_count_total,
-                    card_count_official = excluded.card_count_official,
-                    release_date = excluded.release_date,
-                    logo_url = excluded.logo_url,
-                    symbol_url = excluded.symbol_url,
+                    name = CASE WHEN excluded.name=excluded.id AND pokemon_reference_sets.name<>pokemon_reference_sets.id
+                                THEN pokemon_reference_sets.name ELSE excluded.name END,
+                    series = COALESCE(excluded.series, pokemon_reference_sets.series),
+                    card_count_total = COALESCE(excluded.card_count_total, pokemon_reference_sets.card_count_total),
+                    card_count_official = COALESCE(excluded.card_count_official, pokemon_reference_sets.card_count_official),
+                    release_date = COALESCE(excluded.release_date, pokemon_reference_sets.release_date),
+                    logo_url = COALESCE(excluded.logo_url, pokemon_reference_sets.logo_url),
+                    symbol_url = COALESCE(excluded.symbol_url, pokemon_reference_sets.symbol_url),
                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
                 """,
                 (

@@ -209,14 +209,46 @@ docker compose exec -T app pytest
 
 ## 11. Bilan de la suite de tests automatisés (Novembre 2026)
 
-- **311 tests automatisés passants sur 30 suites** (0 échec, exécution en ~9s dans Docker).
+- **313 tests automatisés passants sur 30 suites** (0 échec, exécution en ~9,8s dans Docker).
 - Aucun appel réseau réel émis (100 % mocké ou basé sur les jeux locaux embarqués).
-- Herméticité absolue, précision monétaire en centimes et points de base, et intégrité SQLite (17 migrations versionnées) validées.
+- Herméticité absolue, précision monétaire en centimes et points de base, et intégrité SQLite (18 migrations versionnées de 0001 à 0018) validées.
 
 ---
 
-## 12. Prochaines étapes recommandées
+## 12. Preuves de prix & cartes comparables dans la fiche détaillée — novembre 2026
+
+- **Extension de `find_price_comparables` (`app/profitability.py`)** : la recherche de preuves de prix consolide désormais trois sources distinctes pour la même carte :
+  1. `references` : ventes conclues et cotes enregistrées dans `market_references` (ex: ventes réussies eBay, Cardmarket, etc.), avec date d'observation et lien source.
+  2. `listings` : annonces du catalogue local (actives en priorité, triées par proximité de prix).
+  3. `sales` : achats passés du portefeuille (`purchases`) au statut `vendu`.
+- **Calcul de l'écart relatif (`delta_cents`)** : chaque preuve affiche son écart net par rapport à l'estimation de revente calculée, permettant d'apprécier immédiatement la cohérence du prix.
+- **Rendu dans `catalog_detail.html`** : affichage modulaire structuré par catégorie de preuve avec étiquettes de provenance, dates et liens sortants.
+- **Outil d'audit en lecture seule (`scripts/comparables_report.py`)** : script console autonome permettant de vérifier la base locale et d'éditer un rapport des annonces avec comparables disponibles.
+- Couverture de test étendue dans `tests/test_profitability.py` portant le total de la suite à **313 tests au vert**.
+
+---
+
+## 13. Prochaines étapes recommandées
 
 1. **Exécution du protocole pilote Phase 0** : Réaliser les 300 annotations (dont 60 doubles lectures aveugles) via l'interface `/annotations`, mesurer l'accord inter-annotateurs et exporter le jeu consolidé pour l'apprentissage.
 2. **Phase 1 ML** : Établir la baseline lexicale mesurée puis entraîner le modèle de ranking (LightGBM) avec partitions étanches sans fuite de données.
 3. **Support multilingue étendu** : Intégrer les référentiels TCGdex anglais et japonais avec gestion des équivalences d'extensions.
+
+---
+
+## 14. Référentiel TCGdex progressif et reprenable — novembre 2026
+
+- Écran `/tcgdex`, accessible depuis le menu et le diagnostic : sélection des extensions utiles, inventaire local, distinction résumés / fiches détaillées / effectifs annoncés, progression et pause/reprise.
+- Migration additive `0018_tcgdex_sync_jobs.sql` : file dédupliquée persistante, étapes par carte et réservation partagée ; réseau hors transaction SQLite et rejet des réponses d’un ancien worker après pause ou reprise.
+- Exécution par le worker après les recherches ciblées, un appel par passage ; trois tentatives par étape, replanification des 429 et cache de réussite de 24 h. Aucun appel réseau dans les routes de demande ou d’affichage.
+- Préservation des références, métadonnées détaillées, annonces originales et confirmations humaines. La synchronisation ne déclenche ni réidentification ni entraînement ML.
+- Commande `sync-tcgdex` pour demander des extensions, consulter la file hors ligne ou exécuter au plus une requête. Procédure et limites dans `docs/TCGDEX_SYNC.md`.
+- Validation Docker : **329 tests passants**, dont 16 nouveaux scénarios de synchronisation, avec réponses API simulées uniquement. Le parcours sélection, chargement partiel, pause, reprise et fin a aussi été vérifié dans Chromium sur ordinateur et mobile, sans erreur console.
+
+### Radar — première correction des preuves de prix
+
+Les achats historiques marqués « vendu » ne fournissent pas de prix de revente : ils sont exclus des preuves de prix. Les évaluations exposent une qualité de référence structurée et signalent le rapprochement approximatif et la portée agrégée du repli Cardmarket. Les montants et le calcul de rentabilité existants restent inchangés. Le reste du plan Radar reste à réaliser.
+
+### Radar — observations et décisions
+
+La migration 0019 ajoute les décisions locales, les observations économiques et leurs événements. Les états connus à la migration sont marqués comme historiques, sans événement rétroactif. Les collecteurs, imports et captures enregistrent leurs observations dans la transaction d'ingestion ; les révisions d'identité restent distinctes des événements de prix. Le radar visuel et les étapes suivantes restent à développer.

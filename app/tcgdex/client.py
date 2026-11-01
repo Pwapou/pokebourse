@@ -1,6 +1,9 @@
 import json
 import logging
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+import math
 from typing import Any
 import urllib.error
 import urllib.parse
@@ -12,6 +15,24 @@ TCGDEX_LOCALE_BASE_URL = "https://api.tcgdex.net/v2/{locale}"
 DEFAULT_TCGDEX_BASE_URL = TCGDEX_LOCALE_BASE_URL.format(locale="fr")
 DEFAULT_TIMEOUT_SECONDS = 10.0
 DEFAULT_USER_AGENT = "Pokebourse/1.0 (Pokemon Card Arbitrage; Local Fair Use)"
+
+
+def retry_after_seconds(value: str | None) -> float:
+    """Lit Retry-After en secondes ou date HTTP ; une valeur invalide reste bornée."""
+    if value:
+        try:
+            delay = float(value)
+            if math.isfinite(delay) and delay >= 0:
+                return delay
+        except ValueError:
+            try:
+                deadline = parsedate_to_datetime(value)
+                if deadline.tzinfo is None:
+                    deadline = deadline.replace(tzinfo=UTC)
+                return max(0.0, (deadline - datetime.now(UTC)).total_seconds())
+            except (ValueError, TypeError, OverflowError):
+                pass
+    return 60.0
 
 
 class TcgdexError(Exception):
@@ -71,8 +92,7 @@ class TcgdexClient:
                 if error.code == 404:
                     raise TcgdexNotFoundError(f"Ressource TCGdex non trouvée : {url}") from error
                 if error.code == 429:
-                    retry_after = error.headers.get("Retry-After")
-                    delay = float(retry_after) if retry_after else 1.0 * (2 ** attempts)
+                    delay = retry_after_seconds(error.headers.get("Retry-After"))
                     if attempts >= self.max_retries:
                         raise TcgdexRateLimitError("Quota de requêtes TCGdex dépassé (429).", delay) from error
                     logger.warning("TCGdex 429 ; attente de %.1fs avant nouvelle tentative.", delay)

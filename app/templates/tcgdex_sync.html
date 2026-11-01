@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Référentiel TCGdex · Pokébourse{% endblock %}
+{% block breadcrumb %}Référentiel TCGdex{% endblock %}
+{% block extra_head %}{% if following %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+{% block content %}
+{% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+<section class="page-heading">
+    <div><span class="eyebrow">IDENTITÉS OFFICIELLES · CATALOGUE FRANÇAIS</span><h1>Référentiel TCGdex</h1>
+        <p>Chargez les extensions utiles pour retrouver les cartes des annonces, puis complétez leurs attributs.</p></div>
+    <div class="heading-actions"><form method="post" action="/tcgdex/directory"><button class="button secondary" type="submit">Actualiser la liste des extensions</button></form>
+        <a class="button secondary" href="/identification/diagnostics?status=all">Diagnostic des annonces</a></div>
+</section>
+<section class="stats-grid" aria-label="Contenu du référentiel">
+    <article class="stat-card"><div class="stat-top"><span>CARTES LOCALES</span></div><strong>{{ card_count }}</strong><small>Références disponibles hors ligne</small></article>
+    <article class="stat-card"><div class="stat-top"><span>EXTENSIONS CONNUES</span></div><strong>{{ set_count }}</strong><small>Métadonnées enregistrées localement</small></article>
+    <article class="stat-card"><div class="stat-top"><span>AVEC RARETÉ RENSEIGNÉE</span></div><strong>{{ with_rarity }}</strong><small>Une identité peut exister sans tous ses attributs</small></article>
+    <article class="stat-card"><div class="stat-top"><span>INVENTAIRES PARTIELS</span></div><strong>{{ partial_count }}</strong><small>Effectif local inférieur au total annoncé</small></article>
+</section>
+<section class="panel" aria-labelledby="selection-title">
+    <div class="panel-heading"><h2 id="selection-title">Choisir les extensions à enrichir</h2></div>
+    <form method="get" class="review-search"><label>Nom ou identifiant d’extension<input name="q" maxlength="100" value="{{ query }}" placeholder="Ex. Évolutions Prismatiques ou sv08.5"></label><button class="button secondary" type="submit">Rechercher</button></form>
+    <p class="table-note">Les extensions mentionnées dans les annonces non résolues apparaissent en premier. Actualiser la liste récupère uniquement les métadonnées des extensions, sans charger toutes leurs cartes.</p>
+    <form method="post" action="/tcgdex/sync">
+        <div class="table-wrap"><table>
+            <thead><tr><th>CHOISIR</th><th>EXTENSION</th><th>CARTES LOCALES / TOTAL</th><th>AVEC RARETÉ</th><th>ANNONCES CONCERNÉES</th></tr></thead>
+            <tbody>{% for extension in extensions %}<tr>
+                <td><input type="checkbox" name="set_ids" value="{{ extension.id }}" aria-label="Sélectionner {{ extension.name }}"></td>
+                <td><strong class="pilot-item-title">{{ extension.name }}</strong><span class="cell-sub">{{ extension.id }}</span></td>
+                <td>{{ extension.cached_cards }} / {{ extension.card_count_total if extension.card_count_total is not none else 'Inconnu' }}{% if extension.partial %}<span class="cell-sub">Inventaire partiel</span>{% endif %}</td>
+                <td>{{ extension.with_rarity }}</td><td>{{ extension.mentions }}</td>
+            </tr>{% else %}<tr><td colspan="5">Aucune extension pour cette recherche. Actualisez la liste ou saisissez un identifiant connu.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <div class="structured-form review-form">
+            <label>Identifiant d’une autre extension (facultatif)<input name="manual_set_id" maxlength="50" placeholder="Ex. base1"></label>
+            <label><input type="checkbox" name="include_details" value="true" checked> Charger aussi les fiches détaillées des cartes</label>
+            <p class="field-hint">Les noms et numéros sont chargés d’abord. Les fiches détaillées avancent ensuite une par une ; vous pouvez mettre leur chargement en pause. Jusqu’à 20 extensions par sélection.</p>
+            <button class="button primary" type="submit">Enrichir la sélection</button>
+        </div>
+    </form>
+    <div class="catalog-footer"><p class="table-note">{{ filtered_count }} extension(s) · Page {{ current_page }} / {{ total_pages }}</p>
+        <nav class="pagination" aria-label="Pages des extensions">
+            {% if current_page > 1 %}<a class="button secondary small" href="?q={{ query|urlencode }}&amp;page={{ current_page - 1 }}">Précédentes</a>{% endif %}
+            {% if current_page < total_pages %}<a class="button secondary small" href="?q={{ query|urlencode }}&amp;page={{ current_page + 1 }}">Suivantes</a>{% endif %}
+        </nav>
+    </div>
+</section>
+<section class="panel" aria-labelledby="jobs-title">
+    <div class="panel-heading"><h2 id="jobs-title">Suivi des chargements</h2><a class="button secondary small" href="/tcgdex#jobs-title">Actualiser le suivi</a></div>
+    {% if following %}<p class="table-note">Suivi actualisé toutes les 5 secondes. <a class="text-link" href="/tcgdex#jobs-title">Arrêter le suivi automatique</a></p>{% endif %}
+    <p class="table-note">Le worker traite les demandes. Les cartes chargées restent disponibles pendant une pause ; une reprise continue au point enregistré. Les chargements réussis sont réutilisés pendant 24 heures.</p>
+    <div class="table-wrap"><table><thead><tr><th>DEMANDE</th><th>ÉTAT</th><th>AVANCEMENT</th><th>ACTIONS</th></tr></thead>
+        <tbody>{% for job in jobs %}<tr>
+            <td><strong>{{ job.set_name or job.set_id if job.kind == 'set' else 'Liste des extensions' }}</strong><span class="cell-sub">#{{ job.id }} · {{ job.updated_at|date }}</span></td>
+            <td>{{ status_labels[job.status] }}{% if job.status == 'queued' and job.error_code %}<span class="cell-sub">Nouvelle tentative après {{ job.next_attempt_at|date }}</span>{% endif %}
+                {% if job.error_message %}<span class="cell-sub pilot-item-title">{{ job.error_message }}</span>{% endif %}</td>
+            <td>{% if job.kind == 'directory' %}{{ job.summary_count }} extension(s) enregistrée(s)
+                {% elif not job.manifest_loaded %}Liste des cartes en attente
+                {% else %}<span class="cell-sub">Identités disponibles : {{ job.summary_count }}</span>
+                    {% if job.include_details %}<span class="cell-sub">Fiches détaillées : {{ job.detail_count }} / {{ job.summary_count }}</span>
+                        {% if job.summary_count %}<progress value="{{ job.detail_count }}" max="{{ job.summary_count }}" aria-label="Fiches détaillées de {{ job.set_name or job.set_id }}">{{ job.detail_count }} / {{ job.summary_count }}</progress>{% endif %}
+                    {% else %}<span class="cell-sub">Fiches détaillées non demandées</span>{% endif %}
+                    {% if job.expected_count is not none and job.summary_count < job.expected_count %}<span class="cell-sub">TCGdex a fourni {{ job.summary_count }} cartes pour un total annoncé de {{ job.expected_count }}.</span>{% endif %}
+                {% endif %}</td>
+            <td>{% if job.status in ['queued','running'] %}<form method="post" action="/tcgdex/jobs/{{ job.id }}/pause"><button class="button secondary small" type="submit">Mettre en pause</button></form>
+                {% elif job.status in ['paused','failed'] %}<form method="post" action="/tcgdex/jobs/{{ job.id }}/resume"><button class="button secondary small" type="submit">Reprendre</button></form>
+                {% elif job.kind == 'set' and not job.include_details %}<form method="post" action="/tcgdex/sync"><input type="hidden" name="set_ids" value="{{ job.set_id }}"><input type="hidden" name="include_details" value="true"><button class="button secondary small" type="submit">Compléter les détails</button></form>
+                {% else %}—{% endif %}</td>
+        </tr>{% else %}<tr><td colspan="4">Aucun chargement demandé. Choisissez une extension pour commencer.</td></tr>{% endfor %}
+        </tbody></table></div>
+    <p class="table-note">Après enrichissement, <a class="text-link" href="/catalog">réexaminez les annonces depuis le catalogue</a>. Une synchronisation ajoute des références ; elle ne modifie pas les observations ou les validations humaines et ne garantit ni l’authenticité ni une cote de prix.</p>
+</section>
+{% endblock %}

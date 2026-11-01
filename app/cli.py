@@ -64,6 +64,12 @@ def build_parser() -> argparse.ArgumentParser:
     diagnostic.add_argument("--limit", type=int, choices=range(1, 501), default=100, metavar="1..500")
     diagnostic.add_argument("--status", choices=("unidentified", "ambiguous", "all"), default="unidentified")
     diagnostic.add_argument("--json", action="store_true", dest="as_json")
+    tcgdex_sync = subparsers.add_parser("sync-tcgdex", help="Mettre en file l'enrichissement du référentiel français")
+    tcgdex_sync.add_argument("sets", nargs="*", help="Identifiants d'extension, ex. base1 sv03.5")
+    tcgdex_sync.add_argument("--directory", action="store_true", help="Actualiser la liste des extensions")
+    tcgdex_sync.add_argument("--summaries-only", action="store_true", help="Charger les identités sans les fiches détaillées")
+    tcgdex_sync.add_argument("--once", action="store_true", help="Exécuter au plus une requête immédiatement due")
+    tcgdex_sync.add_argument("--status", action="store_true", help="Afficher le suivi en JSON, sans appel réseau")
 
     import_cat = subparsers.add_parser(
         "import-catalog", help="Importer un fichier JSONL d'annonces"
@@ -253,6 +259,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                     print(f"Annonces analysées : {report['analyzed_count']} / {report['population']} ; {report['with_candidates']} avec candidats")
                     for key, count in report["counts"].items():
                         print(f"- {report['labels'][key]} : {count}")
+            elif args.command == "sync-tcgdex":
+                from app.tcgdex.sync import enqueue_sync, process_sync_step, sync_dashboard, validate_set_selection
+                check_database(connection)
+                selected_sets = validate_set_selection(args.sets) if args.sets else []
+                if not (args.sets or args.directory or args.once or args.status):
+                    raise ValueError("Indiquez des extensions, --directory, --once ou --status.")
+                if args.directory:
+                    print(f"Liste des extensions : tâche #{enqueue_sync(connection)}")
+                for set_id in selected_sets:
+                    job_id = enqueue_sync(connection, set_id, include_details=not args.summaries_only)
+                    print(f"Extension {set_id} : tâche #{job_id}")
+                if args.once:
+                    processed = process_sync_step(connection, interval_seconds=settings.tcgdex_sync_interval_seconds)
+                    print("Une étape exécutée." if processed else "Aucune requête immédiatement due.")
+                if args.status:
+                    print(json.dumps(sync_dashboard(connection)["jobs"], ensure_ascii=False, indent=2))
             elif args.command == "list-watches":
                 check_database(connection)
                 service = WatchService(
@@ -439,6 +461,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ProfitabilityError,
         WatchNotFoundError,
         WatchValidationError,
+        ValueError,
     ) as error:
         print(f"Erreur : {error}", file=sys.stderr)
         return 1

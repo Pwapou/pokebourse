@@ -4,6 +4,8 @@ import sqlite3
 from datetime import UTC, datetime
 from typing import Any
 
+from app.radar.repository import record_observation
+
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 MAX_IMPORT_BYTES = 2 * 1024 * 1024
@@ -173,6 +175,12 @@ def import_jsonl(
                 connection.execute(
                     "UPDATE catalog_items SET original_title=?, raw_data=? WHERE id=?",
                     (original_title, json.dumps(observed, ensure_ascii=False), row["id"]),
+                )
+                record_observation(
+                    connection, int(row["id"]), price_cents=item.price_cents,
+                    shipping_cents=None, currency=item.currency, available=None,
+                    observed_at=connection.execute("SELECT imported_at FROM catalog_items WHERE id=?", (row["id"],)).fetchone()[0],
+                    origin="import",
                 )
                 resolve_and_apply(connection, int(row["id"]))
             connection.execute(
@@ -607,12 +615,16 @@ def import_listings_from_extension(
                 raw_payload["description"] = item.description
             original_title = raw_payload.get("title") or item.name
             raw_payload["_identity_input_origin"] = "original_text" if raw_payload.get("title") else "structured_import"
-            raw_json = json.dumps(raw_payload, ensure_ascii=False) if raw_payload else None
+            raw_payload.pop("_observed_title", None)
 
             existing = connection.execute(
-                "SELECT id FROM catalog_items WHERE source_id = ? AND external_id = ?",
+                "SELECT id, price_cents, currency, original_title FROM catalog_items WHERE source_id = ? AND external_id = ?",
                 (source_id, item.external_id),
             ).fetchone()
+
+            if existing is not None and original_title != existing["original_title"]:
+                raw_payload["_observed_title"] = original_title
+            raw_json = json.dumps(raw_payload, ensure_ascii=False) if raw_payload else None
 
             if existing is not None:
                 item_id = existing[0]
@@ -620,22 +632,16 @@ def import_listings_from_extension(
                     """
                     UPDATE catalog_items SET
                         price_cents = ?,
-                        currency = ?,
-                        seller = ?,
                         url = ?,
                         raw_data = COALESCE(?, raw_data),
-                        last_seen_at = ?,
-                        import_batch_id = ?
+                        last_seen_at = ?
                     WHERE id = ?
                     """,
                     (
-                        item.price_cents,
-                        item.currency,
-                        item.seller,
+                        item.price_cents if item.currency == existing["currency"] else existing["price_cents"],
                         str(item.url) if item.url else None,
                         raw_json,
                         now,
-                        batch_id,
                         item_id,
                     ),
                 )
@@ -682,9 +688,13 @@ def import_listings_from_extension(
                 )
                 item_id = cursor.lastrowid
 
-            connection.execute("UPDATE catalog_items SET original_title=? WHERE id=?", (original_title, item_id))
-            saved_item_ids.append(item_id)
+            record_observation(connection, int(item_id), price_cents=item.price_cents,
+                               shipping_cents=None, currency=item.currency, available=None,
+                               observed_at=now, origin="extension")
+            if existing is None:
+                connection.execute("UPDATE catalog_items SET original_title=? WHERE id=?", (original_title, item_id))
             reidentify_catalog_item(connection, item_id)
+            saved_item_ids.append(item_id)
 
     placeholders = ",".join("?" for _ in saved_item_ids)
     rows = connection.execute(

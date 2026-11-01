@@ -77,7 +77,7 @@ def capture_evidence(connection: sqlite3.Connection, item_id: int) -> dict[str, 
     if description is None and "description" not in raw and "body" not in raw and previous:
         description = previous["description"]
     image = row["image_url"] or (previous["image_evidence_ref"] if previous else None)
-    title = row["original_title"] or (previous["title"] if previous else row["name"])
+    title = raw.get("_observed_title") or row["original_title"] or (previous["title"] if previous else row["name"])
     canonical = {
         "version": NORMALIZATION_VERSION,
         "title": title,

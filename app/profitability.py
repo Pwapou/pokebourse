@@ -705,8 +705,22 @@ def evaluate_listing(
         market_index.resolve(row, profile.currency)
     )
     metadata = reference_metadata or {}
+    # La clé de rapprochement ne prouve ni l'identité du produit ni les
+    # dimensions réellement couvertes par les données du fournisseur.
+    quality = {
+        "match": ("partielle" if reference_price_cents is not None else "indisponible"),
+        "kind": metadata.get("reference_kind") if reference_source == "reference" else reference_source,
+        "observed_at": metadata.get("observed_at"),
+        "sample_count": (sample_count if sample_count else None),
+        "sample_unit": ("produits" if reference_source == "cardmarket_trend" else
+                        "annonces" if reference_source == "catalog_median" else
+                        "observations" if sample_count else None),
+        "missing_dimensions": (["extension", "variante", "langue du prix", "état du prix"]
+                               if reference_source == "cardmarket_trend" else []),
+    }
     result = {
         **row,
+        "reference_quality": quality,
         "total_cost_cents": total_cost_cents,
         "reference_price_cents": reference_price_cents,
         "reference_source": reference_source,
@@ -978,19 +992,23 @@ def find_price_comparables(
     *,
     limit: int = 2,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Preuves de prix : annonces comparables et achats déjà revendus.
+    """Preuves de prix : annonces comparables, ventes conclues et reventes.
 
-    Retourne jusqu'à ``limit`` annonces du catalogue pour la même carte,
-    triées par proximité du prix avec l'estimation, puis jusqu'à ``limit``
-    achats au statut ``vendu``. Chaque ligne porte ``delta_cents`` (prix
-    observé moins prix estimé, en centimes).
+    Retourne jusqu'à ``limit`` éléments de chaque catégorie pour la même
+    carte : annonces du catalogue (actives d'abord, triées par proximité du
+    prix avec l'estimation), références de marché enregistrées (ventes
+    conclues, annonces ou estimations). Les achats historiques ne fournissent
+    pas de prix de revente et sont exclus des preuves.
+    Chaque ligne porte ``delta_cents`` (prix observé moins prix estimé,
+    en centimes).
     """
     if reference_price_cents is None:
-        return {"listings": [], "sales": []}
+        return {"listings": [], "sales": [], "references": []}
 
     item_dict = dict(item)
     name_key = normalize_token(str(item_dict.get("name") or ""))
     set_key = normalize_token(str(item_dict.get("set_name") or ""))
+    number_key = normalize_token(str(item_dict.get("card_number") or ""))
     reference_card_id = item_dict.get("reference_card_id")
     condition_key = normalize_token(str(item_dict.get("condition") or ""))
     currency = str(item_dict.get("currency") or "EUR").upper()
@@ -1036,32 +1054,49 @@ def find_price_comparables(
         )
     )
 
-    sale_rows = connection.execute(
+    # Les achats historiques ne contiennent aucun prix de revente. Leur prix
+    # payé ne constitue donc pas une observation de vente.
+    sales: list[dict[str, Any]] = []
+
+    reference_rows = connection.execute(
         """
-        SELECT id, card_name, set_name, card_number, condition,
-               price_paid_cents, currency, platform, status, purchased_at
-        FROM purchases
-        WHERE status = 'vendu' AND currency = ?
-        ORDER BY purchased_at DESC, id DESC
+        SELECT id, name, set_name, card_number, condition,
+               reference_price_cents, currency, source_name, reference_kind,
+               observed_at, source_url
+        FROM market_references
+        WHERE currency = ?
+        ORDER BY observed_at DESC, id DESC
         """,
         (currency,),
     ).fetchall()
 
-    sales: list[dict[str, Any]] = []
-    for row in sale_rows:
+    references: list[dict[str, Any]] = []
+    for row in reference_rows:
         row_dict = dict(row)
         if not (
-            normalize_token(str(row_dict["card_name"] or "")) == name_key
+            normalize_token(str(row_dict["name"] or "")) == name_key
             and (
                 not row_dict["set_name"]
                 or normalize_token(str(row_dict["set_name"])) == set_key
+                or (
+                    number_key != ""
+                    and normalize_token(str(row_dict["card_number"] or ""))
+                    == number_key
+                )
             )
         ):
             continue
-        row_dict["delta_cents"] = int(row_dict["price_paid_cents"]) - int(
+        row_dict["delta_cents"] = int(row_dict["reference_price_cents"]) - int(
             reference_price_cents
         )
-        sales.append(row_dict)
-    sales.sort(key=lambda row: abs(row["delta_cents"]))
+        row_dict["reference_kind_label"] = REFERENCE_KIND_LABELS.get(
+            str(row_dict["reference_kind"] or "")
+        )
+        references.append(row_dict)
+    references.sort(key=lambda row: abs(row["delta_cents"]))
 
-    return {"listings": listings[:limit], "sales": sales[:limit]}
+    return {
+        "listings": listings[:limit],
+        "sales": sales[:limit],
+        "references": references[:limit],
+    }

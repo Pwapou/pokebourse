@@ -7,6 +7,7 @@
     <title>{% block title %}Pokébourse{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261104-ml2">
     <script src="{{ url_for('static', path='/forms.js') }}?v=20261104" defer></script>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="app-shell">
@@ -38,6 +39,10 @@
                     Vendeurs
                 </a>
                 <span class="nav-label">GESTION</span>
+                <a class="nav-item {{ 'active' if page == 'tcgdex' else '' }}" href="/tcgdex">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3V3Zm3 3v4h4V6H6Zm8 0v4h4V6h-4ZM6 14v4h4v-4H6Zm8 0v4h4v-4h-4Z"/></svg>
+                    Référentiel TCGdex
+                </a>
                 <a class="nav-item {{ 'active' if page == 'watches' else '' }}" href="/watches">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 0 0-8 8h3a5 5 0 0 1 10 0h3a8 8 0 0 0-8-8Zm7 9a7 7 0 0 1-14 0H2a10 10 0 0 0 20 0h-3Zm-7 4a3 3 0 0 0 3-3h-6a3 3 0 0 0 3 3Z"/></svg>
                     Veilles

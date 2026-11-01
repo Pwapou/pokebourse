@@ -10,6 +10,7 @@ from app.collectors.models import CollectedListing, ListingPlatform
 from app.collectors.normalizer import catalog_item_from_listing
 from app.identification.matcher import CardMatcher
 from app.sellers import repository as seller_repository
+from app.radar.repository import record_observation
 from app.tcgdex.cache import TcgdexCache
 
 
@@ -102,7 +103,11 @@ def ingest_collected_listings(
                 """,
                 (source_id, listing.external_id),
             ).fetchone()
-            raw_data = json.dumps(listing.raw_data, ensure_ascii=False, sort_keys=True)
+            raw_payload = dict(listing.raw_data)
+            raw_payload.pop("_observed_title", None)
+            if existing is not None and listing.title != existing["original_title"]:
+                raw_payload["_observed_title"] = listing.title
+            raw_data = json.dumps(raw_payload, ensure_ascii=False, sort_keys=True)
 
             ident = matcher.identify(listing.title, raw_data=listing.raw_data)
             name = item.name
@@ -235,6 +240,12 @@ def ingest_collected_listings(
                 if _listing_changed(existing, values):
                     updated_count += 1
 
+            record_observation(
+                connection, item_id, price_cents=item.price_cents,
+                shipping_cents=listing.shipping_cents, currency=item.currency,
+                available=1, observed_at=now, origin="collecteur",
+            )
+            # La révision d'identité conserve ses propres preuves et décisions.
             from app.config import Settings
             from app.identification.pipeline import resolve_and_apply
             resolve_and_apply(connection, item_id, auto_enrich=Settings.from_env().tcgdex_auto_enrich)
@@ -256,71 +267,21 @@ def ingest_collected_listings(
 
 
 def _listing_changed(existing: sqlite3.Row, values: dict[str, Any]) -> bool:
-    return (
-        int(existing["price_cents"]) != values["price_cents"]
-        or (existing["shipping_cents"] is None) != (values["shipping_cents"] is None)
-        or (
-            existing["shipping_cents"] is not None
-            and values["shipping_cents"] is not None
-            and int(existing["shipping_cents"]) != values["shipping_cents"]
-        )
-        or existing["currency"] != values["currency"]
-        or existing["seller"] != values["seller"]
-        or existing["url"] != values["url"]
-        or existing["name"] != values["name"]
-        or existing["set_name"] != values["set_name"]
-        or existing["original_title"] != values["original_title"]
-        or existing["raw_data"] != values["raw_data"]
-        or existing["identification_status"] != values["identification_status"]
-        or existing["reference_card_id"] != values["reference_card_id"]
-    )
+    return any(existing[key] != values[key] for key in (
+        "price_cents", "shipping_cents", "url", "raw_data"
+    ))
 
 
 def _update_existing_listing(
     connection: sqlite3.Connection, existing: sqlite3.Row, values: dict[str, Any]
 ) -> None:
+    # Une devise modifiée ne peut pas écraser des montants exprimés dans
+    # l'ancienne devise ; l'observation conserve néanmoins la valeur reçue.
+    same_currency = existing["currency"] == values["currency"]
     connection.execute(
-        """
-        UPDATE catalog_items SET
-            name = ?, set_name = ?, card_number = ?, language = ?,
-            condition = ?, variant = ?, edition = ?, grading_company = ?,
-            grade = ?, certification_number = ?, price_cents = ?,
-            currency = ?, seller = ?, url = ?, original_title = ?,
-            last_seen_at = ?, published_at = ?, image_url = ?,
-            shipping_cents = ?, seller_external_id = ?, is_active = ?, raw_data = ?,
-            identification_status = ?, reference_card_id = ?,
-            identification_confidence = ?, identification_reason = ?,
-            is_lot = ?
-        WHERE id = ?
-        """,
-        (
-            values["name"],
-            values["set_name"],
-            values["card_number"],
-            values["language"],
-            values["condition"],
-            values["variant"],
-            values["edition"],
-            values["grading_company"],
-            values["grade"],
-            values["certification_number"],
-            values["price_cents"],
-            values["currency"],
-            values["seller"],
-            values["url"],
-            values["original_title"],
-            values["last_seen_at"],
-            values["published_at"],
-            values["image_url"],
-            values["shipping_cents"],
-            values["seller_external_id"],
-            values["is_active"],
-            values["raw_data"],
-            values["identification_status"],
-            values["reference_card_id"],
-            values["identification_confidence"],
-            values["identification_reason"],
-            values["is_lot"],
-            existing["id"],
-        ),
+        "UPDATE catalog_items SET price_cents=?, shipping_cents=?, url=?, "
+        "last_seen_at=?, raw_data=? WHERE id=?",
+        (values["price_cents"] if same_currency else existing["price_cents"],
+         values["shipping_cents"] if same_currency else existing["shipping_cents"],
+         values["url"], values["last_seen_at"], values["raw_data"], existing["id"]),
     )

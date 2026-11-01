@@ -425,6 +425,60 @@ def annotation_dashboard_page(
     })
 
 
+@app.get("/tcgdex", response_class=HTMLResponse)
+def tcgdex_catalog_page(
+    request: Request, q: str = Query(default="", max_length=100), page: int = Query(default=1, ge=1),
+    follow: int | None = Query(default=None, ge=1), notice: str | None = Query(default=None, max_length=200),
+    error: str | None = Query(default=None, max_length=300),
+) -> HTMLResponse:
+    """Inventaire et suivi persistants ; aucun accès distant pendant l'affichage."""
+    from app.tcgdex.sync import sync_dashboard
+    with connect(settings_from(request).database_path) as connection:
+        data = sync_dashboard(connection, query=q.strip(), page=page)
+    following = next((job for job in data["jobs"] if job["id"] == follow and job["status"] in ("queued", "running")), None)
+    return templates.TemplateResponse(request=request, name="tcgdex_sync.html", context={
+        "page": "tcgdex", "notice": notice, "error": error, "following": following, **data,
+    })
+
+
+@app.post("/tcgdex/sync")
+def tcgdex_enqueue(
+    request: Request, set_ids: list[str] = Form(default=[]), manual_set_id: str = Form(default="", max_length=50),
+    include_details: bool = Form(default=False),
+) -> RedirectResponse:
+    """Enregistre les extensions explicitement choisies pour le worker."""
+    from app.tcgdex.sync import enqueue_sync, validate_set_selection
+    selected = list(dict.fromkeys([*set_ids, *([manual_set_id.strip()] if manual_set_id.strip() else [])]))
+    try:
+        selected = validate_set_selection(selected)
+        with connect(settings_from(request).database_path) as connection:
+            ids = [enqueue_sync(connection, set_id, include_details=include_details) for set_id in selected]
+    except ValueError as exc:
+        return RedirectResponse(f"/tcgdex?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(f"/tcgdex?follow={ids[0]}&notice={quote('Demande enregistrée. Le worker avance la file ; les données récentes sont réutilisées.')}#jobs-title", status_code=303)
+
+
+@app.post("/tcgdex/directory")
+def tcgdex_refresh_directory(request: Request) -> RedirectResponse:
+    """Demande une liste officielle d'extensions sans charger toutes leurs cartes."""
+    from app.tcgdex.sync import enqueue_sync
+    with connect(settings_from(request).database_path) as connection:
+        job_id = enqueue_sync(connection)
+    return RedirectResponse(f"/tcgdex?follow={job_id}&notice={quote('Liste des extensions demandée au worker.')}#jobs-title", status_code=303)
+
+
+@app.post("/tcgdex/jobs/{job_id}/{action}")
+def tcgdex_control_job(request: Request, job_id: int, action: Literal["pause", "resume"]) -> Response:
+    """Contrôle une tâche sans retirer les cartes déjà disponibles dans le cache."""
+    from app.tcgdex.sync import control_job
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            control_job(connection, job_id, action)
+    except LookupError:
+        return HTMLResponse("Synchronisation introuvable.", status_code=404)
+    return RedirectResponse(f"/tcgdex?follow={job_id}#jobs-title", status_code=303)
+
+
 @app.get("/identification/diagnostics")
 def identification_diagnostic_page(
     request: Request, limit: int = Query(default=100, ge=1, le=500),
@@ -599,6 +653,7 @@ def catalog_item(
         comparables: dict[str, list[dict[str, Any]]] = {
             "listings": [],
             "sales": [],
+            "references": [],
         }
         cardmarket_ready = cardmarket_service.credentials_configured(
             settings_from(request)

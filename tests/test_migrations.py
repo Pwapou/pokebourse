@@ -41,6 +41,8 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "0015_cardmarket_name_aliases.sql",
             "0016_add_ebay_wallapop_platforms.sql",
             "0017_create_cardmarket_sync_state.sql",
+            "0018_tcgdex_sync_jobs.sql",
+            "0019_radar_observations.sql",
         ]
         assert second_applied == []
         assert {
@@ -74,9 +76,12 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "annotation_pilot_items",
             "card_name_aliases",
             "cardmarket_sync_state",
+            "tcgdex_sync_jobs",
+            "tcgdex_sync_cards",
+            "tcgdex_sync_control",
             "schema_migrations",
         } <= tables
-        assert migration_count == 17
+        assert migration_count == 19
         check_database(connection)
 
 

@@ -125,7 +125,7 @@ def test_price_title_and_last_seen_update_preserves_first_seen(
         "FROM catalog_items WHERE external_id = 'abc-2'"
     ).fetchone()
     assert row["price_cents"] == 1250
-    assert row["original_title"] == "Carte Pokémon Pikachu - Base Set"
+    assert row["original_title"] == "Carte Pokémon Pikachu"
     assert row["first_seen_at"] == "2026-10-01T10:00:00.000Z"
     assert row["last_seen_at"] > "2026-10-01T10:00:00.000Z"
 

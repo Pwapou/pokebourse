@@ -189,7 +189,8 @@ class WatchScheduler:
                 if self._seller_service is not None:
                     self._process_sellers()
                 try:
-                    self.process_identification_searches()
+                    if not self.process_identification_searches():
+                        self.process_tcgdex_sync()
                 except (sqlite3.Error, OSError) as error:
                     logger.warning("Recherche TCGdex reportée : %s", error)
                 try:
@@ -202,6 +203,12 @@ class WatchScheduler:
                 with connect(self.database_path) as connection:
                     self._supervisor.shutdown(connection)
         logger.info("Worker de veilles arrêté.")
+
+    def process_tcgdex_sync(self) -> bool:
+        """Avance d'une requête le référentiel demandé, avec priorité aux recherches ciblées."""
+        from app.tcgdex.sync import process_sync_step
+        with connect(self.database_path) as connection:
+            return process_sync_step(connection, interval_seconds=self.settings.tcgdex_sync_interval_seconds)
 
     def _sync_cardmarket_daily(self, stop_event: threading.Event) -> None:
         """Synchronisation quotidienne des cotes + noms Cardmarket (price guide

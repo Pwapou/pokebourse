@@ -13,12 +13,16 @@ Avant d'écrire ou de modifier du code, consultez les documents spécialisés du
 |---|---|---|
 | [`README.md`](README.md) | **Guide produit & utilisateur** : présentation globale, capture d'écran, visite guidée, installation et CLI. | Pour comprendre la valeur métier, le parcours utilisateur et l'interface web. |
 | [`AGENTS.md`](AGENTS.md) | **Ce guide** : règles d'or, architecture interne, conventions, workflow de dev et commandes de test. | **À lire impérativement avant toute session de travail.** |
-| [`SOURCES.md`](SOURCES.md) | **Audit légal et technique des sources** : conditions d'accès (Vinted, Leboncoin, TCGdex), respect des CGU, limitations anti-bot, RGPD et solutions de repli. | Dès qu'une modification touche aux collecteurs, au scraping ou aux API externes. |
-| [`SUIVI.md`](SUIVI.md) | **Historique de stabilisation** : audits du pipeline, corrections passées, intégration de TCGdex et de l'extension Chrome. | Pour comprendre l'historique des choix d'architecture et éviter de réintroduire d'anciens bugs. |
+| [`SOURCES.md`](SOURCES.md) | **Audit légal et technique des sources** : conditions d'accès (Vinted, Leboncoin, eBay, Wallapop, TCGdex, Cardmarket), respect des CGU, limitations anti-bot, RGPD et solutions de repli. | Dès qu'une modification touche aux collecteurs, au scraping ou aux API externes. |
+| [`SUIVI.md`](SUIVI.md) | **Historique de stabilisation** : audits du pipeline, corrections passées, intégration de TCGdex, Cardmarket, extension Chrome et ML Phase 0. | Pour comprendre l'historique des choix d'architecture et éviter de réintroduire d'anciens bugs. |
 | [`TASKING_INTEGRATION_DESIGN.md`](TASKING_INTEGRATION_DESIGN.md) | **Directives UI Mosaic × Flowbite** : règles de style CSS/HTML, maquettes prototypes (`app/static/prototype.html`). | Pour toute modification d'un template Jinja2 (`app/templates/`) ou du style (`app/static/style.css`). |
+| [`TASKING_RECHERCHE_CARTES.md`](TASKING_RECHERCHE_CARTES.md) | **Spécifications recherche approfondie et confirmations TCGdex** : candidats locaux, recherche ciblée worker, file dédupliquée et révisions. | Lors de travaux sur la réconciliation manuelle ou l'intégration TCGdex. |
+| [`docs/IDENTIFICATION_LEXICALE.md`](docs/IDENTIFICATION_LEXICALE.md) | **Diagnostic lexical & suggestions orthographiques** : index trigrammes, distance d'édition, vocabulaire TCGdex et limitations. | Lors de travaux sur la recherche lexicale ou les faux négatifs d'identification. |
+| [`docs/ML_PHASE0.md`](docs/ML_PHASE0.md) | **Protocole du pilote d'annotation ML Phase 0** : tirage stratifié, doubles lectures indépendantes et export reproductible. | Lors de travaux sur l'annotation, la labellisation ou la préparation du dataset ML. |
+| [`docs/TCGDEX_SYNC.md`](docs/TCGDEX_SYNC.md) | **Enrichissement TCGdex progressif** : sélection d’extensions, file persistante, pause/reprise, cache et limites de couverture. | Lors de travaux sur la synchronisation du référentiel. |
 | [`MACHINE_LEARNING_DESIGN.md`](MACHINE_LEARNING_DESIGN.md) & [`PROMPT_ML_DESIGN.md`](PROMPT_ML_DESIGN.md) | **Spécifications futures ML** : feuille de route pour le rattachement d'entités, ranking LightGBM, embeddings et vérité terrain. | Lors de travaux sur l'amélioration de l'identification automatique des cartes. |
 | [`extension/README.md`](extension/README.md) | **Spécifications de l'extension Chrome** : Manifest V3, content scripts, service worker, formats JSONL et tests associés. | Pour toute tâche liée au module de capture dans le navigateur. |
-| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 10 migrations séquentielles (de `0001` à `0010`). | Avant toute modification de base de données ou de modèle de données. |
+| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 18 migrations séquentielles (de `0001` à `0018`). | Avant toute modification de base de données ou de modèle de données. |
 
 ---
 
@@ -81,20 +85,40 @@ En tant qu'agent de code, vous devez respecter scrupuleusement ces 6 principes f
 ```text
 pokebourse/
 ├── app/
-│   ├── collectors/          # Connecteurs de collecte (Vinted, Leboncoin, Normaliseur, Service d'ingestion)
+│   ├── cardmarket/          # Intégration officielle Cardmarket (price guide quotidien & repli)
+│   │   ├── aliases.py       # Pont multilingue et alias de noms TCGdex vers Cardmarket
+│   │   ├── client.py        # Client HTTP OAuth 1.0a (dormant, inscriptions fermées)
+│   │   ├── daily.py         # Planification de synchronisation quotidienne du price guide
+│   │   ├── guide.py         # Téléchargement et intégration SQLite du guide public (~80k cartes)
+│   │   ├── models.py        # Modèles de cotes, tendances et moyennes Cardmarket
+│   │   └── service.py       # Résolution des cotes et modèle de repli à 3 niveaux
+│   ├── collectors/          # Connecteurs de collecte (Vinted, Leboncoin, eBay, Wallapop, Normaliseur, Service)
 │   │   ├── models.py        # Modèle Pydantic CollectedListing commun
 │   │   ├── vinted.py        # Connecteur HTTP Vinted
 │   │   ├── leboncoin.py     # Connecteur HTTP Leboncoin
+│   │   ├── ebay.py          # Connecteur HTTP eBay
+│   │   ├── wallapop.py      # Connecteur HTTP Wallapop
 │   │   ├── normalizer.py    # Transformation vers le modèle unifié
 │   │   ├── service.py       # Ingestion transactionnelle et déduplication
 │   │   └── browser.py       # Collecteur de secours Crawlee/Playwright (désactivé par défaut)
-│   ├── identification/      # Moteur de réconciliation avec le catalogue officiel
+│   ├── identification/      # Moteur de réconciliation, diagnostic lexical & validation ML
+│   │   ├── annotation_pilot.py # Tirage stratifié et gestion du pilote d'annotation Phase 0
+│   │   ├── dataset.py       # Export reproductible du dataset de validation ML (labels.jsonl)
 │   │   ├── detector.py      # Détection regex : numéros, extensions, langues, états, lots
+│   │   ├── diagnostics.py   # Diagnostic des annonces non résolues et inventaire du catalogue
+│   │   ├── lexical.py       # Recherche approchée par trigrammes et distance d'édition
 │   │   ├── matcher.py       # Rapprochement avec le catalogue TCGdex et calcul de confiance
-│   │   └── models.py        # IdentificationResult, CardFeatures, statuts (identified, ambiguous, lot, unidentified)
+│   │   ├── models.py        # IdentificationResult, CardFeatures, statuts (identified, ambiguous, lot, unidentified)
+│   │   ├── normalization.py # Normalisation de chaînes, accents, casse et numéros
+│   │   ├── pipeline.py      # Orchestration du pipeline de détection et matching
+│   │   ├── reference_search.py # Recherche plein texte et approchée dans le référentiel officiel
+│   │   ├── research.py      # File d'enrichissement approfondi traitée par le worker
+│   │   ├── resolution.py    # Résolution commune : arbitrage automatique vs validations humaines
+│   │   └── reviews.py       # Gestion des validations humaines, double lecture aveugle et audit
 │   ├── tcgdex/              # Intégration du catalogue officiel Pokémon (TCGdex)
 │   │   ├── client.py        # Client HTTP REST avec backoff et gestion de rate-limit
 │   │   ├── cache.py         # Cache SQLite persistant (pokemon_reference_cards/sets)
+│   │   ├── sync.py          # Synchronisation progressive et durable du catalogue français
 │   │   └── data/seed_data.py# Données officielles embarquées pour fonctionnement 100% hors-ligne
 │   ├── sellers/             # Annuaire des vendeurs & Suivi du portefeuille d'achats
 │   │   ├── models.py        # SellerProfile, SellerReviewSummary, Purchase
@@ -104,41 +128,51 @@ pokebourse/
 │   ├── supervision/         # Supervision de la santé des scrapers
 │   │   ├── models.py        # AgentState, CollectorState, AgentIncident, codes d'erreur
 │   │   ├── repository.py    # Historisation des états et transitions en base
-│   │   └── service.py       # Heartbeats, transitions d'état et reprise manuelle
+│   │   └── service.py       # Heartbeats, sonde IP publique, transitions d'état et reprise manuelle
 │   ├── monitoring/          # Veilles programmées
 │   │   ├── repository.py    # CRUD des veilles (listing_watches) et exécutions (listing_watch_runs)
-│   │   ├── scheduler.py     # Ordonnancement périodique et limitation de la concurrence (1 par plateforme)
+│   │   ├── scheduler.py     # Ordonnancement périodique et verrous de concurrence par plateforme
 │   │   └── service.py       # Logique d'activation, pause, contrôle immédiat
 │   ├── storage/             # Gestion de la persistance SQLite
 │   │   ├── connection.py    # Création des connexions avec WAL et busy_timeout
-│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0010)
+│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0018)
 │   ├── templates/           # Vues HTML Jinja2 (Mosaic × Flowbite)
 │   │   ├── base.html        # Layout global : sidebar sombre, topbar, messages flash
 │   │   ├── dashboard.html   # Tableau de bord principal (KPIs, opportunités, imports)
 │   │   ├── catalog.html     # Liste paginée du catalogue avec filtres d'identification
-│   │   ├── catalog_detail.html # Fiche détaillée annonce, rentabilité et TCGdex
-│   │   ├── profitability.html # Paramétrage des frais et cotes de marché
-│   │   ├── watches.html     # Gestion et contrôle des veilles Vinted / Leboncoin
+│   │   ├── catalog_detail.html # Fiche détaillée annonce, rentabilité, comparables et TCGdex
+│   │   ├── profitability.html # Paramétrage des frais, cotes de marché et sync Cardmarket
+│   │   ├── watches.html     # Gestion et contrôle des veilles multi-plateformes
 │   │   ├── sellers.html     # Annuaire des vendeurs et carnet d'achats
 │   │   ├── seller_detail.html # Fiche vendeur détaillée et historique d'achats
-│   │   ├── agents.html      # Supervision en direct des collecteurs
+│   │   ├── agents.html      # Supervision en direct des collecteurs et IP publiques
 │   │   ├── agent_detail.html# Détail d'un agent et historique d'incidents
-│   │   └── backups.html     # Sauvegarde et restauration SQLite
+│   │   ├── backups.html     # Sauvegarde et restauration SQLite
+│   │   ├── annotation_dashboard.html # Tableau de bord du pilote d'annotation ML Phase 0
+│   │   ├── annotation_blocked.html   # Écran d'attente d'un second opérateur
+│   │   ├── identification_diagnostics.html # Diagnostic des annonces non résolues
+│   │   └── identification_review.html # Formulaire de validation humaine et double lecture aveugle
 │   ├── static/              # Fichiers statiques (style.css, forms.js, prototype.html)
 │   ├── catalog.py           # Services métier du catalogue (recherche, filtres, pagination, lots)
 │   ├── catalog_export.py    # Génération d'export CSV Excel conforme
-│   ├── profitability.py     # Moteur financier (calcul gain net, ROI, cotes de marché)
+│   ├── profitability.py     # Moteur financier (calcul gain net, ROI, cotes de marché, comparables)
 │   ├── backups.py           # Logique de sauvegarde SQLite et vérification d'intégrité
 │   ├── cli.py               # Interface CLI Typer (pokemon-arbitrage)
 │   ├── web.py               # Serveur FastAPI et toutes les routes HTTP
 │   └── worker.py            # Point d'entrée de la boucle de veille en arrière-plan
+├── docs/                    # Documentation technique spécialisée
+│   ├── IDENTIFICATION_LEXICALE.md # Diagnostic lexical, trigrammes et distance d'édition
+│   └── ML_PHASE0.md         # Protocole du pilote d'annotation Phase 0 et double lecture
 ├── extension/               # Module Google Chrome Manifest V3
 │   ├── manifest.json        # Déclarations V3 et permissions minimales
 │   ├── background/          # Service worker Chrome (stockage local et badge)
 │   ├── content/             # Content script injecté (détection Pokémon et extracteurs)
 │   ├── popup/               # Interface popup (liste de captures, exports JSONL, push local)
 │   └── icons/               # Icônes PNG officielles (16, 48, 128 px)
-└── tests/                   # 25 suites de tests automatisés (100% passants)
+├── scripts/                 # Scripts utilitaires en lecture seule ou de test ponctuel
+│   ├── comparables_report.py # Rapport de contrôle des comparables et preuves de prix
+│   └── manual_collect_test.py # Test ponctuel manuel d'une recherche marketplace
+└── tests/                   # 30 suites de tests automatisés (313 tests, 100% passants)
 ```
 
 ---
@@ -164,16 +198,25 @@ docker compose run --rm app pytest tests/test_chrome_extension.py -v
 # Tester le moteur d'identification et la réconciliation TCGdex
 docker compose run --rm app pytest tests/test_identification.py tests/test_tcgdex_cache.py -v
 
-# Tester le moteur de rentabilité et le calcul de marge
+# Tester la recherche lexicale, les diagnostics et la recherche approfondie
+docker compose run --rm app pytest tests/test_lexical_identification.py tests/test_identification_research.py -v
+
+# Tester le pilote d'annotation ML Phase 0 et les validations humaines
+docker compose run --rm app pytest tests/test_annotation_pilot.py tests/test_identification_reviews.py -v
+
+# Tester l'intégration Cardmarket (guide public, repli, sync quotidienne)
+docker compose run --rm app pytest tests/test_cardmarket.py tests/test_cardmarket_guide.py tests/test_cardmarket_daily.py -v
+
+# Tester le moteur de rentabilité, comparables et calcul de marge
 docker compose run --rm app pytest tests/test_profitability.py -v
 
 # Tester l'annuaire vendeurs et le suivi des achats
 docker compose run --rm app pytest tests/test_sellers_directory_and_purchases.py tests/test_sellers.py -v
 
-# Tester la supervision et les collecteurs
+# Tester la supervision et les collecteurs (Vinted, Leboncoin, eBay, Wallapop)
 docker compose run --rm app pytest tests/test_supervision.py tests/test_collectors.py -v
 
-# Tester l'idempotence des migrations SQLite
+# Tester l'idempotence des migrations SQLite (0001 à 0018)
 docker compose run --rm app pytest tests/test_migrations.py -v
 ```
 
@@ -187,6 +230,15 @@ docker compose run --rm app pokemon-arbitrage migrate
 
 # Effectuer un backup d'urgence
 docker compose run --rm app pokemon-arbitrage backup
+
+# Lancer un diagnostic lexical d'identification (JSON ou texte)
+docker compose run --rm app pokemon-arbitrage diagnose-identification --status all --limit 100 --json
+
+# Exporter le jeu de labels ML du pilote
+docker compose run --rm app pokemon-arbitrage export-labels --output /data/labels-pilote.jsonl
+
+# Exécuter le rapport des comparables et preuves de prix (lecture seule)
+docker compose run --rm app python -m scripts.comparables_report
 ```
 
 ---
@@ -194,15 +246,15 @@ docker compose run --rm app pokemon-arbitrage backup
 ## 🚀 6. Guide Pas-à-Pas pour vos Développements (Workflows)
 
 ### Cas 1 : Vous devez modifier le schéma SQLite
-1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (actuellement `0010_create_purchases_and_seller_stats.sql`).
-2. Créez un nouveau fichier `0011_<nom_explicite>.sql`.
+1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (actuellement `0018_tcgdex_sync_jobs.sql`).
+2. Créez un nouveau fichier `0019_<nom_explicite>.sql`.
 3. Encadrez toujours vos instructions SQL avec :
    ```sql
    BEGIN IMMEDIATE;
    
    -- Vos ALTER TABLE ou CREATE TABLE ici
    
-   INSERT INTO schema_migrations (version) VALUES ('0011_<nom_explicite>.sql');
+   INSERT INTO schema_migrations (version) VALUES ('0019_<nom_explicite>.sql');
    COMMIT;
    ```
 4. Mettez à jour `tests/test_migrations.py` pour inclure le nouveau numéro de migration attendu.

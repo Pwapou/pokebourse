@@ -193,6 +193,11 @@ En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'ana
   $$\text{ROI} = \frac{\text{Gain Net}}{\text{Prix d'achat} + \text{Port aller}}$$
 - **Profil Vendeur** : évaluation de la réputation du vendeur, bouton d'ajout aux favoris et consultation des avis.
 - **Valeur de marché Cardmarket (fichiers officiels)** : deuxième source de prix affichée à côté du prix de l'annonce (tendance + moyennes de vente 1/7/30 jours), avec repli automatique : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce reste affiché. C'est aussi le **dernier repli du moteur de rentabilité** (prix tendance le plus bas des produits assortis, en l'absence de cote dédiée et de médiane du catalogue). **Synchronisation automatique quotidienne** par le worker vers 03:20 (heure de Paris), après la régénération du price guide (~02:45), plus bouton **« Tout synchroniser maintenant »** (cotes + noms) sur la page Rentabilité. Source : fichiers publics publiés chaque jour par Cardmarket (public, gratuit, sans compte — ~80 000 cartes Pokémon).
+- **Preuves de prix & cartes comparables** : La section *Preuves de prix · Annonces & ventes réelles* regroupe les éléments tangibles étayant l'estimation de revente :
+  1. *Ventes conclues & cotes enregistrées* : issues de `market_references` (ex: ventes eBay réussies, Cardmarket) avec lien direct vers la source et date d'observation.
+  2. *En vente actuellement* : annonces similaires actives dans le catalogue local.
+  3. *Déjà revendus par vos soins* : achats passés de votre portefeuille passés au statut `vendu`.
+  Chaque ligne indique l'écart de prix net en centimes et euros ($\pm X,XX\text{ €}$ vs estimation) pour valider immédiatement la crédibilité du prix retenu.
 - **Bouton d'enregistrement d'achat** : un clic permet de convertir l'annonce observée en achat officiel dans votre carnet de suivi.
 
 ---
@@ -314,6 +319,8 @@ Un objet JSON par ligne, encodé en UTF-8 (taille max : 2 Mo) :
 
 ## 🛠️ Utilisation en Ligne de Commande (CLI)
 
+Le menu **Référentiel TCGdex** (`/tcgdex`) permet de sélectionner les extensions à enrichir, suivre les identités et fiches détaillées chargées, puis mettre en pause ou reprendre leur traitement par le worker. Les confirmations humaines sont conservées. Voir le [guide de synchronisation](docs/TCGDEX_SYNC.md) pour le cache de 24 heures, la cadence et les limites de couverture.
+
 Toutes les opérations d'administration peuvent être pilotées depuis le conteneur `app` via la commande `pokemon-arbitrage` :
 
 ```bash
@@ -322,6 +329,10 @@ docker compose run --rm app pokemon-arbitrage check
 
 # Appliquer manuellement les migrations SQLite
 docker compose run --rm app pokemon-arbitrage migrate
+
+# Mettre en file l’enrichissement d’une extension et consulter sa progression
+docker compose run --rm app pokemon-arbitrage sync-tcgdex sv08.5
+docker compose run --rm app pokemon-arbitrage sync-tcgdex --status
 
 # Importer un fichier d'annonces JSONL
 docker compose run --rm app pokemon-arbitrage import-catalog mon_fichier.jsonl --source mon_import
@@ -347,16 +358,19 @@ docker compose run --rm app pokemon-arbitrage restore /data/backups/pokebourse-2
 # Gérer les veilles
 docker compose run --rm app pokemon-arbitrage list-watches
 docker compose run --rm app pokemon-arbitrage run-watch 1
+
+# Rapport de vérification des comparables et preuves de prix (lecture seule)
+docker compose run --rm app python -m scripts.comparables_report
 ```
 
 ---
 
 ## 🧪 Tests & Assurance Qualité
 
-La suite de tests automatisés est rigoureusement hermétique : **aucun appel réseau vers Vinted, Leboncoin ou TCGdex n'est réalisé pendant les tests**.
+La suite de 30 fichiers de tests automatisés comprend **313 tests rigoureusement hermétiques** (0 échec) : **aucun appel réseau vers Vinted, Leboncoin, eBay, Wallapop, Cardmarket ou TCGdex n'est réalisé pendant les tests**.
 
 ```bash
-# Exécuter l'intégralité des tests unitaires et d'intégration
+# Exécuter l'intégralité des 313 tests unitaires et d'intégration
 docker compose run --rm app pytest
 
 # Lancer les tests avec détails et verbosité
@@ -367,6 +381,15 @@ docker compose run --rm app pytest tests/test_chrome_extension.py -v
 
 # Tester le moteur d'identification et la réconciliation
 docker compose run --rm app pytest tests/test_identification.py tests/test_tcgdex_cache.py -v
+
+# Tester Cardmarket (guide public, alias de noms, repli et sync quotidienne)
+docker compose run --rm app pytest tests/test_cardmarket.py tests/test_cardmarket_guide.py tests/test_cardmarket_daily.py -v
+
+# Tester le pilote d'annotation ML Phase 0 et la recherche lexicale
+docker compose run --rm app pytest tests/test_annotation_pilot.py tests/test_lexical_identification.py -v
+
+# Tester le moteur de rentabilité et les comparables de prix
+docker compose run --rm app pytest tests/test_profitability.py -v
 ```
 
 ---
@@ -377,6 +400,8 @@ Le projet Pokébourse adhère aux principes suivants, détaillés dans le fichie
 1. **Aucun achat automatisé** : Pokébourse est un outil d'aide à la décision humaine. L'acte d'achat demeure sous le contrôle direct de l'utilisateur.
 2. **Respect du RGPD** : Seules les métadonnées publiques nécessaires à la qualification de l'offre sont exploitées. Les données personnelles sensibles des vendeurs sont systématiquement ignorées.
 3. **Alternative de navigation légitime** : L'extension Chrome officielle permet à l'utilisateur de capturer les annonces pendant ses propres sessions de navigation manuelles, dans le strict respect de la politique des sites consultés.
+
+Les preuves de prix de la fiche distinguent les références enregistrées des annonces collectées. Un achat marqué « vendu » ne constitue pas une preuve de prix de revente tant que ce montant n'a pas été enregistré. Le repli Cardmarket repose sur un rapprochement approximatif par nom et un prix agrégé dont la langue et l'état ne sont pas confirmés ; sa date de marché peut être inconnue.
 
 ---
 

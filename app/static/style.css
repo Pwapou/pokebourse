@@ -399,6 +399,22 @@ input:focus-visible + .radio-pill { outline: 3px solid rgba(98, 93, 245, .35); o
 .listing-facts .detail-grid { grid-template-columns: 1fr; padding-top: 0; }
 .listing-facts .detail-row:nth-last-child(2) { border-bottom: 1px solid var(--line); }
 
+/* ===== Comparables de prix (preuves de l'estimation) ===== */
+.comparables-section { padding: 6px 20px 20px; }
+.comparables-subtitle { margin: 16px 0 10px; color: var(--ink); font-size: 11px; font-weight: 750; letter-spacing: .3px; }
+.comparables-subtitle:first-child { margin-top: 8px; }
+.comparable-list { display: grid; gap: 10px; margin: 0; }
+.comparable-card { display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #fafbfc; transition: border-color .15s; }
+.comparable-card:hover { border-color: #c9c6f7; }
+.comparable-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.comparable-top strong { font-size: 14px; letter-spacing: -.2px; }
+.comparable-meta { color: var(--muted); font-size: 10px; line-height: 1.55; }
+.comparable-card .text-link { align-self: flex-start; }
+.comparable-tag { display: inline-flex; align-items: center; margin-right: 6px; padding: 2px 7px; border-radius: 5px; font-size: 9px; font-weight: 700; white-space: nowrap; color: #5f6370; background: #eef0f4; }
+.comparable-tag.active { color: var(--blue); background: var(--blue-bg); }
+.comparable-tag.sold { color: var(--green); background: var(--green-bg); }
+.comparables-note { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.6; }
+
 /* Tableau de détail de lot (réutilise .catalog-table hors du catalogue produit) */
 .catalog-table td { height: 69px; }
 
@@ -460,6 +476,7 @@ input:focus-visible + .radio-pill { outline: 3px solid rgba(98, 93, 245, .35); o
     .detail-row:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }
     .detail-row:last-child { border-bottom: 0; }
     .detail-layout { grid-template-columns: 1fr; }
+    .comparables-section { padding-left: 16px; padding-right: 16px; }
     .calculation-list { padding-left: 16px; padding-right: 16px; }
     .calculation-list > div { gap: 12px; }
     .detail-stats { padding: 16px 16px 4px; }

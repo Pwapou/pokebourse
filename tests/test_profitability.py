@@ -526,6 +526,14 @@ def test_cardmarket_trend_fallback_via_multilingual_alias(tmp_path: Path) -> Non
         assert row["reference_price_cents"] == 30000
         assert row["reference_source"] == "cardmarket_trend"
         assert row["sample_count"] == 2
+        assert row["reference_quality"] == {
+            "match": "partielle",
+            "kind": "cardmarket_trend",
+            "observed_at": None,
+            "sample_count": 2,
+            "sample_unit": "produits",
+            "missing_dimensions": ["extension", "variante", "langue du prix", "état du prix"],
+        }
         # 30000 - 1500 (commission 5 %) - 200 (envoi) - 20000 = 8300
         assert row["net_profit_cents"] == 8300
         assert row["verdict"] == "opportunite"
@@ -695,6 +703,7 @@ def test_find_price_comparables_lists_evidence(tmp_path: Path) -> None:
         assert len(comparables["listings"]) == 2
         assert comparables["listings"][0]["delta_cents"] == 0
         assert comparables["listings"][1]["delta_cents"] == -100
+        assert comparables["references"] == []
 
         record_purchase(
             connection,
@@ -715,8 +724,23 @@ def test_find_price_comparables_lists_evidence(tmp_path: Path) -> None:
             status="recu",
         )
         comparables = find_price_comparables(connection, target, 2500)
-        assert len(comparables["sales"]) == 1
-        assert comparables["sales"][0]["delta_cents"] == 50
+        assert comparables["sales"] == []
+
+        upsert_reference(
+            connection,
+            ReferenceInput(
+                name="Pikachu",
+                set_name="Évolutions",
+                card_number="35/108",
+                reference_price_cents=2400,
+                source_name="eBay (ventes réussies)",
+                reference_kind="ventes_conclues",
+            ),
+        )
+        comparables = find_price_comparables(connection, target, 2500)
+        assert len(comparables["references"]) == 1
+        assert comparables["references"][0]["delta_cents"] == -100
+        assert comparables["references"][0]["reference_kind_label"] == "Ventes conclues"
 
         empty = find_price_comparables(connection, target, None)
-        assert empty == {"listings": [], "sales": []}
+        assert empty == {"listings": [], "sales": [], "references": []}

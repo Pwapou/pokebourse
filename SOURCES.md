@@ -90,6 +90,7 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 - Cache local SQLite persistant (`pokemon_reference_cards`, `pokemon_reference_sets`) dans `app/tcgdex/cache.py` permettant un fonctionnement 100% hors-ligne sans dépendance réseau permanente.
 - Recherches ciblées persistantes traitées par le worker : une à la fois, trois tentatives maximum, réseau hors transaction et respect de `Retry-After` par replanification. Seuls les critères de carte utiles sont transmis ; aucun titre brut, description ou attribut vendeur.
 - L’enrichissement automatique à l’import est désactivé par défaut (`TCGDEX_AUTO_ENRICH=false`). La recherche manuelle explicite reste disponible. Aucun appel réseau n’est effectué par le matcher, l’extension ou les tests automatisés.
+- L’écran `/tcgdex` et la commande `sync-tcgdex` permettent de demander explicitement des extensions françaises : manifeste, puis fiches détaillées facultatives, sans transmettre de contenu d’annonce. File persistante, pause/reprise, cache de réussite de 24 h, cadence partagée et replanification des 429 sont décrits dans [le guide de synchronisation](docs/TCGDEX_SYNC.md). Le total annoncé d’une extension peut dépasser le nombre de cartes effectivement fourni dans la locale française ; l’interface conserve cette distinction.
 
 ### Conditions contractuelles applicables
 - **Documentation officielle** : [tcgdex.dev](https://www.tcgdex.dev)

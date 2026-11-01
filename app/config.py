@@ -33,6 +33,7 @@ class Settings(BaseModel):
     )
     tcgdex_auto_enrich: bool = False
     tcgdex_searches_per_tick: int = Field(default=1, ge=0, le=10)
+    tcgdex_sync_interval_seconds: int = Field(default=1, ge=1, le=60)
     review_operator: str = Field(default="local", pattern=r"^[A-Za-z0-9_-]{1,100}$")
 
     @classmethod
@@ -70,6 +71,8 @@ class Settings(BaseModel):
             values["tcgdex_auto_enrich"] = auto_enrich.strip().lower() in ("1", "true", "yes", "on")
         if search_limit := os.getenv("TCGDEX_SEARCHES_PER_TICK"):
             values["tcgdex_searches_per_tick"] = int(search_limit)
+        if sync_interval := os.getenv("TCGDEX_SYNC_INTERVAL_SECONDS"):
+            values["tcgdex_sync_interval_seconds"] = int(sync_interval)
         if review_operator := os.getenv("POKEMON_REVIEW_OPERATOR"):
             values["review_operator"] = review_operator
         for env_key, field in (
