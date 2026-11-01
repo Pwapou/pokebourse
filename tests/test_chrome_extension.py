@@ -214,3 +214,42 @@ def test_import_with_known_resell_price_returns_full_profitability(tmp_path: Pat
     assert "http://localhost:8000/catalog/" in ev["url_detail"]
 
 
+def test_import_with_vague_title_but_rich_description_identifies_tcgdex(tmp_path: Path) -> None:
+    from fastapi.testclient import TestClient
+    from app.config import Settings
+    from app.tcgdex.cache import TcgdexCache
+    from app.web import app
+
+    db_path = tmp_path / "web_ext_desc.db"
+    with connect(db_path) as conn:
+        apply_migrations(conn)
+        cache = TcgdexCache(conn)
+        cache.seed_initial_if_empty()
+
+    app.state.settings = Settings(database_path=db_path)
+    client = TestClient(app)
+
+    # Titre vague typique sur Vinted/Leboncoin mais description contenant les vrais détails TCGdex
+    sample_jsonl = (
+        '{"external_id":"vinted_vague_1","name":"Superbe carte ancienne brillante","set_name":"Non identifiée","price_cents":3000,"currency":"EUR","description":"Magnifique Dracaufeu 4/102 Set de Base holo état neuf","url":"https://www.vinted.fr/items/888"}\n'
+    ).encode("utf-8")
+
+    response = client.post(
+        "/imports",
+        files={"file": ("capture.jsonl", sample_jsonl, "text/plain")},
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["imported"] == 1
+    ev = data["evaluations"][0]
+    # Doit avoir réconcilié la carte avec TCGdex grâce à la description
+    assert ev["name"] == "Dracaufeu"
+    assert ev["set_name"] == "Set de Base"
+    assert ev["card_number"] == "4"
+    assert ev["identification_status"] == "identified"
+
+
+

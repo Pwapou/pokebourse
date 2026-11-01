@@ -42,40 +42,35 @@ Pokébourse est conçu pour fonctionner **100 % en local**, sans serveur cloud d
 
 ---
 
-## 📜 3. Les 7 Règles d'Or Inviolables du Projet
+## 📜 3. Les 6 Règles d'Or Inviolables du Projet
 
-En tant qu'agent de code, vous devez respecter scrupuleusement ces 7 principes fondamentaux :
+En tant qu'agent de code, vous devez respecter scrupuleusement ces 6 principes fondamentaux :
 
-### 🛡️ Règle 1 : Zéro contournement anti-bot & Respect des CGU
-- **Interdiction formelle** d'implémenter des solveurs de CAPTCHA, des proxies tournants, des injections de cookies privés ou des mécanismes de falsification d'empreinte TLS pour contourner Cloudflare ou DataDome.
-- Les connecteurs (`app/collectors/vinted.py`, `app/collectors/leboncoin.py`) doivent gérer gracieusement les codes `403` et `429` en passant en état `SUSPENDED` ou `DEGRADED` sans jamais crasher le worker.
-- Pour capturer des annonces en navigation réelle, **le canal officiel préconisé est l'extension Chrome** (`extension/`).
-
-### 🧪 Règle 2 : Herméticité absolue des tests (`pytest`)
+### 🧪 Règle 1 : Herméticité absolue des tests (`pytest`)
 - **Aucun test automatisé ne doit émettre d'appel réseau réel** vers Vinted, Leboncoin, eBay ou l'API TCGdex.
 - Utilisez systématiquement les mocks (`unittest.mock`, `pytest_mock`) et le jeu de données local embarqué (`app/tcgdex/data/seed_data.py`).
 - Les tests doivent s'exécuter rapidement et réussir à 100 % dans le conteneur Docker.
 
-### 💾 Règle 3 : Intégrité SQLite & Sauvegarde des données
+### 💾 Règle 2 : Intégrité SQLite & Sauvegarde des données
 - **Ne lancez jamais** `docker compose down -v` ou `down --volumes` : le volume `pokemon-data` contient les données réelles de l'utilisateur.
 - Toute évolution du schéma de la base de données **doit impérativement faire l'objet d'un nouveau fichier de migration SQL numéroté** dans `app/storage/migrations/` (ex: `0011_nom_descriptif.sql`).
 - Chaque fichier de migration doit commencer par `BEGIN IMMEDIATE;`, se terminer par `COMMIT;`, et enregistrer son nom dans la table `schema_migrations`.
 
-### 💰 Règle 4 : Précision monétaire en centimes et points de base
+### 💰 Règle 3 : Précision monétaire en centimes et points de base
 - **Ne jamais utiliser de `float` pour manipuler de l'argent ou des taux**. Les erreurs d'arrondis à virgule flottante sont interdites.
 - Les montants sont obligatoirement des entiers en centimes : `price_cents`, `shipping_cents`, `min_net_profit_cents`.
 - Les pourcentages et commissions sont en points de base (`bps`) : $1\% = 100\text{ bps}$, $5\% = 500\text{ bps}$, $15,5\% = 1550\text{ bps}$.
 - L'arrondi monétaire appliqué est l'arrondi demi-supérieur (`ROUND_HALF_UP`).
 
-### 📦 Règle 5 : Règle absolue des Lots dans l'identification
+### 📦 Règle 4 : Règle absolue des Lots dans l'identification
 - Si une annonce correspond à un lot, un coffret, un booster ou un paquet en vrac (`is_lot = 1`), **il est formellement interdit de lui attribuer arbitrairement l'identifiant d'une carte unitaire TCGdex**.
 - Le matcher (`app/identification/matcher.py`) doit la classer avec le statut `lot` avec un motif explicite.
 
-### ⏳ Règle 6 : Préservation des métadonnées temporelles
+### ⏳ Règle 5 : Préservation des métadonnées temporelles
 - Lors de la ré-ingestion d'une annonce déjà existante (`UNIQUE(source_id, external_id)`), le champ `first_seen_at` ne doit **jamais** être écrasé.
 - Seuls `last_seen_at`, `price_cents`, `shipping_cents`, `url` et `raw_data` peuvent être actualisés.
 
-### 🔒 Règle 7 : Respect strict du RGPD pour les vendeurs
+### 🔒 Règle 6 : Respect strict du RGPD pour les vendeurs
 - L'enrichissement des données publiques vendeur (`app/sellers/collect.py`) applique une **liste blanche stricte**.
 - Ne jamais stocker ni journaliser de données personnelles privées (adresses email réelles, noms civils, numéros de téléphone, coordonnées postales).
 

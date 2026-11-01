@@ -184,6 +184,24 @@ La sécurité de vos données est assurée sur la page **Sauvegardes** (`/backup
 
 ---
 
+### 9. Référencement des Vendeurs, Pépites & CRM d'Achats (`/sellers`)
+
+Pokébourse inclut un annuaire intelligent pour identifier vos meilleurs partenaires d'achat et suivre votre historique réel :
+- **Classement Multi-axes** :
+  - ⭐ **Les plus fiables** : évaluation en étoiles (0 à 5 ★) calculée sur les avis vérifiés de la plateforme, le taux d'avis positifs et l'absence de ban.
+  - 🏆 **Meilleures pépites** : vendeurs qui mettent en ligne le plus de cartes sous-évaluées détectées comme *Opportunité* par le moteur d'arbitrage.
+  - 💳 **Fournisseurs clés** : vendeurs chez qui vous avez le plus acheté et dépensé.
+  - ❤️ **Favoris & Notes** : marquez vos vendeurs de confiance et notez leurs habitudes de négociation ou la qualité de leur emballage.
+- **Fiche Vendeur Détaillée (`/sellers/{id}`)** :
+  - Indicateurs de fiabilité et réputation publique détaillée.
+  - Carnet de notes personnelles sur le vendeur.
+  - Historique des achats conclus avec date, prix payé, port et statut de livraison.
+  - Inventaire en direct des cartes en vente du vendeur consolidées dans le catalogue local.
+- **Enregistrement d'Achat Intégré** :
+  - Formulaire **« Marquer cette annonce comme achetée »** sur chaque fiche annonce (`/catalog/{id}`) pour alimenter automatiquement vos statistiques et l'historique vendeur.
+
+---
+
 ## 📥 Format d'Import de Fichiers JSONL
 
 Vous pouvez importer des annonces ou des cotes en masse via l'interface web ou la ligne de commande.

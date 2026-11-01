@@ -90,6 +90,24 @@ Date de la révision TCGdex & Identification : 2026-11-01
    - Test d'ingestion directe du JSONL dans la base de données et test HTTP du endpoint d'import avec en-tête `Accept: application/json`.
    - Test de calcul complet de rentabilité et retour de cote de revente (`test_import_with_known_resell_price_returns_full_profitability`).
 
+### E. Référencement des Vendeurs, Pépites & Suivi des Achats (`app/sellers/`)
+1. **Migrations SQLite `0009` et `0010`** :
+   - Migration `0009_create_seller_profiles.sql` : table `seller_profiles` (réputation, avis, taux de réponse, ban), file d'enrichissement `seller_enrichment_queue` et colonne `seller_profile_id` dans `catalog_items`.
+   - Migration `0010_create_purchases_and_seller_stats.sql` : table `purchases` pour le suivi des achats réels (carte, set, prix payé, frais de port, statut, date, notes), ajout de `is_favorite` et `user_notes` sur `seller_profiles`.
+2. **Scoring de fiabilité & extraction en liste blanche** :
+   - Modèle `SellerProfile` et calcul `reliability_rating` sur 5 étoiles avec garde-fous stricts (plafonnement si peu d'avis ou taux d'avis négatifs > 10 %).
+   - Extraction des profils Vinted et Leboncoin sans conservation de données personnelles.
+3. **Moteur de classement multi-axes (Sourcing & CRM)** :
+   - Classement par **Fiabilité** (note en étoiles, réputation plateforme, avis positifs).
+   - Classement par **Pépites / Opportunités** (nombre d'annonces de ce vendeur détectées en `opportunite` par le moteur de rentabilité).
+   - Classement par **Achats réels** (nombre d'achats conclus, montant cumulé dépensé).
+   - Filtre par **Favoris** (❤️) et recherche textuelle.
+4. **Interface utilisateur & Actions** :
+   - Page `/sellers` : annuaire avec filtres, tris et indicateurs clés.
+   - Page `/sellers/{id}` : fiche détaillée regroupant 4 cartes métriques, réputation, formulaire de notes perso, historique d'achats passés, et annonces actives du vendeur dans le catalogue.
+   - Page `/catalog/{id}` : lien direct vers la fiche vendeur et formulaire « Marquer cette annonce comme achetée » (`POST /catalog/{id}/purchase`).
+   - Page `/catalog` : nom du vendeur cliquable menant directement à sa fiche profil.
+
 ---
 
 ## 3. Synthèse des tests automatisés
@@ -101,7 +119,9 @@ docker compose exec -T app pytest
 
 | Fichier de test | Domaine testé | Statut |
 |---|---|---|
-| `tests/test_migrations.py` | Idempotence des 9 migrations SQLite, clés étrangères et tables | **5 passés** |
+| `tests/test_migrations.py` | Idempotence des 10 migrations SQLite, clés étrangères et tables | **5 passés** |
+| `tests/test_sellers_directory_and_purchases.py` | Annuaire vendeurs, tri pépites/achats/fiabilité, favoris, CRM | **4 passés** |
+| `tests/test_sellers.py` | Extraction liste blanche, calcul étoiles, ré-enfilement et reliaison | **16 passés** |
 | `tests/test_chrome_extension.py` | Manifest V3, icônes PNG réelles, sélection, estimation revente & API | **5 passés** |
 | `tests/test_tcgdex_cache.py` | Cache TCGdex, lecture hors-ligne, seed, gestion des erreurs 404/429/réseau | **5 passés** |
 | `tests/test_identification.py` | Détection de lots, identification claire/ambiguë, variantes, champs manquants | **8 passés** |

@@ -63,7 +63,15 @@
     if (isItemPage) {
       const titleElem = document.querySelector("h1") || document.querySelector("meta[property='og:title']");
       const title = (titleElem?.textContent || titleElem?.content || "").trim();
-      if (!isPokemonContext(title) && !isPokemonContext(document.title)) return null;
+
+      const descElem = document.querySelector("[itemprop='description']") ||
+                       document.querySelector("[data-testid*='description']") ||
+                       document.querySelector(".details-list--description") ||
+                       document.querySelector(".item-description");
+      const description = descElem?.textContent?.trim() || "";
+      const fullContext = `${title} ${description}`.trim();
+
+      if (!isPokemonContext(fullContext) && !isPokemonContext(document.title)) return null;
 
       const priceElem = document.querySelector("[data-testid*='price']") || document.querySelector("h2[class*='price']");
       const priceText = priceElem?.textContent || "";
@@ -82,13 +90,15 @@
       return [{
         external_id: externalId,
         name: title,
-        set_name: extractSetName(title),
-        card_number: extractCardNumber(title),
+        set_name: extractSetName(fullContext),
+        card_number: extractCardNumber(fullContext),
         price_cents: priceCents,
         currency: "EUR",
         seller,
         url: window.location.href,
         image_url: imageUrl,
+        description,
+        raw_data: { title, description },
         source: "vinted"
       }];
     }
@@ -101,7 +111,14 @@
     if (isAdPage) {
       const titleElem = document.querySelector("h1") || document.querySelector("[data-qa-id='adview_title']");
       const title = titleElem?.textContent?.trim() || "";
-      if (!isPokemonContext(title) && !isPokemonContext(document.title)) return null;
+
+      const descElem = document.querySelector("[data-qa-id='adview_description_container']") ||
+                       document.querySelector("[data-test-id='adview_description']") ||
+                       document.querySelector("[itemprop='description']");
+      const description = descElem?.textContent?.trim() || "";
+      const fullContext = `${title} ${description}`.trim();
+
+      if (!isPokemonContext(fullContext) && !isPokemonContext(document.title)) return null;
 
       const priceElem = document.querySelector("[data-qa-id='adview_price']") || document.querySelector("[class*='price']");
       const priceCents = parsePriceToCents(priceElem?.textContent || "");
@@ -119,13 +136,15 @@
       return [{
         external_id: externalId,
         name: title,
-        set_name: extractSetName(title),
-        card_number: extractCardNumber(title),
+        set_name: extractSetName(fullContext),
+        card_number: extractCardNumber(fullContext),
         price_cents: priceCents,
         currency: "EUR",
         seller,
         url: window.location.href,
         image_url: imageUrl,
+        description,
+        raw_data: { title, description },
         source: "leboncoin"
       }];
     }
@@ -195,19 +214,25 @@
 
     if (!title || priceCents === null) return null;
 
+    const metaDesc = document.querySelector("meta[name='description']")?.content ||
+                     document.querySelector("meta[property='og:description']")?.content || "";
+    const fullContext = `${title} ${metaDesc}`.trim();
+
     const hostname = window.location.hostname.replace(/^www\./, "");
     const cleanId = `${hostname}_${Math.abs(hashCode(window.location.href))}`;
 
     return [{
       external_id: cleanId,
       name: title,
-      set_name: extractSetName(title),
-      card_number: extractCardNumber(title),
+      set_name: extractSetName(fullContext),
+      card_number: extractCardNumber(fullContext),
       price_cents: priceCents,
       currency: "EUR",
       seller: seller || hostname,
       url: window.location.href,
       image_url: imageUrl,
+      description: metaDesc,
+      raw_data: { title, description: metaDesc },
       source: hostname.includes("vinted") ? "vinted" : hostname.includes("leboncoin") ? "leboncoin" : "web"
     }];
   }

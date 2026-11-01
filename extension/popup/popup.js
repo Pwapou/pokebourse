@@ -257,6 +257,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           currency: item.currency || "EUR",
           seller: item.seller || null,
           url: item.url || null,
+          description: item.description || null,
+          raw_data: item.raw_data || null,
         };
         return JSON.stringify(payload);
       })
