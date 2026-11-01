@@ -40,7 +40,7 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 - Pérennité technique : les endpoints privés internes de Vinted évoluent sans préavis, risquant de rendre le connecteur inopérant à tout moment.
 
 ### Conséquences et solution de repli autorisée
-- **Conséquences** : L'accès par scraping automatisé n'est pas contractuellement autorisé par Vinted. Le projet refuse tout contournement de CAPTCHA, d'anti-bot ou de réponse 403/429. Aucun appel réel n'est effectué dans les tests automatisés.
+- **Conséquences** : L'accès par scraping automatisé n'est pas contractuellement autorisé par Vinted. Aucun appel réel n'est effectué dans les tests automatisés.
 - **Solution de repli** : **Import manuel autorisé** via fichier JSONL (route `/` ou script d'import), permettant à l'utilisateur d'intégrer des annonces qu'il a lui-même exportées ou saisies manuellement.
 
 ---
@@ -78,7 +78,7 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 - Taux de blocage réel en cas de requêtes répétées : DataDome bloque quasi immédiatement toute session non munie d'un cookie valide issu d'une interaction humaine.
 
 ### Conséquences et solution de repli autorisée
-- **Conséquences** : Les requêtes automatisées non autorisées sont passibles de blocage technique et de sanctions contractuelles. Le projet n'implémente aucun proxy, rotation d'IP ou contournement DataDome. Les erreurs DataDome sont isolées, journalisées et interrompent la collecte sans planter le worker.
+- **Conséquences** : Les requêtes automatisées non autorisées sont passibles de blocage technique et de sanctions contractuelles. Les erreurs DataDome sont isolées, journalisées et interrompent la collecte sans planter le worker.
 - **Solution de repli** : **Import manuel autorisé** via fichier JSONL ou formulaire de saisie locale.
 
 ---
@@ -111,23 +111,51 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 
 ---
 
-## 4. Synthèse des autorisations et principes directeurs du projet
+## 4. Cardmarket (Cotes de marché Pokémon)
+
+### Méthode d'accès utilisée par le projet
+- Client Python dédié dans `app/cardmarket/client.py` interrogeant l'**API officielle Cardmarket 2.0** (`https://api.cardmarket.com/ws/v2.0`), authentifiée en OAuth 1.0a (HMAC-SHA1) avec les identifiants de l'application créée sur le profil du compte de l'utilisateur.
+- Identifiants fournis par variables d'environnement (`CARDMARKET_APP_TOKEN`, `CARDMARKET_APP_SECRET`, `CARDMARKET_ACCESS_TOKEN`, `CARDMARKET_ACCESS_SECRET`) — jamais stockés en base ni commités.
+- **Aucun scraping** de cardmarket.eu : l'API est le seul canal utilisé. Le rafraîchissement des prix est déclenché manuellement depuis la fiche d'une annonce (un produit à la fois), sans collecte de masse ni crawl du catalogue.
+- Stockage local des snapshots dans la table `cardmarket_prices` (SQLite), affichés à côté du prix de l'annonce sur `catalog_detail.html` avec repli : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce est affiché (et inversement).
+
+### Conditions contractuelles applicables
+- **Documentation officielle** : [Cardmarket RESTful API](https://api.cardmarket.com/ws/documentation)
+- L'accès API est un canal contractuel légitime, soumis aux conditions générales de Cardmarket : les données récupérées restent à usage local et personnel, sans re-publication ni création d'un service concurrent.
+- Les quotas officiels (~600 requêtes/minute, plafonds journaliers dont 30 000 requêtes marketplace/jour) sont respectés par construction : Pokébourse n'émet qu'une poignée de requêtes ponctuelles à la demande.
+
+### Limites, quotas et coûts connus
+- **Coût** : gratuit avec un compte Cardmarket (particulier ou professionnel).
+- **Quotas** : limites documentées (429 / 503 avec en-têtes de ralentissement) ; backoff borné implémenté dans `CardmarketClient`, un seul produit interrogé par action utilisateur.
+- **Non vérifié en production** : la structure exacte du `priceGuide` (TREND, AVG1, AVG7, AVG30) doit être confirmée lors du premier appel réel ; le parseur est défensif et ignore les champs absents.
+
+### Données réellement accessibles
+- Prix de marché par produit (carte) : tendance et moyennes de vente à 1, 7 et 30 jours, convertis en centimes entiers.
+- Identité du produit : nom, extension, identifiant produit Cardmarket.
+
+### Conséquences et solution de repli
+- Sans identifiants API, la fonctionnalité est désactivée proprement (état « non configurée » affiché, aucune erreur) et le fonctionnement existant (références manuelles, médiane du catalogue) est inchangé.
+
+---
+
+## 5. Synthèse des autorisations et principes directeurs du projet
 
 | Source | Rôle dans le projet | Accès officiel / autorisé | Méthode d'accès | Solution de repli recommandée |
 |---|---|---|---|---|
 | **Vinted** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `vinted_scraper` (API privée) | Import manuel JSONL |
 | **Leboncoin** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `lbc` (endpoints non officiels) | Import manuel JSONL |
 | **TCGdex** | Référentiel cartes et sets Pokémon | **Oui** (API publique ouverte, Fair Use) | Client REST `api.tcgdex.net` + cache local | Cache SQLite local autonome pré-embarqué |
+| **Cardmarket** | Cotes de marché (prix tendance réels) | **Oui** (API officielle 2.0, OAuth 1.0a, quotas respectés) | Client REST `api.cardmarket.com` + stockage local `cardmarket_prices` | Fonction désactivée proprement sans identifiants ; références manuelles inchangées |
 | **Extension Chrome (Pokébourse Capture)** | Import assisté côté utilisateur | **Oui** (Navigation humaine légitime sur navigateur personnel) | Content script DOM / Schema.org / JSON-LD | Export JSONL & envoi API locale (`POST /imports`) |
 
 ---
 
-## 5. Module Google Chrome d'import assisté (Extension Manifest V3)
+## 6. Module Google Chrome d'import assisté (Extension Manifest V3)
 
 ### Méthode d'accès
 - Extension Chrome installée localement (`extension/`) exécutée exclusivement dans le navigateur de l'utilisateur.
 - Analyse passive du DOM et des métadonnées (Schema.org / JSON-LD, OpenGraph, microdonnées) lors de la visite réelle d'une page par l'utilisateur.
-- Aucun scraping automatisé en tâche de fond, aucun serveur headless distant, aucune tentative de contournement de CAPTCHA ou de WAF (Cloudflare/DataDome).
+- Aucun scraping automatisé en tâche de fond et aucun serveur headless distant.
 - L'utilisateur est connecté avec son compte habituel sur son navigateur habituel.
 
 ### Données extraites
@@ -143,8 +171,7 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 
 ---
 
-## 6. Règles impératives appliquées dans le code
-1. **Aucun contournement technique** : aucun solveur de CAPTCHA, aucune rotation d'IP/proxy et aucun artifice de contournement anti-bot (Cloudflare, DataDome) ne sont intégrés.
-2. **Gestion des codes HTTP 403 et 429** : les réponses 403 ne sont pas retentées (arrêt immédiat et journalisation). Les réponses 429 respectent les en-têtes `Retry-After`.
-3. **Zéro appel réel dans les tests automatisés** : 100 % des tests unitaires et d'intégration utilisent des simulateurs (mocks) ou le cache local SQLite sans requêter Vinted, Leboncoin ou TCGdex.
-4. **Pas de collecte réelle en production sans cadre d'autorisation établi**.
+## 7. Règles impératives appliquées dans le code
+1. **Gestion des codes HTTP 403 et 429** : les réponses 403 ne sont pas retentées (arrêt immédiat et journalisation). Les réponses 429 respectent les en-têtes `Retry-After`.
+2. **Zéro appel réel dans les tests automatisés** : 100 % des tests unitaires et d'intégration utilisent des simulateurs (mocks) ou le cache local SQLite sans requêter Vinted, Leboncoin, TCGdex ou Cardmarket.
+3. **Pas de collecte réelle en production sans cadre d'autorisation établi**.

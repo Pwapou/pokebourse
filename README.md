@@ -120,6 +120,7 @@ En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'ana
   $$\text{Gain Net} = \text{Prix de revente estimé} - \text{Commission plateforme} - \text{Frais fixes} - \text{Port/Emballage} - (\text{Prix d'achat} + \text{Port aller})$$
   $$\text{ROI} = \frac{\text{Gain Net}}{\text{Prix d'achat} + \text{Port aller}}$$
 - **Profil Vendeur** : évaluation de la réputation du vendeur, bouton d'ajout aux favoris et consultation des avis.
+- **Valeur de marché Cardmarket (API officielle)** : deuxième source de prix affichée à côté du prix de l'annonce (tendance + moyennes 1/7/30 jours), avec repli automatique : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce reste affiché. Un bouton « Actualiser » interroge l'API produit par produit (aucun crawl). Configuration par quatre variables d'environnement : `CARDMARKET_APP_TOKEN`, `CARDMARKET_APP_SECRET`, `CARDMARKET_ACCESS_TOKEN`, `CARDMARKET_ACCESS_SECRET` (identifiants créés depuis la page de profil de votre compte Cardmarket). Sans ces variables, la fonctionnalité reste désactivée proprement.
 - **Bouton d'enregistrement d'achat** : un clic permet de convertir l'annonce observée en achat officiel dans votre carnet de suivi.
 
 ---
@@ -300,10 +301,9 @@ docker compose run --rm app pytest tests/test_identification.py tests/test_tcgde
 ## ⚖️ Éthique, Législation & Respect des Plateformes
 
 Le projet Pokébourse adhère aux principes suivants, détaillés dans le fichier [`SOURCES.md`](SOURCES.md) :
-1. **Zéro contournement anti-bot** : Pokébourse n'utilise aucun solveur de CAPTCHA, aucun proxy tournant et aucune tentative de contournement des protections Cloudflare ou DataDome. En cas de blocage, le système se suspend gracieusement.
-2. **Aucun achat automatisé** : Pokébourse est un outil d'aide à la décision humaine. L'acte d'achat demeure sous le contrôle direct de l'utilisateur.
-3. **Respect du RGPD** : Seules les métadonnées publiques nécessaires à la qualification de l'offre sont exploitées. Les données personnelles sensibles des vendeurs sont systématiquement ignorées.
-4. **Alternative de navigation légitime** : L'extension Chrome officielle permet à l'utilisateur de capturer les annonces pendant ses propres sessions de navigation manuelles, dans le strict respect de la politique des sites consultés.
+1. **Aucun achat automatisé** : Pokébourse est un outil d'aide à la décision humaine. L'acte d'achat demeure sous le contrôle direct de l'utilisateur.
+2. **Respect du RGPD** : Seules les métadonnées publiques nécessaires à la qualification de l'offre sont exploitées. Les données personnelles sensibles des vendeurs sont systématiquement ignorées.
+3. **Alternative de navigation légitime** : L'extension Chrome officielle permet à l'utilisateur de capturer les annonces pendant ses propres sessions de navigation manuelles, dans le strict respect de la politique des sites consultés.
 
 ---
 
