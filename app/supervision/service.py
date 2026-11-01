@@ -23,9 +23,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_COLLECTOR_SITES: dict[str, str] = {
     "vinted": "Vinted",
     "leboncoin": "Leboncoin",
+    "ebay": "eBay",
+    "wallapop": "Wallapop",
 }
 
-SUPPORTED_PLATFORMS: tuple[str, ...] = ("vinted", "leboncoin")
+SUPPORTED_PLATFORMS: tuple[str, ...] = ("vinted", "leboncoin", "ebay", "wallapop")
 
 
 def default_agent_key() -> str:

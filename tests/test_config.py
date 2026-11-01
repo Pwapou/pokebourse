@@ -9,11 +9,13 @@ from app.config import Settings
 def test_default_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("POKEMON_DATABASE_PATH", raising=False)
     monkeypatch.delenv("POKEMON_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("POKEMON_SUPERVISION_IP_PROBE_URL", raising=False)
 
     settings = Settings.from_env()
 
     assert settings.database_path == Path("data/pokemon-arbitrage.db")
     assert settings.log_level == "INFO"
+    assert settings.supervision_ip_probe_url == "https://api.ipify.org"
 
 
 def test_settings_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:

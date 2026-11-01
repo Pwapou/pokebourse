@@ -163,7 +163,60 @@ docker compose exec -T app pytest
 
 ---
 
-## 6. Prochaine étape recommandée
+## 6. Recherche approfondie et confirmations — novembre 2026
 
-- **Mise en place d'un module d'export/import semi-automatique par bookmarklet ou extension locale** :
-  Développer un script d'export manuel pour le navigateur de l'utilisateur (bookmarklet ou mini-extension locale) permettant d'exporter en 1 clic au format JSONL les annonces consultées légitimement par l'utilisateur connecté, afin d'alimenter Pokébourse via la solution de repli autorisée sans risque de blocage robot.
+- Référence initiale mesurée : 15 cartes, 6 extensions, 14 annonces ; suite initiale : 205 tests passants.
+- Recherche locale normalisée (Unicode, accents, ponctuation), numéros canoniques sans rapprochement par suffixe, vocabulaire dérivé du catalogue et ex æquo conservés comme ambigus.
+- Migrations `0012` et `0013` : preuves, décisions humaines, file dédupliquée avec bail, historique des révisions et versions de catalogue. Les clés étrangères et suppressions d’imports sont couvertes par les tests.
+- Recherche TCGdex ciblée par le worker, sans réseau dans le matcher ou les transactions d’import ; reprise bornée et préservation des détails déjà connus.
+- Fiche annonce : candidats, recherche approfondie, confirmation/retrait, correction motivée d’un faux lot, états d’attente et d’échec. Le popup distingue identité et disponibilité d’une cote.
+- Réglage `TCGDEX_AUTO_ENRICH` désactivé par défaut ; `TCGDEX_SEARCHES_PER_TICK=1` par défaut. Référentiel français uniquement, sans substitution silencieuse des cartes étrangères.
+- Recette finale : **248 tests passants**, sans appel réseau réel. Une dépréciation Starlette concernant `httpx` reste signalée, sans échec fonctionnel.
+
+## 7. Supervision réseau des agents — novembre 2026
+
+- La sonde `https://api.ipify.org` est désormais configurée par défaut : chaque enregistrement du worker détecte à nouveau l’IP publique et remplace celle du déploiement précédent.
+- Le signal de vie propage cette IP à l’agent et aux collecteurs Vinted et Leboncoin ; les pages `/agents` et `/agents/{id}` affichent les valeurs persistées existantes. Une sonde indisponible laisse « IP inconnue » et ne bloque pas le démarrage.
+- Tests de configuration, d’enregistrement, de redéploiement et d’interface simulés, sans appel réseau réel.
+
+## 8. Cotes Cardmarket officielles & repli prudent — novembre 2026
+
+- Migrations `0011_create_cardmarket_prices.sql`, `0015_cardmarket_name_aliases.sql` et `0017_create_cardmarket_sync_state.sql`.
+- Téléchargement et synchronisation SQLite du price guide officiel public de Cardmarket (~80 000 références en EUR, gratuit, sans compte API).
+- Modèle de repli à 3 niveaux dans `app/profitability.py` : (1) Cote dédiée manuelle ou ventes conclues `market_references`, (2) Médiane du catalogue d'annonces strictement identiques, (3) Prix tendance Cardmarket le plus conservateur avec pont multilingue FR · EN · JA · KO · ZH via les alias de noms officiels TCGdex.
+- Synchronisation quotidienne intégrée au worker (`app/monitoring/scheduler.py`) planifiée à 01h45 UTC juste après la publication Cardmarket, ou déclenchable manuellement depuis `/profitability`.
+
+---
+
+## 9. Extension multi-plateformes : eBay & Wallapop — novembre 2026
+
+- Migration `0016_add_ebay_wallapop_platforms.sql` autorisant `'ebay'` et `'wallapop'` comme plateformes natives dans `sources`, `listing_watches`, `supervision_collectors` et `seller_profiles`.
+- Connecteurs HTTP `app/collectors/ebay.py` et `app/collectors/wallapop.py` avec normalisation des filtres de recherche (prix min/max en centimes).
+- Ingestion unifiée, respect de `first_seen_at`, verrous dédiés par plateforme (`_platform_locks`) dans le scheduler pour éviter les exécutions concurrentes.
+- Extension Chrome mise à jour : détection automatique du domaine eBay/Wallapop, extraction dédiée et styles de badges de source.
+
+---
+
+## 10. Phase 0 ML & Pilote d'annotation textuelle — novembre 2026
+
+- Migration `0014_annotation_pilot.sql` : gestion des vagues de tirage stratifié, attribution déterministe et suivi d'avancement vers un budget de 300 annonces et 60 doubles lectures indépendantes.
+- Snapshots immuables d'observations (`listing_identification_snapshots`) séparés des champs corrigés, avec masquage préventif des données de contact personnelles (`redact_contacts`).
+- Interface `/annotations` et `/annotations/items/{id}` : première et seconde lectures aveugles garantissant l'indépendance des annotateurs grâce à la configuration serveur `POKEMON_REVIEW_OPERATOR`.
+- Formulaire d'arbitrage final et diagnostic en lecture seule `/identification/diagnostics` (aussi disponible en CLI `pokemon-arbitrage diagnose-identification`).
+- Export reproductible sans fuite de données personnelles : `GET /catalog/labels.jsonl` et commande CLI `pokemon-arbitrage export-labels`.
+
+---
+
+## 11. Bilan de la suite de tests automatisés (Novembre 2026)
+
+- **311 tests automatisés passants sur 30 suites** (0 échec, exécution en ~9s dans Docker).
+- Aucun appel réseau réel émis (100 % mocké ou basé sur les jeux locaux embarqués).
+- Herméticité absolue, précision monétaire en centimes et points de base, et intégrité SQLite (17 migrations versionnées) validées.
+
+---
+
+## 12. Prochaines étapes recommandées
+
+1. **Exécution du protocole pilote Phase 0** : Réaliser les 300 annotations (dont 60 doubles lectures aveugles) via l'interface `/annotations`, mesurer l'accord inter-annotateurs et exporter le jeu consolidé pour l'apprentissage.
+2. **Phase 1 ML** : Établir la baseline lexicale mesurée puis entraîner le modèle de ranking (LightGBM) avec partitions étanches sans fuite de données.
+3. **Support multilingue étendu** : Intégrer les référentiels TCGdex anglais et japonais avec gestion des équivalences d'extensions.

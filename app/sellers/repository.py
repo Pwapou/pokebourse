@@ -312,7 +312,7 @@ def list_sellers_with_aggregates(
         WHERE 1 = 1
     """
     params: list[Any] = []
-    if platform and platform in ("vinted", "leboncoin"):
+    if platform and platform in ("vinted", "leboncoin", "ebay", "wallapop"):
         sql += " AND sp.platform = ?"
         params.append(platform)
     if only_favorites:

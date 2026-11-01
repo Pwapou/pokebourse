@@ -158,6 +158,23 @@ def import_jsonl(
                     for item in items
                 ],
             )
+            from app.identification.pipeline import resolve_and_apply
+            rows = connection.execute("SELECT id FROM catalog_items WHERE import_batch_id = ? ORDER BY id", (batch_id,)).fetchall()
+            for row, item in zip(rows, items, strict=True):
+                # Les champs corrigés ne doivent jamais devenir les entrées d'apprentissage.
+                raw_input = item.raw_data or {}
+                raw_title = raw_input.get("title")
+                original_title = raw_title if isinstance(raw_title, str) and raw_title.strip() else item.name
+                observed = {key: getattr(item, key) for key in ("name", "set_name", "card_number", "variant", "condition", "edition")}
+                if "language" in item.model_fields_set:
+                    observed["language"] = item.language
+                observed["description"] = item.description if "description" in item.model_fields_set else raw_input.get("description", raw_input.get("body"))
+                observed["_identity_input_origin"] = "original_text" if isinstance(raw_title, str) and raw_title.strip() else "structured_import"
+                connection.execute(
+                    "UPDATE catalog_items SET original_title=?, raw_data=? WHERE id=?",
+                    (original_title, json.dumps(observed, ensure_ascii=False), row["id"]),
+                )
+                resolve_and_apply(connection, int(row["id"]))
             connection.execute(
                 "UPDATE import_batches SET status = 'completed' WHERE id = ?",
                 (batch_id,),
@@ -227,7 +244,7 @@ CATALOG_SORTS: dict[str, str] = {
     ),
 }
 DEFAULT_CATALOG_SORT = "import_desc"
-CATALOG_SOURCES = ("all", "vinted", "leboncoin", "manual")
+CATALOG_SOURCES = ("all", "vinted", "leboncoin", "ebay", "wallapop", "manual")
 DEFAULT_CATALOG_SOURCE = "all"
 CATALOG_IDENT_STATUSES = ("all", "identified", "ambiguous", "lot", "unidentified")
 DEFAULT_CATALOG_IDENT_STATUS = "all"
@@ -272,10 +289,9 @@ def _catalog_filters(
         filters.append("c.set_name = ?")
         parameters.append(set_name)
     active_source = normalize_catalog_source(source)
-    if active_source == "vinted":
-        filters.append("s.name = 'vinted'")
-    elif active_source == "leboncoin":
-        filters.append("s.name = 'leboncoin'")
+    if active_source in ("vinted", "leboncoin", "ebay", "wallapop"):
+        filters.append("s.name = ?")
+        parameters.append(active_source)
     elif active_source == "manual":
         filters.append("s.kind = 'manual_jsonl'")
 
@@ -492,85 +508,51 @@ def import_failures_report(connection: sqlite3.Connection, limit: int = 50) -> s
 def reidentify_catalog_item(
     connection: sqlite3.Connection, item_id: int
 ) -> dict[str, Any] | None:
-    """Réexamine et met à jour l'identification d'une annonce du catalogue."""
-    from app.identification.matcher import CardMatcher
-    from app.tcgdex.cache import TcgdexCache
+    """Réexamine via le service commun, sans écraser une confirmation applicable."""
+    from app.config import Settings
+    from app.identification.pipeline import resolve_and_apply
 
-    item = catalog_item_detail(connection, item_id)
-    if not item:
+    if not catalog_item_detail(connection, item_id):
         return None
-
-    raw_data = None
-    title = item["original_title"] or item["name"]
-    raw_row = connection.execute(
-        "SELECT raw_data FROM catalog_items WHERE id = ?", (item_id,)
-    ).fetchone()
-    if raw_row and raw_row[0]:
-        try:
-            raw_data = json.loads(raw_row[0])
-        except Exception:
-            pass
-
-    matcher = CardMatcher(TcgdexCache(connection))
-    ident = matcher.identify(title, raw_data=raw_data)
-
-    name = item["name"]
-    set_name = item["set_name"]
-    card_number = item["card_number"]
-    ref_card_id = None
-    is_lot = 1 if ident.features.is_lot else 0
-
-    if ident.status == "identified" and ident.matched_card:
-        name = ident.matched_card.name
-        set_name = ident.matched_card.set_name
-        card_number = ident.matched_card.local_id
-        ref_card_id = ident.matched_card.id
-    elif ident.status == "lot":
-        name = title
-        set_name = "Lot / Coffret"
-        card_number = None
-        is_lot = 1
-    elif ident.status == "ambiguous":
-        if ident.features.name:
-            name = ident.features.name
-        if ident.features.set_name:
-            set_name = ident.features.set_name
-        if ident.features.card_number:
-            card_number = ident.features.card_number
-
     with connection:
-        connection.execute(
-            """
-            UPDATE catalog_items SET
-                name = ?, set_name = ?, card_number = ?,
-                identification_status = ?, reference_card_id = ?,
-                identification_confidence = ?, identification_reason = ?,
-                is_lot = ?
-            WHERE id = ?
-            """,
-            (
-                name,
-                set_name,
-                card_number,
-                ident.status,
-                ref_card_id,
-                ident.confidence,
-                ident.reason,
-                is_lot,
-                item_id,
-            ),
+        resolution = resolve_and_apply(
+            connection, item_id, auto_enrich=Settings.from_env().tcgdex_auto_enrich
         )
-
+    item = catalog_item_detail(connection, item_id)
     return {
-        "item_id": item_id,
-        "name": name,
-        "set_name": set_name,
-        "card_number": card_number,
-        "status": ident.status,
-        "confidence": ident.confidence,
-        "reason": ident.reason,
-        "reference_card_id": ref_card_id,
+        "item_id": item_id, "name": item["name"], "set_name": item["set_name"],
+        "card_number": item["card_number"], "status": resolution.result.status,
+        "confidence": resolution.result.confidence, "reason": resolution.result.reason,
+        "reference_card_id": item["reference_card_id"],
     }
+
+
+def reidentify_catalog(
+    connection: sqlite3.Connection, *, only_pending: bool = True
+) -> dict[str, int]:
+    """Réexamine les annonces avec le référentiel courant.
+
+    À lancer après une mise à jour complète du catalogue TCGdex : les annonces
+    importées alors que le référentiel était incomplet (ex. données seed)
+    obtiennent une nouvelle chance d'être identifiées. Les confirmations
+    humaines restent prioritaires (le service commun les respecte).
+    """
+    from app.config import Settings
+    from app.identification.pipeline import resolve_and_apply
+
+    query = "SELECT id FROM catalog_items"
+    if only_pending:
+        query += " WHERE identification_status IN ('unidentified', 'ambiguous')"
+    item_ids = [int(row["id"]) for row in connection.execute(query).fetchall()]
+    auto_enrich = Settings.from_env().tcgdex_auto_enrich
+    counts: dict[str, int] = {}
+    for item_id in item_ids:
+        with connection:
+            resolution = resolve_and_apply(connection, item_id, auto_enrich=auto_enrich)
+        status = resolution.result.status
+        counts[status] = counts.get(status, 0) + 1
+    counts["examined"] = len(item_ids)
+    return counts
 
 
 def import_listings_from_extension(
@@ -580,6 +562,7 @@ def import_listings_from_extension(
 ) -> list[dict[str, Any]]:
     """Importe et évalue immédiatement une liste d'annonces transmises par l'extension Chrome."""
     from app.profitability import enrich_catalog_items
+    from app.identification.resolution import resolve_listing
 
     items = parse_jsonl(content)
     if not items:
@@ -616,8 +599,14 @@ def import_listings_from_extension(
         saved_item_ids: list[int] = []
         for item in items:
             raw_payload = dict(item.raw_data or {})
-            if item.description and "description" not in raw_payload:
+            for key in ("name", "set_name", "card_number", "variant", "condition", "edition"):
+                raw_payload.setdefault(key, getattr(item, key))
+            if "language" in item.model_fields_set:
+                raw_payload["language"] = item.language
+            if "description" in item.model_fields_set:
                 raw_payload["description"] = item.description
+            original_title = raw_payload.get("title") or item.name
+            raw_payload["_identity_input_origin"] = "original_text" if raw_payload.get("title") else "structured_import"
             raw_json = json.dumps(raw_payload, ensure_ascii=False) if raw_payload else None
 
             existing = connection.execute(
@@ -693,6 +682,7 @@ def import_listings_from_extension(
                 )
                 item_id = cursor.lastrowid
 
+            connection.execute("UPDATE catalog_items SET original_title=? WHERE id=?", (original_title, item_id))
             saved_item_ids.append(item_id)
             reidentify_catalog_item(connection, item_id)
 
@@ -753,7 +743,9 @@ def import_listings_from_extension(
                 "identification_status": ev.get("identification_status"),
                 "identification_reason": ev.get("identification_reason"),
                 "is_lot": bool(ev.get("is_lot")),
+                "decision_source": resolve_listing(connection, int(ev["id"])).decision_source,
                 "url_detail": f"http://localhost:8000/catalog/{ev['id']}",
+                "url_identify": f"http://localhost:8000/catalog/{ev['id']}#ident-title",
                 "url_add_cote": "http://localhost:8000/profitability#cotes",
             }
         )

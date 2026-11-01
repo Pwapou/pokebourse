@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-SellerPlatform = Literal["vinted", "leboncoin"]
+SellerPlatform = Literal["vinted", "leboncoin", "ebay", "wallapop"]
 
 MAX_REPUTATION_BPS = 10_000
 
@@ -42,7 +42,12 @@ class SellerProfile(BaseModel):
     def validate_profile_url(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        if not (value.startswith("https://www.vinted.") or value.startswith("https://www.leboncoin.fr")):
+        if not (
+            value.startswith("https://www.vinted.")
+            or value.startswith("https://www.leboncoin.fr")
+            or "ebay." in value
+            or "wallapop.com" in value
+        ):
             raise ValueError("URL de profil hors domaine officiel")
         return value
 

@@ -233,7 +233,15 @@
       image_url: imageUrl,
       description: metaDesc,
       raw_data: { title, description: metaDesc },
-      source: hostname.includes("vinted") ? "vinted" : hostname.includes("leboncoin") ? "leboncoin" : "web"
+      source: hostname.includes("vinted")
+        ? "vinted"
+        : hostname.includes("leboncoin")
+        ? "leboncoin"
+        : hostname.includes("ebay")
+        ? "ebay"
+        : hostname.includes("wallapop")
+        ? "wallapop"
+        : "web"
     }];
   }
 

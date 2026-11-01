@@ -136,6 +136,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const sourceLabel = ev.reference_source_name ? `<span class="eval-source">(${escapeHtml(ev.reference_source_name)})</span>` : "";
+        let identityHtml = "";
+        if (ev.identification_status === "identified") {
+          identityHtml = `<div class="eval-identification">✓ ${ev.decision_source === "human" ? "Carte confirmée manuellement" : "Carte identifiée"}${ev.has_reference_price ? "" : " · cote non renseignée"}</div>`;
+        } else if (ev.identification_status === "ambiguous") {
+          identityHtml = `<div class="eval-identification">Plusieurs cartes possibles · <a href="${escapeHtml(ev.url_identify || ev.url_detail)}" target="_blank" rel="noopener noreferrer">Comparer les candidats</a></div>`;
+        } else if (ev.identification_status === "lot") {
+          identityHtml = `<div class="eval-identification">Lot / produit scellé · aucune carte unitaire attribuée</div>`;
+        } else {
+          identityHtml = `<div class="eval-identification">Carte à identifier · <a href="${escapeHtml(ev.url_identify || ev.url_detail)}" target="_blank" rel="noopener noreferrer">Identifier cette carte</a></div>`;
+        }
 
         evalHtml = `
           <div class="eval-box ${verdictClass}">
@@ -156,6 +166,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </span>
               </div>
             </div>
+            ${identityHtml}
             ${profitHtml}
             <div class="eval-footer">
               <a href="${escapeHtml(ev.url_detail || 'http://localhost:8000/catalog')}" target="_blank" rel="noopener noreferrer" class="eval-link-detail">

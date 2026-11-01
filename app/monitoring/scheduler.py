@@ -38,7 +38,8 @@ class WatchScheduler:
         self._supervisor = supervisor
         self._seller_service = seller_service
         self._platform_locks = {
-            platform: threading.Lock() for platform in ("vinted", "leboncoin")
+            platform: threading.Lock()
+            for platform in ("vinted", "leboncoin", "ebay", "wallapop")
         }
 
     def initialize(self) -> None:
@@ -58,7 +59,7 @@ class WatchScheduler:
             timespec="milliseconds"
         ).replace("+00:00", "Z")
         summary = {"executed": 0, "failed": 0, "skipped": 0, "suspended": 0}
-        for platform in ("vinted", "leboncoin"):
+        for platform in ("vinted", "leboncoin", "ebay", "wallapop"):
             lock = self._platform_locks[platform]
             if not lock.acquire(blocking=False):
                 summary["skipped"] += 1
@@ -148,6 +149,22 @@ class WatchScheduler:
         except sqlite3.Error as error:
             logger.warning("Enrichissement vendeur impossible pour l'instant : %s", error)
 
+    def process_identification_searches(self) -> int:
+        """Traite une recherche distante à la fois, hors des transactions SQLite."""
+        from app.identification.research import claim_search, process_claimed_search
+        from app.tcgdex.client import TcgdexClient
+
+        processed = 0
+        for _ in range(self.settings.tcgdex_searches_per_tick):
+            with connect(self.database_path) as connection:
+                claimed = claim_search(connection)
+            if claimed is None:
+                break
+            with connect(self.database_path) as connection:
+                process_claimed_search(connection, claimed, TcgdexClient(max_retries=1))
+            processed += 1
+        return processed
+
     def run_forever(self, stop_event: threading.Event) -> None:
         self.initialize()
         logger.info(
@@ -171,12 +188,38 @@ class WatchScheduler:
                         last_heartbeat = time.monotonic()
                 if self._seller_service is not None:
                     self._process_sellers()
+                try:
+                    self.process_identification_searches()
+                except (sqlite3.Error, OSError) as error:
+                    logger.warning("Recherche TCGdex reportée : %s", error)
+                try:
+                    self._sync_cardmarket_daily(stop_event)
+                except Exception as error:
+                    logger.warning("Synchronisation Cardmarket reportée : %s", error)
                 stop_event.wait(self.settings.watch_poll_seconds)
         finally:
             if self._supervisor is not None:
                 with connect(self.database_path) as connection:
                     self._supervisor.shutdown(connection)
         logger.info("Worker de veilles arrêté.")
+
+    def _sync_cardmarket_daily(self, stop_event: threading.Event) -> None:
+        """Synchronisation quotidienne des cotes + noms Cardmarket (price guide
+        régénéré ~01:45 UTC ; synchro planifiée juste après)."""
+        if stop_event.is_set():
+            return
+        from app.cardmarket import daily as cardmarket_daily
+
+        with connect(self.database_path) as connection:
+            result = cardmarket_daily.maybe_run_daily_sync(
+                connection,
+                run_time_utc=self.settings.cardmarket_daily_sync_utc,
+            )
+        if result is not None:
+            logger.info(
+                "Synchronisation Cardmarket quotidienne : %s.",
+                cardmarket_daily.summarize(result),
+            )
 
     @staticmethod
     def _is_due(watch: dict[str, Any], now: datetime) -> bool:

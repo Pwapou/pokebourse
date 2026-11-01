@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Lecture indisponible · Pokébourse{% endblock %}
+{% block breadcrumb %}Annotations{% endblock %}
+{% block content %}
+<section class="panel empty-state">
+    <h1>Lecture indisponible</h1>
+    <p>{{ message }}</p>
+    <a class="button primary" href="/annotations">Retour à la file d’annotation</a>
+</section>
+{% endblock %}

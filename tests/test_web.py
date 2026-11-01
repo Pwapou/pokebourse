@@ -339,3 +339,27 @@ def test_catalog_export_csv_respects_filters_and_escapes_formulas(
     assert len(lines) == 2  # en-tête + la seule annonce filtrée
     assert "Pikachu" in filtered_body
     assert "evil-1" not in filtered_body
+
+
+def test_identification_search_and_confirmation_flow(client: TestClient) -> None:
+    from app.config import Settings
+    from app.identification.resolution import resolve_listing
+    from app.storage.database import connect
+
+    content = b'{"external_id":"draco-web","name":"Dracaufeu","set_name":"Set de Base","card_number":"004/102","price_cents":1000}'
+    client.post("/imports", files={"file": ("annonces.jsonl", content, "application/x-ndjson")})
+    candidates = client.get("/catalog/1/identification", params={"name": "Dracaufeu", "local_id": "4"})
+    assert candidates.status_code == 200
+    card = candidates.json()["items"][0]
+    with connect(Settings.from_env().database_path) as connection:
+        resolution = resolve_listing(connection, 1)
+    response = client.post("/catalog/1/identification/confirm", data={
+        "reference_card_id": card["id"], "evidence_hash": resolution.evidence_hash,
+        "revision": resolution.revision,
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert "Confirmée manuellement" in response.text
+    assert "Retirer la confirmation" in response.text
+    queued = client.post("/catalog/1/identification/search", data={"name": "Dracaufeu"}, follow_redirects=False)
+    assert queued.status_code == 303
+    assert "attente" in queued.headers["location"]

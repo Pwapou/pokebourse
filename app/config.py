@@ -21,7 +21,19 @@ class Settings(BaseModel):
     supervision_degraded_after_errors: int = Field(default=3, ge=1, le=100)
     supervision_blocked_after_blocks: int = Field(default=2, ge=1, le=20)
     supervision_suspend_seconds: float = Field(default=900.0, gt=0, le=86_400.0)
-    supervision_ip_probe_url: str | None = Field(default=None, max_length=500)
+    supervision_ip_probe_url: str | None = Field(
+        default="https://api.ipify.org", max_length=500
+    )
+    cardmarket_app_token: str | None = Field(default=None, max_length=200)
+    cardmarket_app_secret: str | None = Field(default=None, max_length=200)
+    cardmarket_access_token: str | None = Field(default=None, max_length=200)
+    cardmarket_access_secret: str | None = Field(default=None, max_length=200)
+    cardmarket_daily_sync_utc: str = Field(
+        default="02:20", pattern=r"^([01]\d|2[0-3]):[0-5]\d$"
+    )
+    tcgdex_auto_enrich: bool = False
+    tcgdex_searches_per_tick: int = Field(default=1, ge=0, le=10)
+    review_operator: str = Field(default="local", pattern=r"^[A-Za-z0-9_-]{1,100}$")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -54,6 +66,21 @@ class Settings(BaseModel):
             values["supervision_suspend_seconds"] = float(suspend)
         if probe := os.getenv("POKEMON_SUPERVISION_IP_PROBE_URL"):
             values["supervision_ip_probe_url"] = probe
+        if auto_enrich := os.getenv("TCGDEX_AUTO_ENRICH"):
+            values["tcgdex_auto_enrich"] = auto_enrich.strip().lower() in ("1", "true", "yes", "on")
+        if search_limit := os.getenv("TCGDEX_SEARCHES_PER_TICK"):
+            values["tcgdex_searches_per_tick"] = int(search_limit)
+        if review_operator := os.getenv("POKEMON_REVIEW_OPERATOR"):
+            values["review_operator"] = review_operator
+        for env_key, field in (
+            ("CARDMARKET_APP_TOKEN", "cardmarket_app_token"),
+            ("CARDMARKET_APP_SECRET", "cardmarket_app_secret"),
+            ("CARDMARKET_ACCESS_TOKEN", "cardmarket_access_token"),
+            ("CARDMARKET_ACCESS_SECRET", "cardmarket_access_secret"),
+            ("CARDMARKET_DAILY_SYNC_UTC", "cardmarket_daily_sync_utc"),
+        ):
+            if env_value := os.getenv(env_key):
+                values[field] = env_value
         return cls.model_validate(values)
 
     def supervision_thresholds(self) -> "SupervisionThresholds":

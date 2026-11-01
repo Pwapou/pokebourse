@@ -1,9 +1,11 @@
 import json
 import logging
+from contextlib import nullcontext
 import sqlite3
 import unicodedata
 from typing import Any
 
+from app.identification.normalization import canonical_local_id, normalize_text
 from app.tcgdex.client import TcgdexClient
 from app.tcgdex.data.seed_data import INITIAL_CARDS, INITIAL_SETS
 from app.tcgdex.models import ReferenceCardRecord, TcgdexCard, TcgdexSet
@@ -35,7 +37,7 @@ class TcgdexCache:
             return 0
 
         inserted = 0
-        with self.connection:
+        with self.connection if not self.connection.in_transaction else nullcontext():
             for s in INITIAL_SETS:
                 self.connection.execute(
                     """
@@ -70,8 +72,9 @@ class TcgdexCache:
                     INSERT INTO pokemon_reference_cards (
                         tcgdex_id, local_id, name, set_id, set_name,
                         rarity, category, types, hp, stage, illustrator,
-                        image_url, raw_data
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        image_url, raw_data, normalized_name, normalized_set_name,
+                        canonical_local_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(tcgdex_id) DO UPDATE SET
                         local_id = excluded.local_id,
                         name = excluded.name,
@@ -84,7 +87,10 @@ class TcgdexCache:
                         stage = excluded.stage,
                         illustrator = excluded.illustrator,
                         image_url = excluded.image_url,
-                        raw_data = excluded.raw_data
+                        raw_data = excluded.raw_data,
+                        normalized_name = excluded.normalized_name,
+                        normalized_set_name = excluded.normalized_set_name,
+                        canonical_local_id = excluded.canonical_local_id
                     """,
                     (
                         c["tcgdex_id"],
@@ -100,6 +106,9 @@ class TcgdexCache:
                         c.get("illustrator"),
                         c.get("image_url"),
                         json.dumps(c, ensure_ascii=False),
+                        normalize_text(c["name"]),
+                        normalize_text(c["set_name"]),
+                        canonical_local_id(c["local_id"]),
                     ),
                 )
                 inserted += 1
@@ -138,44 +147,43 @@ class TcgdexCache:
             )
 
     def upsert_card(self, card_obj: TcgdexCard) -> int:
-        with self.connection:
+        """Insère un résumé sans effacer les détails absents de la réponse."""
+        with self.connection if not self.connection.in_transaction else nullcontext():
             cursor = self.connection.execute(
                 """
                 INSERT INTO pokemon_reference_cards (
                     tcgdex_id, local_id, name, set_id, set_name,
                     rarity, category, types, hp, stage, illustrator,
-                    image_url, raw_data
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    image_url, raw_data, normalized_name, normalized_set_name,
+                    canonical_local_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(tcgdex_id) DO UPDATE SET
                     local_id = excluded.local_id,
                     name = excluded.name,
                     set_id = excluded.set_id,
                     set_name = excluded.set_name,
-                    rarity = excluded.rarity,
-                    category = excluded.category,
-                    types = excluded.types,
-                    hp = excluded.hp,
-                    stage = excluded.stage,
-                    illustrator = excluded.illustrator,
-                    image_url = excluded.image_url,
+                    rarity = COALESCE(excluded.rarity, pokemon_reference_cards.rarity),
+                    category = COALESCE(excluded.category, pokemon_reference_cards.category),
+                    types = CASE WHEN excluded.types <> '[]' THEN excluded.types ELSE pokemon_reference_cards.types END,
+                    hp = COALESCE(excluded.hp, pokemon_reference_cards.hp),
+                    stage = COALESCE(excluded.stage, pokemon_reference_cards.stage),
+                    illustrator = COALESCE(excluded.illustrator, pokemon_reference_cards.illustrator),
+                    image_url = COALESCE(excluded.image_url, pokemon_reference_cards.image_url),
                     raw_data = excluded.raw_data,
+                    normalized_name = excluded.normalized_name,
+                    normalized_set_name = excluded.normalized_set_name,
+                    canonical_local_id = excluded.canonical_local_id,
                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
                 RETURNING id
                 """,
                 (
-                    card_obj.id,
-                    card_obj.local_id,
-                    card_obj.name,
-                    card_obj.set_id,
-                    card_obj.set_name,
-                    card_obj.rarity,
-                    card_obj.category,
-                    json.dumps(card_obj.types, ensure_ascii=False),
-                    card_obj.hp,
-                    card_obj.stage,
-                    card_obj.illustrator,
-                    card_obj.image_url,
+                    card_obj.id, card_obj.local_id, card_obj.name, card_obj.set_id,
+                    card_obj.set_name, card_obj.rarity, card_obj.category,
+                    json.dumps(card_obj.types, ensure_ascii=False), card_obj.hp,
+                    card_obj.stage, card_obj.illustrator, card_obj.image_url,
                     json.dumps(card_obj.raw_data, ensure_ascii=False),
+                    normalize_text(card_obj.name), normalize_text(card_obj.set_name),
+                    canonical_local_id(card_obj.local_id),
                 ),
             )
             row = cursor.fetchone()
@@ -211,47 +219,72 @@ class TcgdexCache:
             return None
         return self._row_to_record(row)
 
+    def get_cards_by_ids(self, card_ids: list[int]) -> list[ReferenceCardRecord]:
+        """Lit des références connues sans tronquer avant leur classement."""
+        ids = sorted(set(card_ids))
+        cards = []
+        for start in range(0, len(ids), 500):
+            batch = ids[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            rows = self.connection.execute(
+                f"SELECT id, tcgdex_id, local_id, name, set_id, set_name, rarity, category, "
+                f"types, hp, stage, illustrator, image_url, raw_data, updated_at "
+                f"FROM pokemon_reference_cards WHERE id IN ({placeholders}) ORDER BY id", batch,
+            ).fetchall()
+            cards.extend(self._row_to_record(row) for row in rows)
+        return cards
+
     def find_cards(
         self,
         *,
         name: str | None = None,
         local_id: str | None = None,
         set_query: str | None = None,
+        tcgdex_id: str | None = None,
         limit: int = 50,
+        offset: int = 0,
     ) -> list[ReferenceCardRecord]:
-        """Recherche dans le cache local avec nom, numéro local ou extension."""
+        """Recherche paginée avec la même normalisation à l'écriture et à la lecture."""
         clauses: list[str] = []
         params: list[Any] = []
-
+        if tcgdex_id:
+            clauses.append("tcgdex_id = ?")
+            params.append(tcgdex_id)
         if name:
-            norm_name = _normalize_token(name)
-            clauses.append("LOWER(name) LIKE ?")
+            norm_name = normalize_text(name)
+            clauses.append("normalized_name LIKE ?")
             params.append(f"%{norm_name}%")
-
         if local_id:
-            # Nettoyer zéros initiaux ou chercher variante exacte
-            cleaned_id = local_id.lstrip("0") or "0"
-            clauses.append("(local_id = ? OR local_id = ? OR local_id LIKE ?)")
-            params.extend([local_id, cleaned_id, f"%{cleaned_id}"])
-
+            clauses.append("canonical_local_id = ?")
+            params.append(canonical_local_id(local_id))
         if set_query:
-            norm_set = _normalize_token(set_query)
-            clauses.append("(set_id = ? OR LOWER(set_name) LIKE ?)")
-            params.extend([set_query.lower(), f"%{norm_set}%"])
-
+            norm_set = normalize_text(set_query)
+            clauses.append("(set_id = ? OR normalized_set_name LIKE ?)")
+            params.extend([set_query, f"%{norm_set}%"])
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        query = f"""
+        rows = self.connection.execute(
+            f"""
             SELECT id, tcgdex_id, local_id, name, set_id, set_name,
                    rarity, category, types, hp, stage, illustrator,
                    image_url, raw_data, updated_at
-            FROM pokemon_reference_cards
-            {where}
-            ORDER BY id ASC
-            LIMIT ?
-        """
-        params.append(limit)
-        rows = self.connection.execute(query, params).fetchall()
+            FROM pokemon_reference_cards {where}
+            ORDER BY name COLLATE NOCASE ASC, set_name COLLATE NOCASE ASC,
+                     canonical_local_id ASC, id ASC
+            LIMIT ? OFFSET ?
+            """,
+            [*params, max(1, min(limit, 200)), max(0, offset)],
+        ).fetchall()
         return [self._row_to_record(row) for row in rows]
+
+    def catalog_vocabulary(self) -> tuple[list[str], list[str]]:
+        """Noms et extensions dérivés du référentiel, sans liste figée."""
+        names = [row[0] for row in self.connection.execute(
+            "SELECT DISTINCT name FROM pokemon_reference_cards ORDER BY length(name) DESC"
+        )]
+        sets = [row[0] for row in self.connection.execute(
+            "SELECT DISTINCT set_name FROM pokemon_reference_cards ORDER BY length(set_name) DESC"
+        )]
+        return names, sets
 
     def list_sets(self) -> list[dict[str, Any]]:
         rows = self.connection.execute(

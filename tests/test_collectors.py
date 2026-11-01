@@ -4,10 +4,13 @@ from collections.abc import Iterator
 
 import pytest
 
+from app.collectors.ebay import build_ebay_search_params, collect_ebay_listings
 from app.collectors.leboncoin import collect_leboncoin_listings
 from app.collectors.models import CollectorError
+from app.collectors.normalizer import normalize_ebay_item, normalize_wallapop_item
 from app.collectors.retry import call_with_backoff
 from app.collectors.vinted import collect_vinted_listings, build_vinted_search_params
+from app.collectors.wallapop import build_wallapop_search_params, collect_wallapop_listings
 
 
 class Response429:
@@ -228,4 +231,76 @@ def test_leboncoin_datadome_anti_bot_blocks_without_bypass(monkeypatch: pytest.M
 
     with pytest.raises(CollectorError, match="DataDome"):
         collect_leboncoin_listings(text="Pikachu")
+
+
+def test_ebay_search_params_and_collection() -> None:
+    params = build_ebay_search_params(
+        search_text="Dracaufeu Holo",
+        price_from=1500,
+        price_to=5000,
+        per_page=25,
+    )
+    assert params["_nkw"] == "Dracaufeu Holo"
+    assert params["_udlo"] == "15.00"
+    assert params["_udhi"] == "50.00"
+    assert params["_ipg"] == 25
+
+    fake_items = [
+        {
+            "id": "11223344",
+            "title": "Carte Pokémon Dracaufeu Holo",
+            "price": "35,00",
+            "shipping": "4,50",
+            "url": "https://www.ebay.fr/itm/11223344",
+            "image": "https://i.ebayimg.com/images/g/xyz/s-l1600.jpg",
+            "seller": "PokeSellerEbay",
+        }
+    ]
+
+    result = collect_ebay_listings(
+        search_text="Dracaufeu",
+        search_func=lambda _p: fake_items,
+    )
+    assert len(result.listings) == 1
+    listing = result.listings[0]
+    assert listing.source == "ebay"
+    assert listing.external_id == "11223344"
+    assert listing.price_cents == 3500
+    assert listing.shipping_cents == 450
+    assert listing.seller == "PokeSellerEbay"
+    assert str(listing.url) == "https://www.ebay.fr/itm/11223344"
+
+
+def test_wallapop_search_params_and_collection() -> None:
+    params = build_wallapop_search_params(
+        search_text="Mewtwo GX",
+        price_from=1000,
+        price_to=3000,
+    )
+    assert params["keywords"] == "Mewtwo GX"
+    assert params["min_sale_price"] == 10
+    assert params["max_sale_price"] == 30
+
+    fake_items = [
+        {
+            "id": "w-998877",
+            "title": "Carte Pokémon Mewtwo GX",
+            "price": "20.00",
+            "web_slug": "carte-pokemon-mewtwo-gx-998877",
+            "images": [{"original": "https://cdn.wallapop.com/images/10420/item.jpg"}],
+            "user": {"micro_name": "PokeSellerWalla"},
+        }
+    ]
+
+    result = collect_wallapop_listings(
+        search_text="Mewtwo",
+        search_func=lambda _p: fake_items,
+    )
+    assert len(result.listings) == 1
+    listing = result.listings[0]
+    assert listing.source == "wallapop"
+    assert listing.external_id == "w-998877"
+    assert listing.price_cents == 2000
+    assert listing.seller == "PokeSellerWalla"
+    assert str(listing.url) == "https://fr.wallapop.com/item/carte-pokemon-mewtwo-gx-998877"
 

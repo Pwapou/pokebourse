@@ -38,12 +38,14 @@ class CandidateMatch:
     local_id: str
     confidence: int
     match_reason: str
+    name_match_kind: Literal["exact", "partial", "fuzzy", "absent"] = "absent"
+    contradictions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class IdentificationResult:
     status: IdentificationStatus
-    confidence: int
+    confidence: int | None
     reason: str
     features: ExtractedFeatures
     matched_card: ReferenceCardRecord | None = None

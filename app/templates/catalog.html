@@ -3,11 +3,14 @@
 {% block breadcrumb %}Annonces{% endblock %}
 {% block content %}
 {% set sort_labels = {"import_desc": "Import récent", "import_asc": "Import ancien", "name_asc": "Nom (A → Z)", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "seller_reliability": "Fiabilité vendeur"} %}
-{% set source_labels = {"all": "Toutes", "vinted": "Vinted", "leboncoin": "Leboncoin", "manual": "Imports manuels"} %}
+{% set source_labels = {"all": "Toutes", "vinted": "Vinted", "leboncoin": "Leboncoin", "ebay": "eBay", "wallapop": "Wallapop", "manual": "Imports manuels"} %}
 {% set ident_status_labels = {"all": "Tous statuts", "identified": "Identifiée", "ambiguous": "À vérifier", "lot": "Lot / Coffret", "unidentified": "Non identifiée"} %}
 <section class="page-heading">
     <div><span class="eyebrow">CATALOGUE IMPORTÉ</span><h1>Annonces</h1><p>{{ total }} annonce{{ 's' if total != 1 else '' }} · comparez le prix d’achat, l’estimation et les données disponibles.</p></div>
     <div class="heading-actions">
+        <form action="/catalog/reidentify-all" method="post" style="display:inline">
+            <button class="button secondary" type="submit" title="Réexamine les annonces non identifiées avec le référentiel TCGdex courant">Réexaminer l'identification ⟳</button>
+        </form>
         <a class="button secondary" href="/catalog/export.csv?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort}|urlencode }}">Exporter les résultats (CSV)</a>
         <a class="button primary" href="/#import">Importer des annonces</a>
     </div>
@@ -57,7 +60,7 @@
             </div>
             <div>
                 <span class="cell-label">REVENTE ESTIMÉE</span>
-                {% if item.reference_price_cents is not none %}<b class="cell-value">{{ item.reference_price_cents|money(item.currency) }}</b><span class="cell-sub">{% if item.reference_source == 'reference' %}Référence{% else %}Médiane · {{ item.sample_count }} autres ann.{% endif %}</span>{% else %}<span class="cell-value unknown">Inconnue</span>{% endif %}
+                {% if item.reference_price_cents is not none %}<b class="cell-value">{{ item.reference_price_cents|money(item.currency) }}</b><span class="cell-sub">{% if item.reference_source == 'reference' %}Référence{% elif item.reference_source == 'cardmarket_trend' %}Cardmarket · {{ item.sample_count }} prod.{% else %}Médiane · {{ item.sample_count }} autres ann.{% endif %}</span>{% else %}<span class="cell-value unknown">Inconnue</span>{% endif %}
             </div>
             <div>
                 <span class="cell-label">GAIN NET</span>

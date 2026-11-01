@@ -60,6 +60,7 @@ Le popup met à disposition 3 modes de transfert :
    - Le popup affiche immédiatement les résultats sous chaque carte :
      * Si la carte est cotée : Prix d'achat, Prix de revente estimé, Bénéfice net (+XX €), ROI (+XX%) et verdict (Opportunité / À surveiller).
      * Si la carte n'a pas encore de cote dans Pokébourse : statut « Sans cote » clair avec un lien direct `+ Renseigner une cote` vers `/profitability#cotes`.
+     * L’identité est affichée séparément de la cote : « Carte à identifier », « Plusieurs cartes possibles », « Carte identifiée · cote non renseignée » ou « Lot ». Le lien « Identifier cette carte » ouvre la fiche de recherche et de confirmation.
      * Lien d'accès direct vers la fiche de l'annonce dans Pokébourse.
 2. **⬇️ Télécharger .jsonl** :
    Génère un fichier horodaté pour la sélection, importable manuellement via le formulaire web ou en CLI.

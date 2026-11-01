@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic des annonces · Pokébourse{% endblock %}
+{% block breadcrumb %}Annotations / Diagnostic des annonces{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><span class="eyebrow">RÉFÉRENTIEL ET RECHERCHE LOCALE</span><h1>Diagnostic des annonces</h1>
+        <p>Comprendre les identifications non résolues et trouver des pistes de correction à partir du texte.</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/annotations">Retour aux annotations</a>
+        <a class="button secondary" href="?status={{ report.status }}&amp;limit={{ report.limit }}&amp;download=true">Télécharger le diagnostic JSON</a></div>
+</section>
+<section class="stats-grid" aria-label="Périmètre du diagnostic">
+    <article class="stat-card"><div class="stat-top"><span>CARTES EN CACHE</span></div><strong>{{ report.catalog.card_count }}</strong><small>{{ report.catalog.set_count }} extension(s) enregistrée(s)</small></article>
+    <article class="stat-card"><div class="stat-top"><span>ANNONCES DU PÉRIMÈTRE</span></div><strong>{{ report.population }}</strong><small>Selon le statut choisi ci-dessous</small></article>
+    <article class="stat-card"><div class="stat-top"><span>ANNONCES ANALYSÉES</span></div><strong>{{ report.analyzed_count }}</strong><small>Les plus récentes, dans la limite choisie</small></article>
+    <article class="stat-card"><div class="stat-top"><span>AVEC CANDIDATS LOCAUX</span></div><strong>{{ report.with_candidates }}</strong><small>Pistes à examiner, parmi les annonces analysées</small></article>
+</section>
+{% if report.catalog.card_count == 0 %}<div class="alert error">Le catalogue local est vide. Complétez-le avant d’évaluer la capacité de recherche.</div>{% endif %}
+<section class="panel" aria-labelledby="scope-title">
+    <div class="panel-heading"><h2 id="scope-title">Choisir les annonces à examiner</h2></div>
+    <form method="get" class="review-search">
+        <label>Statut<select name="status">
+            {% for value, label in [('unidentified', 'Non identifiées'), ('ambiguous', 'À vérifier'), ('all', 'Toutes les non résolues')] %}<option value="{{ value }}" {{ 'selected' if report.status == value else '' }}>{{ label }}</option>{% endfor %}
+        </select></label>
+        <label>Nombre maximal d’annonces<input name="limit" type="number" min="1" max="500" value="{{ report.limit }}" required></label>
+        <button class="button primary" type="submit">Analyser</button>
+    </form>
+    <p class="table-note">Cette analyse ne modifie aucune annonce. Un nom approché reste à confirmer. L’absence de candidat local ne prouve pas qu’une carte est absente de TCGdex. Les cas récents affichés ne constituent pas un audit représentatif de précision.</p>
+</section>
+<section class="panel" aria-labelledby="findings-title">
+    <div class="panel-heading"><h2 id="findings-title">Constats sur les annonces analysées</h2></div>
+    <div class="review-evidence"><dl>{% for key, count in report.counts.items() %}<div class="detail-row"><dt>{{ report.labels[key] }}</dt><dd>{{ count }}</dd></div>{% else %}<p>Aucune annonce à analyser pour ce statut.</p>{% endfor %}</dl></div>
+</section>
+<section class="panel" aria-labelledby="listing-title">
+    <div class="panel-heading"><h2 id="listing-title">Pistes de correction</h2></div>
+    <div class="table-wrap"><table>
+        <thead><tr><th>ANNONCE</th><th>CONSTAT</th><th>CANDIDATS LOCAUX</th><th>ACTION</th></tr></thead>
+        <tbody>{% for item in report['items'] %}<tr>
+            <td><strong class="pilot-item-title">{{ item.title }}</strong><span class="cell-sub">{{ 'Description disponible' if item.has_description else 'Sans description' }}</span></td>
+            <td><strong>{{ item.diagnostic_label }}</strong><span class="cell-sub pilot-item-title">{{ item.reason }}</span></td>
+            <td>{% for candidate in item.candidates[:3] %}<div class="pilot-item-title"><strong>{{ candidate.name }}</strong> · {{ candidate.set_name }} · N° {{ candidate.local_id }}<span class="cell-sub">{{ candidate.tcgdex_id }}{% if candidate.name_match_kind == 'fuzzy' %} · Nom approché{% endif %}</span></div>{% else %}Aucun candidat proposé{% endfor %}</td>
+            <td><a class="button secondary small" href="/catalog/{{ item.id }}#ident-title">Examiner l’annonce</a></td>
+        </tr>{% else %}<tr><td colspan="4">Aucune annonce dans ce périmètre.</td></tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+<details class="panel pilot-protocol"><summary>Inventaire du catalogue local</summary>
+    <p>Ces effectifs décrivent le cache disponible. Ils ne garantissent ni la couverture de toutes les cartes ni la complétude des attributs. Le rapprochement automatique utilise le référentiel français.</p>
+    <div class="table-wrap"><table><thead><tr><th>EXTENSION</th><th>CARTES EN CACHE</th><th>TOTAL RÉFÉRENCÉ</th></tr></thead><tbody>
+        {% for extension in report.catalog.sets %}<tr><td>{{ extension.name }}</td><td>{{ extension.cached_cards }}</td><td>{{ extension.expected_total if extension.expected_total is not none else 'Inconnu' }}</td></tr>{% else %}<tr><td colspan="3">Aucune extension en cache.</td></tr>{% endfor %}
+    </tbody></table></div>
+</details>
+{% endblock %}

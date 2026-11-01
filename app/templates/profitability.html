@@ -102,7 +102,7 @@
                         {% if row.reference_observed_at %}<span class="cell-sub">Observée le {{ row.reference_observed_at }}</span>{% endif %}
                         {% if row.reference_match_scope != 'exacte' %}<span class="cell-sub">Repli : {{ row.reference_match_scope }}</span>{% endif %}
                         {% if row.sample_count %}<span class="cell-sub">{{ row.sample_count }} observation{{ 's' if row.sample_count > 1 else '' }}</span>{% endif %}
-                        {% else %}<span class="cell-sub">Médiane · {{ row.sample_count }} autres annonces comparables</span>{% endif %}
+                        {% else %}<span class="cell-sub">{% if row.reference_source == 'cardmarket_trend' %}Cardmarket · {{ row.sample_count }} produit{{ 's' if row.sample_count > 1 else '' }} assorti{{ 's' if row.sample_count > 1 else '' }}{% else %}Médiane · {{ row.sample_count }} autres annonces comparables{% endif %}</span>{% endif %}
                         {% else %}<a class="define-cote-link" href="/profitability?prefill_name={{ row.name|urlencode }}&amp;prefill_set={{ row.set_name|urlencode }}&amp;prefill_number={{ (row.card_number or '')|urlencode }}&amp;prefill_lang={{ row.language|urlencode }}&amp;prefill_condition={{ (row.condition or '')|urlencode }}&amp;prefill_variant={{ (row.variant or '')|urlencode }}&amp;prefill_edition={{ (row.edition or '')|urlencode }}&amp;prefill_grading_company={{ (row.grading_company or '')|urlencode }}&amp;prefill_grade={{ (row.grade or '')|urlencode }}&amp;prefill_certification_number={{ (row.certification_number or '')|urlencode }}#cotes">Ajouter une référence →</a>{% endif %}
                     </td>
                     <td class="align-right">
@@ -282,6 +282,38 @@
                 <button class="button secondary" type="submit">Importer les références</button>
             </form>
             <details class="format-help"><summary>Format JSONL des références</summary><p>Une référence par ligne. Champs requis : <code>name</code>, <code>set_name</code> et <code>reference_price_cents</code>. Les références existantes sont mises à jour.</p><pre>{"name":"Dracaufeu","set_name":"Base Set","card_number":"4/102","condition":"NM","reference_price_cents":32000,"currency":"EUR"}</pre></details>
+        </div>
+
+        <div class="subpanel-divider">
+            <form action="/cardmarket/sync-all" method="post" class="import-form">
+                <div>
+                    <span class="section-kicker">SYNCHRONISATION CARDMARKET</span>
+                    <p class="cell-sub" style="margin: 4px 0 0;">Cotes <strong>et</strong> noms en une seule action. Le worker synchronise automatiquement chaque jour vers <strong>03:20 (heure de Paris)</strong>, après la régénération du price guide (~02:45).{% if cardmarket_sync and cardmarket_sync.last_success_at %} Dernière synchro : <strong>{{ cardmarket_sync.last_success_at|date }}</strong> ({{ cardmarket_sync.detail }}).{% elif cardmarket_sync and cardmarket_sync.last_attempt_at %} Dernière tentative en échec : {{ cardmarket_sync.last_attempt_at|date }}.{% endif %}</p>
+                </div>
+                <button class="button primary" type="submit">Tout synchroniser maintenant ↓⟳</button>
+            </form>
+        </div>
+
+        <div class="subpanel-divider">
+            <form action="/cardmarket/sync" method="post" class="import-form">
+                <div>
+                    <span class="section-kicker">COTES CARDMARKET ({{ cardmarket_count }} PRODUITS EN BASE)</span>
+                    <p class="cell-sub" style="margin: 4px 0 0;">Télécharge le <strong>price guide officiel Cardmarket</strong> (fichiers publics, mis à jour quotidiennement) : prix tendance et moyennes de vente 1/7/30 jours pour l’ensemble des cartes Pokémon. Les prix sont affichés sur la fiche de chaque annonce, à côté du prix du vendeur, et servent de dernier repli dans le calcul de rentabilité.</p>
+                </div>
+                <button class="button secondary" type="submit">Synchroniser les cotes Cardmarket ↓</button>
+            </form>
+            <details class="format-help"><summary>D’où viennent ces cotes ?</summary><p>Fichiers officiels publiés par Cardmarket (catalogue produits + price guide, jointure par identifiant produit). Pas de scraping, pas de compte requis. Si une carte de votre catalogue n’existe pas chez Cardmarket, la fiche annonce l’indique et garde le prix de l’annonce comme seule valeur.</p></details>
+        </div>
+
+        <div class="subpanel-divider">
+            <form action="/cardmarket/aliases/sync" method="post" class="import-form">
+                <div>
+                    <span class="section-kicker">NOMS MULTILINGUES DES CARTES</span>
+                    <p class="cell-sub" style="margin: 4px 0 0;">Construit le pont de noms FR · EN · KO · JA · ZH (TCGdex) qui rattache les annonces en français (et toute autre langue) aux produits Cardmarket en anglais. À relancer après une mise à jour du référentiel TCGdex.</p>
+                </div>
+                <button class="button secondary" type="submit">Synchroniser les noms ⟳</button>
+            </form>
+            <details class="format-help"><summary>Pourquoi cette étape ?</summary><p>Cardmarket nomme les cartes en anglais (ex. « Charizard [Fire Spin | Wing Attack]») alors que vos annonces sont en français (« Dracaufeu »). TCGdex donne le même identifiant de carte dans chaque langue : cette synchronisation stocke les deux noms pour chaque carte, permettant à la fiche annonce d’afficher la cote Cardmarket même pour un titre français, coréen, japonais ou chinois.</p></details>
         </div>
 
         {% if saved_references %}

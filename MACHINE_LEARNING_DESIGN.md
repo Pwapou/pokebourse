@@ -13,6 +13,8 @@
 
 Document de conception, daté du **1er novembre 2026**. Il décrit des développements proposés, sans les implémenter. Les volumes, gains et latences ci-dessous sont des hypothèses ou critères d’acceptation, pas des performances observées.
 
+Le développement du premier lot textuel de phase 0 est suivi séparément dans [docs/ML_PHASE0.md](docs/ML_PHASE0.md), avec son périmètre livré et les critères restant à satisfaire.
+
 ## A. Cadrage et préalable indispensable
 
 ### A.1. Ce que le projet permet réellement aujourd’hui

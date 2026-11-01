@@ -88,6 +88,8 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 ### Méthode d'accès utilisée par le projet
 - Client REST Python dédié dans `app/tcgdex/client.py` interrogeant l'API publique `https://api.tcgdex.net/v2/fr`.
 - Cache local SQLite persistant (`pokemon_reference_cards`, `pokemon_reference_sets`) dans `app/tcgdex/cache.py` permettant un fonctionnement 100% hors-ligne sans dépendance réseau permanente.
+- Recherches ciblées persistantes traitées par le worker : une à la fois, trois tentatives maximum, réseau hors transaction et respect de `Retry-After` par replanification. Seuls les critères de carte utiles sont transmis ; aucun titre brut, description ou attribut vendeur.
+- L’enrichissement automatique à l’import est désactivé par défaut (`TCGDEX_AUTO_ENRICH=false`). La recherche manuelle explicite reste disponible. Aucun appel réseau n’est effectué par le matcher, l’extension ou les tests automatisés.
 
 ### Conditions contractuelles applicables
 - **Documentation officielle** : [tcgdex.dev](https://www.tcgdex.dev)
@@ -114,27 +116,31 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 ## 4. Cardmarket (Cotes de marché Pokémon)
 
 ### Méthode d'accès utilisée par le projet
-- Client Python dédié dans `app/cardmarket/client.py` interrogeant l'**API officielle Cardmarket 2.0** (`https://api.cardmarket.com/ws/v2.0`), authentifiée en OAuth 1.0a (HMAC-SHA1) avec les identifiants de l'application créée sur le profil du compte de l'utilisateur.
-- Identifiants fournis par variables d'environnement (`CARDMARKET_APP_TOKEN`, `CARDMARKET_APP_SECRET`, `CARDMARKET_ACCESS_TOKEN`, `CARDMARKET_ACCESS_SECRET`) — jamais stockés en base ni commités.
-- **Aucun scraping** de cardmarket.eu : l'API est le seul canal utilisé. Le rafraîchissement des prix est déclenché manuellement depuis la fiche d'une annonce (un produit à la fois), sans collecte de masse ni crawl du catalogue.
-- Stockage local des snapshots dans la table `cardmarket_prices` (SQLite), affichés à côté du prix de l'annonce sur `catalog_detail.html` avec repli : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce est affiché (et inversement).
+- **Canal principal : les fichiers publics quotidiens de Cardmarket** (sans authentification, sans scraping). Cardmarket publie depuis juin 2024 son price guide et son catalogue produits en téléchargement libre, régénérés une fois par jour (vers 02:45 CET) :
+  - Price guide Pokémon : `https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json` (prix par `idProduct` : `trend`, `avg1`, `avg7`, `avg30`, variantes holo).
+  - Catalogue des cartes Pokémon : `https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json` (`idProduct`, nom anglais, `idExpansion`).
+  - Synchroniseur implémenté dans `app/cardmarket/guide.py` : télécharge les deux fichiers, les joint par `idProduct`, convertit en centimes entiers et remplit la table `cardmarket_prices`. Déclenché manuellement (bouton sur la page Rentabilité) ; une synchronisation par jour suffit.
+- **Canal secondaire dormant : l'API officielle 2.0** (`app/cardmarket/client.py`, OAuth 1.0a). ⚠️ **Vérifié le 2026-11-01 : Cardmarket n'accepte plus les demandes d'accès API** (« Currently, we are not accepting applications for access to the Cardmarket API », [Cardmarket Help](https://help.cardmarket.com/en/cardmarket-api)). Le client reste fonctionnel au cas où les inscriptions rouvriraient ; sans identifiants (`CARDMARKET_*`), il est désactivé proprement.
+- Stockage local des snapshots dans la table `cardmarket_prices` (SQLite), affichés à côté du prix de l'annonce sur `catalog_detail.html` avec repli : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce est affiché.
+- **Aucun scraping** de cardmarket.eu dans le projet.
 
 ### Conditions contractuelles applicables
-- **Documentation officielle** : [Cardmarket RESTful API](https://api.cardmarket.com/ws/documentation)
-- L'accès API est un canal contractuel légitime, soumis aux conditions générales de Cardmarket : les données récupérées restent à usage local et personnel, sans re-publication ni création d'un service concurrent.
-- Les quotas officiels (~600 requêtes/minute, plafonds journaliers dont 30 000 requêtes marketplace/jour) sont respectés par construction : Pokébourse n'émet qu'une poignée de requêtes ponctuelles à la demande.
+- [Annonce officielle Cardmarket](https://news.cardmarket.com/en/Magic/were-making-the-price-guide-and-product-catalogue-available-for-download) : les fichiers sont publiés précisément pour être téléchargés par les utilisateurs ; usage local et personnel, sans re-publication ni service concurrent.
+- Les quotas ne sont pas concernés : deux requêtes de fichiers publics par jour au maximum.
 
 ### Limites, quotas et coûts connus
-- **Coût** : gratuit avec un compte Cardmarket (particulier ou professionnel).
-- **Quotas** : limites documentées (429 / 503 avec en-têtes de ralentissement) ; backoff borné implémenté dans `CardmarketClient`, un seul produit interrogé par action utilisateur.
-- **Non vérifié en production** : la structure exacte du `priceGuide` (TREND, AVG1, AVG7, AVG30) doit être confirmée lors du premier appel réel ; le parseur est défensif et ignore les champs absents.
+- **Coût** : 100 % gratuit, sans compte.
+- **Fraîcheur** : guide régénéré une fois par jour ; les moyennes 1/7/30 jours et la tendance reflètent les ventes conclues à J-1 au plus tôt.
+- **Couverture vérifiée le 2026-11-01** : 80 173 produits dans le guide Pokémon, 75 067 rattachés à un nom de carte (5 106 ignorés, absents du catalogue singles).
+- **Noms de cartes en anglais** avec suffixes d'attaques (ex. « Charizard [Fire Spin | Wing Attack]») : la correspondance avec le catalogue français se fait via un pont multilingue TCGdex (table `card_name_aliases`, locales `fr`, `en`, `ko`, `ja`, `zh-tw`) : nom de base direct, puis carte identifiée (`reference_card_id` / `ref_tcgdex_id`), puis alias → nom anglais Cardmarket. Limite constatée le 2026-11-01 : les catalogues TCGdex coréen, japonais et chinois (traditionnel) sont des univers de cartes distincts (IDs propres, ~239 / ~13 156 / ~7 436 cartes) ; seuls le français et l'anglais partagent les IDs internationaux (~22 100 cartes). Le pont KO · JA · ZH ne couvre donc que la petite intersection.
 
 ### Données réellement accessibles
-- Prix de marché par produit (carte) : tendance et moyennes de vente à 1, 7 et 30 jours, convertis en centimes entiers.
-- Identité du produit : nom, extension, identifiant produit Cardmarket.
+- Prix de marché par produit : tendance et moyennes de vente à 1, 7 et 30 jours, convertis en centimes entiers.
+- Identité du produit : nom anglais, identifiant produit Cardmarket, identifiant d'extension — **sans nom d'extension** (aucun fichier public d'extensions) : quand plusieurs extensions partagent le nom d'une carte, la fiche annonce affiche une fourchette et le moteur de rentabilité retient le **plus bas** des prix tendances (hypothèse prudente).
 
 ### Conséquences et solution de repli
-- Sans identifiants API, la fonctionnalité est désactivée proprement (état « non configurée » affiché, aucune erreur) et le fonctionnement existant (références manuelles, médiane du catalogue) est inchangé.
+- Sans synchronisation, la fiche annonce affiche « Aucune cote Cardmarket en base » et le fonctionnement existant (références manuelles, médiane du catalogue) est inchangé.
+- En l'absence de référence et de médiane, le moteur de rentabilité utilise le prix tendance Cardmarket comme **dernier repli** (`reference_source = cardmarket_trend`), uniquement pour les annonces en EUR ; les références manuelles et la médiane du catalogue restent prioritaires.
 
 ---
 
@@ -144,9 +150,12 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 |---|---|---|---|---|
 | **Vinted** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `vinted_scraper` (API privée) | Import manuel JSONL |
 | **Leboncoin** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `lbc` (endpoints non officiels) | Import manuel JSONL |
+| **eBay** | Annonces de marché | **Oui / API officielle** | Endpoint de recherche / API eBay | Import manuel JSONL |
+| **Wallapop** | Annonces de marché | **Non établi** (accès public C2C) | API de recherche Wallapop | Import manuel JSONL |
 | **TCGdex** | Référentiel cartes et sets Pokémon | **Oui** (API publique ouverte, Fair Use) | Client REST `api.tcgdex.net` + cache local | Cache SQLite local autonome pré-embarqué |
-| **Cardmarket** | Cotes de marché (prix tendance réels) | **Oui** (API officielle 2.0, OAuth 1.0a, quotas respectés) | Client REST `api.cardmarket.com` + stockage local `cardmarket_prices` | Fonction désactivée proprement sans identifiants ; références manuelles inchangées |
+| **Cardmarket** | Cotes de marché (prix tendance réels) | **Oui** (fichiers publics quotidiens officiels ; API fermée aux nouvelles demandes) | Synchronisation des fichiers officiels + stockage local `cardmarket_prices` | Cotes manuelles et médiane du catalogue inchangées |
 | **Extension Chrome (Pokébourse Capture)** | Import assisté côté utilisateur | **Oui** (Navigation humaine légitime sur navigateur personnel) | Content script DOM / Schema.org / JSON-LD | Export JSONL & envoi API locale (`POST /imports`) |
+| **ipify** | IP publique de sortie des agents | **Oui** (API publique sans authentification) | Une requête `https://api.ipify.org` à chaque démarrage du worker | IP inconnue, sans interruption du worker |
 
 ---
 

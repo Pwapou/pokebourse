@@ -151,3 +151,41 @@ def test_catalog_source_filters_include_marketplace_and_manual(
     assert "Source" in export.text
     assert "vinted" in export.text
     assert "Dracaufeu" not in export.text
+
+
+def test_create_ebay_and_wallapop_watches(watch_client: TestClient) -> None:
+    page = watch_client.get("/watches")
+    assert '<option value="ebay">eBay</option>' in page.text
+    assert '<option value="wallapop">Wallapop</option>' in page.text
+
+    ebay_created = watch_client.post(
+        "/watches",
+        data={
+            "platform": "ebay",
+            "name": "Dracaufeu eBay",
+            "search_text": "Dracaufeu",
+            "price_min_euros": "10,00",
+            "price_max_euros": "100,00",
+            "interval_seconds": "120",
+        },
+        follow_redirects=True,
+    )
+    assert ebay_created.status_code == 200
+    assert "Dracaufeu eBay" in ebay_created.text
+    assert "eBay" in ebay_created.text
+
+    wallapop_created = watch_client.post(
+        "/watches",
+        data={
+            "platform": "wallapop",
+            "name": "Mew Wallapop",
+            "search_text": "Mew",
+            "price_min_euros": "5,00",
+            "price_max_euros": "50,00",
+            "interval_seconds": "120",
+        },
+        follow_redirects=True,
+    )
+    assert wallapop_created.status_code == 200
+    assert "Mew Wallapop" in wallapop_created.text
+    assert "Wallapop" in wallapop_created.text

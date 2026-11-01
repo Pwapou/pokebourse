@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Pokébourse, votre espace local d'analyse du marché des cartes Pokémon.">
     <title>{% block title %}Pokébourse{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261104">
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261104-ml2">
     <script src="{{ url_for('static', path='/forms.js') }}?v=20261104" defer></script>
 </head>
 <body>
@@ -24,6 +24,10 @@
                 <a class="nav-item {{ 'active' if page == 'catalog' else '' }}" href="/catalog">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2Z"/></svg>
                     Annonces
+                </a>
+                <a class="nav-item {{ 'active' if page == 'annotations' else '' }}" href="/annotations">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16v18H4V3Zm3 5h10V6H7v2Zm0 5h10v-2H7v2Zm0 5h6v-2H7v2Z"/></svg>
+                    Annotations
                 </a>
                 <a class="nav-item {{ 'active' if page == 'profitability' else '' }}" href="/profitability">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 18.5 9.5 12.5l4 4L22 6.9 20.6 5.5l-7.1 8-4-4-7.5 7.5 1.5 1.5Z"/></svg>

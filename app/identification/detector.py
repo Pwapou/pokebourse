@@ -87,8 +87,14 @@ def _normalize_text(text: str) -> str:
     return " ".join(stripped.casefold().split())
 
 
-def extract_features(title: str, description: str | None = None) -> ExtractedFeatures:
-    """Analyse le titre et la description pour extraire les caractéristiques explicites."""
+def extract_features(
+    title: str,
+    description: str | None = None,
+    *,
+    catalog_names: list[str] | None = None,
+    catalog_sets: list[str] | None = None,
+) -> ExtractedFeatures:
+    """Analyse les preuves, avec un vocabulaire dérivé du référentiel local."""
     full_text = f"{title or ''} {description or ''}".strip()
     norm_text = _normalize_text(full_text)
 
@@ -118,12 +124,17 @@ def extract_features(title: str, description: str | None = None) -> ExtractedFea
             local_id = prefix_match.group("num")
             card_number = local_id
 
-    # 3. Extension (set)
+    # 3. Extension : vocabulaire du catalogue prioritaire, alias historiques en repli.
     set_name = None
-    for key, official_name in _KNOWN_SETS.items():
-        if key in norm_text:
+    for official_name in catalog_sets or []:
+        if re.search(rf"\b{re.escape(_normalize_text(official_name))}\b", norm_text):
             set_name = official_name
             break
+    if set_name is None:
+        for key, official_name in _KNOWN_SETS.items():
+            if key in norm_text:
+                set_name = official_name
+                break
 
     # 4. Gradation
     grading_company = None
@@ -157,7 +168,7 @@ def extract_features(title: str, description: str | None = None) -> ExtractedFea
             break
 
     # 8. Extraction du nom de carte potentiel
-    extracted_name = _extract_card_name(title, full_text, norm_text)
+    extracted_name = _extract_card_name(title, full_text, norm_text, catalog_names)
 
     return ExtractedFeatures(
         name=extracted_name,
@@ -165,7 +176,7 @@ def extract_features(title: str, description: str | None = None) -> ExtractedFea
         local_id=local_id,
         set_card_count=set_card_count,
         set_name=set_name,
-        language=language or "fr",
+        language=language,
         variant=variant,
         condition=condition,
         grading_company=grading_company,
@@ -175,8 +186,13 @@ def extract_features(title: str, description: str | None = None) -> ExtractedFea
     )
 
 
-def _extract_card_name(title: str, full_text: str, norm_text: str) -> str | None:
+def _extract_card_name(
+    title: str, full_text: str, norm_text: str, catalog_names: list[str] | None = None
+) -> str | None:
     """Tente d'isoler le nom potentiel de la carte sans inventer."""
+    for official_name in catalog_names or []:
+        if re.search(rf"\b{re.escape(_normalize_text(official_name))}\b", norm_text):
+            return official_name
     clean_title = re.sub(r"^\s*(?:carte\s+)?pok[ée]mon\s+", "", title, flags=re.IGNORECASE).strip()
 
     # Si tiret séparateur (ex: "Dracaufeu - Set de base" ou "Pikachu - Évolutions")

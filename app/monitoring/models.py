@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-WatchPlatform = Literal["vinted", "leboncoin"]
+WatchPlatform = Literal["vinted", "leboncoin", "ebay", "wallapop"]
 
 
 class WatchInput(BaseModel):

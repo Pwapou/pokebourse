@@ -9,6 +9,8 @@ from app.supervision.models import AGENT_STATES, StructuredError, utc_now
 DEFAULT_COLLECTORS: tuple[tuple[str, str], ...] = (
     ("vinted", "Vinted"),
     ("leboncoin", "Leboncoin"),
+    ("ebay", "eBay"),
+    ("wallapop", "Wallapop"),
 )
 
 

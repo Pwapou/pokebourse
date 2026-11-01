@@ -110,3 +110,47 @@ def test_run_watch_returns_success_and_failure_codes(
     monkeypatch.setattr(cli, "WatchService", FailingService)
     assert main(["--database", str(database), "run-watch", "1"]) == 1
     assert "Veille introuvable" in capsys.readouterr().err
+
+
+def test_cli_add_ebay_and_wallapop_watches(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    database = tmp_path / "watch-cli-new.db"
+    assert main(["--database", str(database), "migrate"]) == 0
+
+    assert (
+        main(
+            [
+                "--database",
+                str(database),
+                "add-watch",
+                "ebay",
+                "Dracaufeu eBay",
+                "Dracaufeu",
+                "--interval-seconds",
+                "120",
+            ]
+        )
+        == 0
+    )
+    assert "Veille créée et activée : #1" in capsys.readouterr().out
+
+    assert (
+        main(
+            [
+                "--database",
+                str(database),
+                "add-watch",
+                "wallapop",
+                "Mew Wallapop",
+                "Mew",
+                "--interval-seconds",
+                "120",
+            ]
+        )
+        == 0
+    )
+    assert "Veille créée et activée : #2" in capsys.readouterr().out
+
+    assert main(["--database", str(database), "list-watches"]) == 0
+    out = capsys.readouterr().out
+    assert "[ebay] Dracaufeu eBay" in out
+    assert "[wallapop] Mew Wallapop" in out

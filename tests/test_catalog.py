@@ -263,3 +263,59 @@ def test_catalog_item_detail_returns_full_row_or_none(tmp_path: Path) -> None:
         assert item["source_name"] == "import-web"
         assert item["import_batch_id"] == 1
         assert catalog_item_detail(connection, 9999) is None
+
+
+def test_reidentify_catalog_reattaches_items_once_reference_is_complete(
+    tmp_path: Path,
+) -> None:
+    """Une annonce importée alors que le référentiel était incomplet est
+    rattachée après le peuplement du catalogue (bouton « Réexaminer »)."""
+    from app.catalog import reidentify_catalog
+
+    with initialized_connection(tmp_path) as connection:
+        apply_migrations(connection)
+        # « Ronflex » n'existe pas dans les données seed : l'annonce reste non identifiée.
+        # Le titre porte les preuves (numéro + extension), comme une vraie annonce.
+        import_jsonl(
+            connection,
+            jsonl(
+                {
+                    **sample_item(),
+                    "name": "Ronflex 143/102 Set de Base",
+                    "set_name": "Set de Base",
+                    "card_number": "143/102",
+                }
+            ),
+        )
+        row = connection.execute(
+            "SELECT identification_status FROM catalog_items WHERE id = 1"
+        ).fetchone()
+        assert row["identification_status"] in ("unidentified", "ambiguous")
+
+        # Le référentiel TCGdex arrive (ex. synchronisation complète).
+        # L'extension « Set de Base » existe déjà dans les données seed (id base1).
+        connection.execute(
+            """
+            INSERT INTO pokemon_reference_cards (tcgdex_id, local_id, name, set_id, set_name)
+            VALUES ('base1-143', '143', 'Ronflex', 'base1', 'Set de Base')
+            """
+        )
+        connection.commit()
+
+        report = reidentify_catalog(connection)
+
+        assert report["examined"] == 1
+        assert report.get("identified") == 1
+        refreshed = connection.execute(
+            """
+            SELECT identification_status, reference_card_id, name, card_number
+            FROM catalog_items WHERE id = 1
+            """
+        ).fetchone()
+        assert refreshed["identification_status"] == "identified"
+        assert refreshed["reference_card_id"] is not None
+        assert refreshed["name"] == "Ronflex"
+        assert refreshed["card_number"] == "143"
+
+        # Second passage : plus rien en attente, rien à réexaminer.
+        assert reidentify_catalog(connection) == {"examined": 0}

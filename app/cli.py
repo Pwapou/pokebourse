@@ -58,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("migrate", help="Appliquer les migrations SQLite")
     subparsers.add_parser("check", help="Vérifier l'intégrité et les migrations")
+    export_labels = subparsers.add_parser("export-labels", help="Exporter les validations humaines ML en JSONL")
+    export_labels.add_argument("--output", required=True, type=Path, help="Fichier JSONL à créer (sans écrasement)")
+    diagnostic = subparsers.add_parser("diagnose-identification", help="Diagnostiquer les annonces non résolues, en lecture seule")
+    diagnostic.add_argument("--limit", type=int, choices=range(1, 501), default=100, metavar="1..500")
+    diagnostic.add_argument("--status", choices=("unidentified", "ambiguous", "all"), default="unidentified")
+    diagnostic.add_argument("--json", action="store_true", dest="as_json")
 
     import_cat = subparsers.add_parser(
         "import-catalog", help="Importer un fichier JSONL d'annonces"
@@ -147,7 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_watch = subparsers.add_parser(
         "add-watch", help="Créer et activer une veille marketplace"
     )
-    add_watch.add_argument("platform", choices=("vinted", "leboncoin"))
+    add_watch.add_argument("platform", choices=("vinted", "leboncoin", "ebay", "wallapop"))
     add_watch.add_argument("name", help="Nom de la veille")
     add_watch.add_argument("keywords", help="Mots-clés de recherche")
     add_watch.add_argument(
@@ -229,6 +235,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif args.command == "check":
                 check_database(connection)
                 print(f"Base SQLite valide : {database_path}")
+            elif args.command == "export-labels":
+                from app.identification.dataset import build_dataset
+                check_database(connection)
+                payload = build_dataset(connection)
+                with args.output.open("xb") as destination:
+                    destination.write(payload)
+                print(f"Validations humaines exportées : {args.output}")
+            elif args.command == "diagnose-identification":
+                from app.identification.diagnostics import identification_diagnostics
+                check_database(connection)
+                report = identification_diagnostics(connection, limit=args.limit, status=args.status)
+                if args.as_json:
+                    print(json.dumps(report, ensure_ascii=False, indent=2))
+                else:
+                    print(f"Catalogue : {report['catalog']['card_count']} cartes, {report['catalog']['set_count']} extensions")
+                    print(f"Annonces analysées : {report['analyzed_count']} / {report['population']} ; {report['with_candidates']} avec candidats")
+                    for key, count in report["counts"].items():
+                        print(f"- {report['labels'][key]} : {count}")
             elif args.command == "list-watches":
                 check_database(connection)
                 service = WatchService(

@@ -5,7 +5,7 @@
 {% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
 {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
 <section class="page-heading">
-    <div><span class="eyebrow">VEILLE MARKETPLACE</span><h1>Veilles</h1><p>Surveillez localement Vinted et Leboncoin, puis consolidez les annonces dans le catalogue. Aucun compte, achat automatique ou contournement anti-bot n’est utilisé.</p></div>
+    <div><span class="eyebrow">VEILLE MARKETPLACE</span><h1>Veilles</h1><p>Surveillez localement Vinted, Leboncoin, eBay et Wallapop, puis consolidez les annonces dans le catalogue. Aucun compte, achat automatique ou contournement anti-bot n’est utilisé.</p></div>
     <div class="heading-actions"><a class="button secondary" href="/catalog">Voir le catalogue</a></div>
 </section>
 <div class="config-grid">
@@ -15,10 +15,10 @@
             <fieldset class="form-fieldset">
                 <legend>Plateforme et critères</legend>
                 <div class="field-grid two-cols">
-                    <div class="form-field"><label for="watch-platform">Plateforme</label><select id="watch-platform" name="platform" required><option value="vinted">Vinted</option><option value="leboncoin">Leboncoin</option></select><span class="error-msg">Choisissez une plateforme.</span></div>
+                    <div class="form-field"><label for="watch-platform">Plateforme</label><select id="watch-platform" name="platform" required><option value="vinted">Vinted</option><option value="leboncoin">Leboncoin</option><option value="ebay">eBay</option><option value="wallapop">Wallapop</option></select><span class="error-msg">Choisissez une plateforme.</span></div>
                     <div class="form-field"><label for="watch-name">Nom de la veille</label><input id="watch-name" name="name" maxlength="120" required placeholder="Cartes Pikachu"><span class="error-msg">Nom obligatoire.</span></div>
                     <div class="form-field"><label for="watch-keywords">Mots-clés</label><input id="watch-keywords" name="search_text" maxlength="200" required placeholder="Carte Pokémon Pikachu"><span class="error-msg">Mots-clés obligatoires.</span></div>
-                    <div class="form-field"><label for="watch-category">Catégorie Leboncoin</label><input id="watch-category" name="category" maxlength="100" placeholder="Facultatif"><span class="field-hint">Ignorée par Vinted.</span></div>
+                    <div class="form-field"><label for="watch-category">Catégorie Leboncoin</label><input id="watch-category" name="category" maxlength="100" placeholder="Facultatif"><span class="field-hint">Spécifique à Leboncoin.</span></div>
                 </div>
             </fieldset>
             <fieldset class="form-fieldset">
@@ -56,7 +56,7 @@
                 {% for watch in watches %}
                 <tr>
                     <th scope="row"><div><strong>{{ watch.name }}</strong><span class="cell-sub">#{{ watch.id }}</span></div></th>
-                    <td>{{ 'Vinted' if watch.platform == 'vinted' else 'Leboncoin' }}</td>
+                    <td>{% if watch.platform == 'vinted' %}Vinted{% elif watch.platform == 'leboncoin' %}Leboncoin{% elif watch.platform == 'ebay' %}eBay{% elif watch.platform == 'wallapop' %}Wallapop{% else %}{{ watch.platform }}{% endif %}</td>
                     <td>{{ watch.interval_seconds }} s</td>
                     <td>{% if watch.is_active %}<span class="status-badge">Active</span>{% else %}<span class="tag">En pause</span>{% endif %}</td>
                     <td>{% if watch.last_run_started_at %}<div>{{ watch.last_run_started_at|date }}<span class="cell-sub">{% if watch.last_run_status == 'success' %}Réussi{% elif watch.last_run_status == 'failed' %}Échec{% else %}En cours{% endif %}{% if watch.last_error_message %} · {{ watch.last_error_message }}{% endif %}</span></div>{% else %}<span class="unknown">Jamais exécutée</span>{% endif %}</td>

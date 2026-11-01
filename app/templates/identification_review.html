@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Validation humaine · Pokébourse{% endblock %}
+{% block breadcrumb %}Annonces / Validation humaine{% endblock %}
+{% block content %}
+{% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">JEU PILOTE · LECTURE DU TEXTE</span>
+        <h1>Validation humaine</h1>
+        <p>Confirmez uniquement ce que le texte permet d’établir. L’identité ne certifie ni l’état, ni la variante, ni l’authenticité.</p>
+    </div>
+    {% if pilot_assignment %}<a class="button secondary" href="/annotations">Retour à la file</a>
+    {% else %}<a class="button secondary" href="/catalog/{{ item_id }}">Retour à l’annonce</a>{% endif %}
+</section>
+{% if pilot_assignment %}<div class="alert" role="status">{% if assignment_stage == 'first' %}Première lecture indépendante.{% elif assignment_stage == 'second' %}Seconde lecture indépendante : le premier avis reste masqué.{% else %}Validation finale : examinez les lectures puis enregistrez votre décision.{% endif %}</div>{% endif %}
+{% if needs_review %}<div class="alert error" role="alert">Les preuves ont changé. La validation précédente doit être réexaminée.</div>{% endif %}
+<section class="panel" aria-labelledby="original-title">
+    <div class="panel-heading"><h2 id="original-title">Texte observé</h2></div>
+    <div class="review-evidence">
+        <h3>{{ snapshot.title }}</h3>
+        <p>{{ snapshot.description or 'Aucune description disponible.' }}</p>
+        {% set attribute_labels = {'name': 'Nom fourni', 'set_name': 'Extension fournie', 'card_number': 'Numéro fourni', 'language': 'Langue observée', 'variant': 'Variante observée', 'condition': 'État observé', 'edition': 'Édition observée'} %}
+        {% if observed_attributes %}<dl>{% for key, value in observed_attributes.items() %}<div class="detail-row"><dt>{{ attribute_labels.get(key, key) }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% endif %}
+        {% if snapshot.input_origin == 'structured_import' %}<p>Import structuré : le nom fourni ne constitue pas un titre marketplace original.</p>{% endif %}
+        {% if snapshot.input_origin == 'legacy_unknown' %}<p>Original historique non fiable : ce cas sera exclu du jeu d’apprentissage textuel.</p>{% endif %}
+        <p>La langue et les autres attributs absents restent inconnus. Les photos ne sont pas utilisées pour ce pilote.</p>
+        {% if blind %}<p>Lecture indépendante : suggestions et avis précédents masqués.</p>{% endif %}
+    </div>
+</section>
+{% if compared_annotations %}
+<section class="panel" aria-labelledby="compared-title">
+    <div class="panel-heading"><h2 id="compared-title">Lectures à valider</h2></div>
+    <div class="review-evidence">{% for annotation in compared_annotations %}<p>Lecture {{ loop.index }} : <strong>{{ outcomes[annotation.outcome] }}</strong> · {{ annotation.validated_tcgdex_id or 'Aucune carte choisie' }} · Texte {{ 'suffisant' if annotation.text_sufficient else 'insuffisant' }}.</p>{% endfor %}</div>
+</section>
+{% endif %}
+<section class="panel" aria-labelledby="reference-title">
+    <div class="panel-heading"><h2 id="reference-title">Rechercher une référence</h2></div>
+    <form method="get" class="review-search">
+        {% if not pilot_assignment %}
+        <input type="hidden" name="blind" value="{{ 'true' if blind else 'false' }}">
+        {% endif %}
+        <label>Nom ou identifiant TCGdex<input name="q" value="{{ query }}" maxlength="100" placeholder="Ex. Dracaufeu ou base1-4"></label>
+        <button type="submit" class="button secondary">Rechercher</button>
+    </form>
+    <p class="table-note">La recherche parcourt tout le catalogue local, au-delà des candidats proposés par le moteur.</p>
+    {% if search_approximate %}<p class="table-note">Résultats approchés pour votre recherche : vérifiez le nom, le numéro et l’extension avant de choisir une carte.</p>{% endif %}
+    {% if query and not cards %}<p class="table-note">Aucune référence locale trouvée.</p>{% endif %}
+    <form method="post" action="/catalog/{{ item_id }}/review" class="structured-form review-form">
+        <input type="hidden" name="evidence_hash" value="{{ snapshot.input_hash }}">
+        <input type="hidden" name="revision" value="{{ revision }}">
+        {% if pilot_assignment %}
+        <input type="hidden" name="assignment_id" value="{{ pilot_assignment.id }}">
+        <input type="hidden" name="assignment_stage" value="{{ assignment_stage }}">
+        <input type="hidden" name="review_kind" value="{{ 'annotation' if blind else 'adjudication' }}">
+        <input type="hidden" name="annotation_ids" value="{{ annotation_ids }}">
+        {% endif %}
+        {% if cards %}
+        <fieldset class="form-fieldset">
+            <legend>Carte choisie (uniquement pour « Carte reconnue »)</legend>
+            {% for card in cards %}
+            <label><input type="radio" name="reference_card_id" value="{{ card.id }}"> {{ card.name }} · {{ card.set_name }} · {{ card.local_id }} · {{ card.tcgdex_id }}</label>
+            {% endfor %}
+        </fieldset>
+        {% endif %}
+        <label>Résultat<select name="outcome" required>
+            <option value="">Choisir un résultat</option>
+            {% for value, label in outcomes.items() %}{% if not pilot_assignment or value != 'withdrawn' %}<option value="{{ value }}">{{ label }}</option>{% endif %}{% endfor %}
+        </select></label>
+        {% if not pilot_assignment %}
+        <label>Type de lecture<select name="review_kind">
+            <option value="annotation" {{ 'selected' if blind else '' }}>Annotation indépendante</option>
+            <option value="decision" {{ 'selected' if not blind else '' }}>Décision sur l’annonce</option>
+            <option value="adjudication">Arbitrage d’annotations</option>
+        </select></label>
+        <p class="field-hint">Une annotation indépendante conserve votre lecture sans modifier l’annonce. Une décision ou un arbitrage actualise son identification.</p>
+        <label>Annotations arbitrées (arbitrage uniquement)<input name="annotation_ids" placeholder="Ex. 12, 15" maxlength="1000"></label>
+        {% endif %}
+        <label><input type="checkbox" name="text_sufficient" value="true"> Le texte seul suffit à établir ce résultat</label>
+        <fieldset class="form-fieldset review-attributes">
+            <legend>Attributs vérifiés dans le texte (facultatif)</legend>
+            <p>Laissez vide ce que le texte ne permet pas de confirmer. Le choix d’une carte ne vérifie aucun de ces attributs.</p>
+            {% for key, label in [('language', 'Langue (ex. fr)'), ('variant', 'Variante'), ('edition', 'Édition'), ('condition', 'État')] %}
+            <label>{{ label }}<input name="verified_{{ key }}" maxlength="100" placeholder="Inconnu"></label>
+            {% endfor %}
+        </fieldset>
+        <label>Commentaire sans coordonnées personnelles<textarea name="comment" maxlength="2000" rows="3"></textarea></label>
+        <button type="submit" class="button primary">Enregistrer la lecture</button>
+    </form>
+    {% if offset or has_more %}
+    <nav class="pagination" aria-label="Résultats de référence">
+        {% if offset %}<a class="button secondary" href="?q={{ query|urlencode }}&amp;blind={{ 'true' if blind else 'false' }}&amp;offset={{ [0, offset - 25]|max }}">Précédentes</a>{% endif %}
+        {% if has_more %}<a class="button secondary" href="?q={{ query|urlencode }}&amp;blind={{ 'true' if blind else 'false' }}&amp;offset={{ offset + 25 }}">Suivantes</a>{% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% if not blind %}
+<section class="panel" aria-labelledby="history-title">
+    <div class="panel-heading"><h2 id="history-title">Historique des lectures</h2></div>
+    <div class="table-wrap"><table>
+        <thead><tr><th>N°</th><th>Type</th><th>Résultat</th><th>Référence</th><th>Date</th></tr></thead>
+        <tbody>{% for review in history %}<tr><td>{{ review.id }}</td><td>{{ review.review_kind }}</td><td>{{ outcomes[review.outcome] }}</td><td>{{ review.validated_tcgdex_id or '—' }}</td><td>{{ review.validated_at|date }}</td></tr>{% else %}<tr><td colspan="5">Aucune lecture.</td></tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+{% endif %}
+{% if not pilot_assignment %}<p class="table-note"><a href="?blind={{ 'false' if blind else 'true' }}">{{ 'Afficher l’historique et corriger' if blind else 'Ouvrir une lecture indépendante' }}</a> · <a href="/catalog/labels.jsonl">Exporter les validations JSONL</a></p>{% endif %}
+{% endblock %}

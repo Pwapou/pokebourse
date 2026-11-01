@@ -165,13 +165,37 @@ def fetch_leboncoin_seller_profile(seller_id: str) -> SellerProfile:
     )
 
 
+def fetch_ebay_seller_profile(seller_id: str) -> SellerProfile:
+    return SellerProfile(
+        platform="ebay",
+        seller_external_id=seller_id,
+        login=seller_id,
+        profile_url=f"https://www.ebay.fr/usr/{seller_id}",
+        fetched_at=utc_now(),
+    )
+
+
+def fetch_wallapop_seller_profile(seller_id: str) -> SellerProfile:
+    return SellerProfile(
+        platform="wallapop",
+        seller_external_id=seller_id,
+        login=seller_id,
+        profile_url=f"https://fr.wallapop.com/user/{seller_id}",
+        fetched_at=utc_now(),
+    )
+
+
 PLATFORM_FETCHERS = {
     "vinted": fetch_vinted_seller_profile,
     "leboncoin": fetch_leboncoin_seller_profile,
+    "ebay": fetch_ebay_seller_profile,
+    "wallapop": fetch_wallapop_seller_profile,
 }
 
 __all__ = [
     "PLATFORM_FETCHERS",
+    "fetch_ebay_seller_profile",
     "fetch_leboncoin_seller_profile",
     "fetch_vinted_seller_profile",
+    "fetch_wallapop_seller_profile",
 ]

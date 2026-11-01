@@ -3,11 +3,13 @@ import logging
 import time
 from typing import Any
 import urllib.error
+import urllib.parse
 import urllib.request
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TCGDEX_BASE_URL = "https://api.tcgdex.net/v2/fr"
+TCGDEX_LOCALE_BASE_URL = "https://api.tcgdex.net/v2/{locale}"
+DEFAULT_TCGDEX_BASE_URL = TCGDEX_LOCALE_BASE_URL.format(locale="fr")
 DEFAULT_TIMEOUT_SECONDS = 10.0
 DEFAULT_USER_AGENT = "Pokebourse/1.0 (Pokemon Card Arbitrage; Local Fair Use)"
 
@@ -23,8 +25,10 @@ class TcgdexNetworkError(TcgdexError):
 
 
 class TcgdexRateLimitError(TcgdexError):
-    """Limite de requêtes atteinte (HTTP 429)."""
-    pass
+    """Limite de requêtes atteinte (HTTP 429), avec délai serveur éventuel."""
+    def __init__(self, message: str, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class TcgdexNotFoundError(TcgdexError):
@@ -67,10 +71,10 @@ class TcgdexClient:
                 if error.code == 404:
                     raise TcgdexNotFoundError(f"Ressource TCGdex non trouvée : {url}") from error
                 if error.code == 429:
-                    if attempts >= self.max_retries:
-                        raise TcgdexRateLimitError("Quota de requêtes TCGdex dépassé (429).") from error
                     retry_after = error.headers.get("Retry-After")
                     delay = float(retry_after) if retry_after else 1.0 * (2 ** attempts)
+                    if attempts >= self.max_retries:
+                        raise TcgdexRateLimitError("Quota de requêtes TCGdex dépassé (429).", delay) from error
                     logger.warning("TCGdex 429 ; attente de %.1fs avant nouvelle tentative.", delay)
                     time.sleep(delay)
                     continue
@@ -116,3 +120,36 @@ class TcgdexClient:
         if isinstance(data, dict):
             return data
         return {}
+
+    def list_cards(self) -> list[dict[str, Any]]:
+        """Liste résumée de toutes les cartes (id, name, localId…) dans la locale du client."""
+        data = self._request("/cards")
+        if isinstance(data, list):
+            return [dict(card) for card in data]
+        return []
+
+    def search_cards(
+        self,
+        *,
+        name: str | None = None,
+        local_id: str | None = None,
+        set_id: str | None = None,
+        set_name: str | None = None,
+        tcgdex_id: str | None = None,
+        page: int = 1,
+    ) -> list[dict[str, Any]]:
+        """Recherche ciblée et paginée ; seuls des critères de carte sont transmis."""
+        if tcgdex_id:
+            return [self.get_card(tcgdex_id)]
+        filters = {key: value for key, value in (("name", name), ("localId", local_id)) if value}
+        if set_id:
+            filters["set"] = set_id
+        elif set_name:
+            filters["set.name"] = set_name
+        if not filters:
+            raise ValueError("Un critère de recherche TCGdex est requis.")
+        query = urllib.parse.urlencode({**filters, "pagination:page": max(1, page), "pagination:itemsPerPage": 50})
+        data = self._request(f"/cards?{query}")
+        if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
+            raise ValueError("Réponse de recherche TCGdex invalide")
+        return data

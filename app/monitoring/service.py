@@ -4,10 +4,12 @@ import sqlite3
 from collections.abc import Callable
 from typing import Any
 
+from app.collectors.ebay import collect_ebay_listings
 from app.collectors.leboncoin import collect_leboncoin_listings
 from app.collectors.models import CollectionResult, CollectorError
 from app.collectors.service import ingest_collected_listings
 from app.collectors.vinted import collect_vinted_listings
+from app.collectors.wallapop import collect_wallapop_listings
 from app.monitoring import repository
 from app.monitoring.models import (
     WatchAlreadyRunningError,
@@ -33,6 +35,16 @@ def default_collectors() -> dict[str, Collector]:
             price_from=params.get("price_from"),
             price_to=params.get("price_to"),
             category=params.get("category"),
+        ),
+        "ebay": lambda **params: collect_ebay_listings(
+            search_text=params["search_text"],
+            price_from=params.get("price_from"),
+            price_to=params.get("price_to"),
+        ),
+        "wallapop": lambda **params: collect_wallapop_listings(
+            search_text=params["search_text"],
+            price_from=params.get("price_from"),
+            price_to=params.get("price_to"),
         ),
     }
 

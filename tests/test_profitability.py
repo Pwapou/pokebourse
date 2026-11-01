@@ -10,12 +10,14 @@ from app.profitability import (
     ReferenceInput,
     delete_reference,
     evaluate_catalog,
+    find_price_comparables,
     import_references_jsonl,
     parse_euros_to_cents,
     parse_percent_to_bps,
     update_active_fee_profile,
     upsert_reference,
 )
+from app.sellers.repository import record_purchase
 from app.storage.database import connect
 from app.storage.migration_runner import apply_migrations
 
@@ -463,3 +465,258 @@ def test_half_cent_rounding_is_characterized(tmp_path: Path) -> None:
 
         rows, _, _ = evaluate_catalog(connection)
         assert rows[0]["platform_fee_cents"] == 100
+
+
+def seed_cardmarket_bridge(connection, extra_locales: bool = True) -> None:
+    """Référentiel + alias multilingues + 2 produits Cardmarket (trend 35/30 €)."""
+    from app.cardmarket.aliases import base_card_name
+
+    connection.execute(
+        "INSERT INTO pokemon_reference_sets (id, name) VALUES ('sv03', 'Flammes Obsidiennes')"
+    )
+    connection.execute(
+        """
+        INSERT INTO pokemon_reference_cards (tcgdex_id, local_id, name, set_id, set_name)
+        VALUES ('sv03-125', '125', 'Dracaufeu-ex', 'sv03', 'Flammes Obsidiennes')
+        """
+    )
+    card_id = connection.execute("SELECT id FROM pokemon_reference_cards").fetchone()[0]
+    locales = [("fr", "Dracaufeu-ex"), ("en", "Charizard ex")]
+    if extra_locales:
+        locales += [("ko", "리자몽 ex"), ("ja", "リザードンex"), ("zh-tw", "噴火龍 ex")]
+    for locale, name in locales:
+        connection.execute(
+            "INSERT INTO card_name_aliases (card_id, locale, name) VALUES (?, ?, ?)",
+            (card_id, locale, name),
+        )
+    for product_id, trend in ((9001, 35000), (9002, 30000)):
+        card_name = "Charizard ex"
+        connection.execute(
+            """
+            INSERT INTO cardmarket_prices (product_id, card_name, trend_price_cents,
+                                           currency, name_base)
+            VALUES (?, ?, ?, 'EUR', ?)
+            """,
+            (product_id, card_name, trend, base_card_name(card_name)),
+        )
+    connection.commit()
+
+
+def test_cardmarket_trend_fallback_via_multilingual_alias(tmp_path: Path) -> None:
+    with connect(tmp_path / "cm-alias.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        seed_cardmarket_bridge(connection)
+        import_jsonl(
+            connection,
+            jsonl(
+                listing(
+                    "drac-fr",
+                    20000,
+                    name="Dracaufeu-ex",
+                    set_name="Flammes Obsidiennes",
+                    card_number="125/197",
+                )
+            ),
+        )
+
+        evaluations, summary, _ = evaluate_catalog(connection)
+        row = evaluations[0]
+        # Repli Cardmarket : le plus bas des prix tendances des produits assortis.
+        assert row["reference_price_cents"] == 30000
+        assert row["reference_source"] == "cardmarket_trend"
+        assert row["sample_count"] == 2
+        # 30000 - 1500 (commission 5 %) - 200 (envoi) - 20000 = 8300
+        assert row["net_profit_cents"] == 8300
+        assert row["verdict"] == "opportunite"
+        assert summary["cardmarket_match_count"] == 1
+
+
+def test_cardmarket_trend_fallback_direct_name_and_korean_alias(tmp_path: Path) -> None:
+    with connect(tmp_path / "cm-direct.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        seed_cardmarket_bridge(connection)
+        import_jsonl(
+            connection,
+            jsonl(
+                listing(
+                    "drac-en",
+                    23000,
+                    name="Charizard ex",
+                    set_name="Obsidian Flames",
+                    card_number="125/197",
+                ),
+                listing(
+                    "drac-ko",
+                    25000,
+                    name="리자몽 ex",
+                    set_name="Obsidian Flames",
+                    card_number="223/197",
+                ),
+            ),
+        )
+
+        evaluations, summary, _ = evaluate_catalog(connection)
+        by_id = {row["external_id"]: row for row in evaluations}
+        # Nom anglais : correspondance directe sur le nom de base.
+        assert by_id["drac-en"]["reference_source"] == "cardmarket_trend"
+        assert by_id["drac-en"]["reference_price_cents"] == 30000
+        assert by_id["drac-en"]["verdict"] == "opportunite"
+        # Nom coréen : pont multilingue via les alias (ko → en).
+        assert by_id["drac-ko"]["reference_source"] == "cardmarket_trend"
+        assert by_id["drac-ko"]["reference_price_cents"] == 30000
+        assert summary["cardmarket_match_count"] == 2
+
+
+def test_reference_and_median_take_priority_over_cardmarket(tmp_path: Path) -> None:
+    with connect(tmp_path / "cm-priority.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        seed_cardmarket_bridge(connection)
+        import_jsonl(
+            connection,
+            jsonl(
+                listing(
+                    "with-ref",
+                    20000,
+                    name="Dracaufeu-ex",
+                    set_name="Flammes Obsidiennes",
+                    card_number="125/197",
+                ),
+                # Médiane : deux annonces NM strictement comparables, l'évaluée exclue.
+                listing("median-a", 40000, name="Ronflex"),
+                listing("median-b", 44000, name="Ronflex"),
+                listing("median-c", 46000, name="Ronflex"),
+            ),
+        )
+        import_references_jsonl(
+            connection,
+            jsonl(
+                reference(
+                    20000,
+                    name="Dracaufeu-ex",
+                    set_name="Flammes Obsidiennes",
+                    card_number="125/197",
+                )
+            ),
+        )
+
+        evaluations, summary, _ = evaluate_catalog(connection)
+        by_id = {row["external_id"]: row for row in evaluations}
+        assert by_id["with-ref"]["reference_source"] == "reference"
+        assert by_id["with-ref"]["reference_price_cents"] == 20000
+        assert by_id["median-a"]["reference_source"] == "catalog_median"
+        assert by_id["median-a"]["reference_price_cents"] == 45000
+        assert summary["cardmarket_match_count"] == 0
+
+
+def test_cardmarket_trend_ignored_for_non_eur_listing(tmp_path: Path) -> None:
+    with connect(tmp_path / "cm-fx.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        seed_cardmarket_bridge(connection)
+        import_jsonl(
+            connection,
+            jsonl(
+                listing(
+                    "drac-usd",
+                    20000,
+                    name="Dracaufeu-ex",
+                    set_name="Flammes Obsidiennes",
+                    card_number="125/197",
+                    currency="USD",
+                )
+            ),
+        )
+
+        rows, summary, _ = evaluate_catalog(connection)
+        assert rows[0]["reference_price_cents"] is None
+        assert rows[0]["verdict"] == "sans_cote"
+        assert summary["cardmarket_match_count"] == 0
+
+
+def test_find_price_comparables_lists_evidence(tmp_path: Path) -> None:
+    with connect(tmp_path / "comparables.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        import_jsonl(
+            connection,
+            jsonl(
+                {
+                    "external_id": "pika-target",
+                    "name": "Pikachu",
+                    "set_name": "Evolutions",
+                    "card_number": "35/108",
+                    "condition": "NM",
+                    "price_cents": 1000,
+                },
+                {
+                    "external_id": "pika-exact",
+                    "name": "Pikachu",
+                    "set_name": "Évolutions",
+                    "card_number": "35/108",
+                    "condition": "NM",
+                    "price_cents": 2500,
+                },
+                {
+                    "external_id": "pika-close",
+                    "name": "Pikachu",
+                    "set_name": "Évolutions",
+                    "card_number": "35/108",
+                    "condition": "NM",
+                    "price_cents": 2400,
+                },
+                {
+                    "external_id": "other-card",
+                    "name": "Dracaufeu",
+                    "set_name": "Évolutions",
+                    "card_number": "11/108",
+                    "condition": "NM",
+                    "price_cents": 2500,
+                },
+            ),
+        )
+        target = dict(
+            connection.execute(
+                "SELECT * FROM catalog_items WHERE external_id = 'pika-target'"
+            ).fetchone()
+        )
+
+        comparables = find_price_comparables(connection, target, 2500)
+
+        listing_ids = [row["id"] for row in comparables["listings"]]
+        target_id = int(target["id"])
+        other_id = connection.execute(
+            "SELECT id FROM catalog_items WHERE external_id = 'other-card'"
+        ).fetchone()[0]
+        assert target_id not in listing_ids
+        assert other_id not in listing_ids
+        assert len(comparables["listings"]) == 2
+        assert comparables["listings"][0]["delta_cents"] == 0
+        assert comparables["listings"][1]["delta_cents"] == -100
+
+        record_purchase(
+            connection,
+            seller_name="vendeur-1",
+            card_name="Pikachu",
+            set_name="Évolutions",
+            card_number="35/108",
+            condition="NM",
+            price_paid_cents=2550,
+            status="vendu",
+        )
+        record_purchase(
+            connection,
+            seller_name="vendeur-2",
+            card_name="Pikachu",
+            set_name="Évolutions",
+            price_paid_cents=3000,
+            status="recu",
+        )
+        comparables = find_price_comparables(connection, target, 2500)
+        assert len(comparables["sales"]) == 1
+        assert comparables["sales"][0]["delta_cents"] == 50
+
+        empty = find_price_comparables(connection, target, None)
+        assert empty == {"listings": [], "sales": []}

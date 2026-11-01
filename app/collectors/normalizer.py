@@ -180,6 +180,36 @@ def _serializable_raw(payload: object, *, source: ListingPlatform) -> dict[str, 
             "published_at",
             "raw_data",
         ),
+        "ebay": (
+            "id",
+            "item_id",
+            "title",
+            "price",
+            "shipping",
+            "currency",
+            "url",
+            "image",
+            "images",
+            "seller",
+            "created_at",
+            "published_at",
+            "raw_data",
+        ),
+        "wallapop": (
+            "id",
+            "title",
+            "price",
+            "currency",
+            "url",
+            "web_slug",
+            "images",
+            "image",
+            "user",
+            "seller",
+            "created_at",
+            "published_at",
+            "raw_data",
+        ),
     }[source]
     raw: dict[str, Any] = {}
     for key in allowed_keys:
@@ -258,4 +288,89 @@ def normalize_leboncoin_ad(ad: object) -> CollectedListing:
         seller_external_id=seller_external_id,
         published_at=published_at,
         raw_data=_serializable_raw(ad, source="leboncoin"),
+    )
+
+
+def normalize_ebay_item(item: object) -> CollectedListing:
+    external_id = _value(item, "id", "item_id", "itemId", "external_id")
+    title = _value(item, "title", "subject", "name")
+    price = _value(item, "price", "price_amount", "current_price")
+    shipping = _value(item, "shipping_cents", "shipping", "shipping_cost", "postage")
+    currency = _value(item, "currency", "currency_code") or "EUR"
+    url = _value(item, "url", "item_url", "link", "viewItemURL")
+    if not url and external_id:
+        url = f"https://www.ebay.fr/itm/{external_id}"
+    image = _first_image_url(
+        _value(item, "image", "image_url", "images", "galleryURL", "picture_urls")
+    )
+    seller = _seller_name(_value(item, "seller", "user", "seller_username", "sellerUserName"))
+    seller_external_id = _seller_external_id(item)
+    published_at = _parse_datetime(
+        _value(item, "published_at", "created_at", "startTime")
+    )
+    if external_id is not None:
+        external_id = str(external_id)
+
+    shipping_cents = None
+    if shipping is not None:
+        try:
+            shipping_cents = parse_price_to_cents(_price_value(shipping), "port eBay")
+        except ValueError:
+            shipping_cents = None
+
+    return CollectedListing(
+        source="ebay",
+        external_id=external_id or "",
+        title=str(title or ""),
+        price_cents=parse_price_to_cents(_price_value(price), "prix eBay"),
+        shipping_cents=shipping_cents,
+        currency=str(currency),
+        url=str(url or ""),
+        image_url=image,
+        seller=seller,
+        seller_external_id=seller_external_id,
+        published_at=published_at,
+        raw_data=_serializable_raw(item, source="ebay"),
+    )
+
+
+def normalize_wallapop_item(item: object) -> CollectedListing:
+    external_id = _value(item, "id", "item_id", "itemId", "external_id")
+    title = _value(item, "title", "subject", "name")
+    price = _value(item, "price", "price_amount")
+    currency = _value(item, "currency", "currency_code") or "EUR"
+    web_slug = _value(item, "web_slug", "slug")
+    url = _value(item, "url", "link")
+    if not url:
+        if web_slug:
+            url = f"https://fr.wallapop.com/item/{web_slug}"
+        elif external_id:
+            url = f"https://fr.wallapop.com/item/{external_id}"
+    images = _value(item, "images", "image", "photos")
+    if isinstance(images, list) and images and isinstance(images[0], Mapping) and "original" in images[0]:
+        image = images[0]["original"]
+    else:
+        image = _first_image_url(images)
+    seller = _seller_name(_value(item, "user", "seller", "owner"))
+    if not seller and isinstance(_value(item, "user"), Mapping):
+        seller = _value(_value(item, "user"), "micro_name", "web_slug")
+    seller_external_id = _seller_external_id(item)
+    published_at = _parse_datetime(
+        _value(item, "published_at", "created_at", "modified_at")
+    )
+    if external_id is not None:
+        external_id = str(external_id)
+    return CollectedListing(
+        source="wallapop",
+        external_id=external_id or "",
+        title=str(title or ""),
+        price_cents=parse_price_to_cents(_price_value(price), "prix Wallapop"),
+        shipping_cents=None,
+        currency=str(currency),
+        url=str(url or ""),
+        image_url=image,
+        seller=seller,
+        seller_external_id=seller_external_id,
+        published_at=published_at,
+        raw_data=_serializable_raw(item, source="wallapop"),
     )

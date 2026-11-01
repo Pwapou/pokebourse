@@ -174,7 +174,7 @@ def test_manual_jsonl_import_survives_marketplace_ingestion(
     assert imported == 1
     assert marketplace.created_count == 1
     sources = connection.execute(
-        "SELECT name, kind, enabled FROM sources ORDER BY name"
+        "SELECT name, kind, enabled FROM sources WHERE name IN ('import-test', 'vinted') ORDER BY name"
     ).fetchall()
     assert {row["name"]: row["kind"] for row in sources} == {
         "import-test": "manual_jsonl",

@@ -175,7 +175,7 @@ def ingest_collected_listings(
                 "is_lot": is_lot,
             }
             if existing is None:
-                connection.execute(
+                insert_cursor = connection.execute(
                     """
                     INSERT INTO catalog_items (
                         source_id, import_batch_id, external_id, name, set_name,
@@ -227,11 +227,17 @@ def ingest_collected_listings(
                         values["is_lot"],
                     ),
                 )
+                item_id = int(insert_cursor.lastrowid)
                 created_count += 1
             else:
+                item_id = int(existing["id"])
                 _update_existing_listing(connection, existing, values)
                 if _listing_changed(existing, values):
                     updated_count += 1
+
+            from app.config import Settings
+            from app.identification.pipeline import resolve_and_apply
+            resolve_and_apply(connection, item_id, auto_enrich=Settings.from_env().tcgdex_auto_enrich)
 
             if listing.seller_external_id:
                 seller_repository.enqueue_seller(

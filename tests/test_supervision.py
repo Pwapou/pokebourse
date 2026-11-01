@@ -31,7 +31,11 @@ from app.supervision.models import (
     transition_for,
     utc_now,
 )
-from app.supervision.service import SupervisionService
+from app.supervision.service import (
+    DEFAULT_COLLECTOR_SITES,
+    SUPPORTED_PLATFORMS,
+    SupervisionService,
+)
 from app.monitoring.scheduler import WatchScheduler
 from app.monitoring.service import WatchService
 
@@ -236,13 +240,39 @@ def test_register_creates_agent_and_collectors(
     agents = repository.list_agents(connection)
     assert len(agents) == 1
     assert agents[0]["process_state"] == "operational"
-    assert {c["collector_key"] for c in agents[0]["collectors"]} == {
-        "vinted",
-        "leboncoin",
-    }
+    assert {c["collector_key"] for c in agents[0]["collectors"]} == set(
+        SUPPORTED_PLATFORMS
+    )
     detail = repository.agent_detail(connection, agent_id)
     assert detail is not None
-    assert {c["site"] for c in detail["collectors"]} == {"Vinted", "Leboncoin"}
+    assert {c["site"] for c in detail["collectors"]} == set(
+        DEFAULT_COLLECTOR_SITES.values()
+    )
+
+
+def test_register_detects_ip_on_every_deployment_and_heartbeat_exposes_it(
+    connection: sqlite3.Connection,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    addresses = iter(("203.0.113.10", "203.0.113.11"))
+    monkeypatch.setattr(
+        "app.supervision.service.detect_public_ip", lambda _url: next(addresses)
+    )
+    service = SupervisionService(
+        tmp_path / "supervision.db",
+        agent_key="agent-test",
+        ip_probe_url="https://ip.example.test",
+    )
+
+    agent_id = registered(connection, service)
+    service.heartbeat(connection)
+    agents = repository.list_agents(connection)
+    assert agents[0]["public_ip"] == "203.0.113.10"
+    assert {c["public_ip"] for c in agents[0]["collectors"]} == {"203.0.113.10"}
+
+    service.register(connection)
+    assert repository.agent_detail(connection, agent_id)["public_ip"] == "203.0.113.11"  # type: ignore[index]
 
 
 def test_heartbeat_does_not_unblock_collector(

@@ -2,8 +2,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+import json
 import sqlite3
-from typing import cast
+from typing import Any, Literal, cast
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
@@ -42,12 +43,31 @@ from app.catalog import (
     import_listings_from_extension,
     recent_import_failures,
     record_import_failure,
+    reidentify_catalog,
     reidentify_catalog_item,
 )
 from app.catalog_export import CSV_FILENAME, build_catalog_csv
+from app.cardmarket import aliases as cardmarket_aliases
+from app.cardmarket import guide as cardmarket_guide
+from app.cardmarket import service as cardmarket_service
+from app.cardmarket.client import (
+    CardmarketError,
+    CardmarketNotConfiguredError,
+    CardmarketNotFoundError,
+    CardmarketRateLimitError,
+)
 from app.collectors.models import CollectorError
 from app.config import Settings
 from app.identification.models import IDENTIFICATION_STATUS_LABELS
+from app.identification.annotation_pilot import (
+    AnnotationAccessError, assignment, assignment_stage, pilot_dashboard, sample_pilot,
+)
+from app.identification.reviews import OUTCOMES, ReviewInput, review_context, save_review
+from app.identification.research import enqueue_search, get_search_for_item, latest_search_for_item
+from app.identification.resolution import (
+    IdentificationConflictError, confirm_card, reclassify_unit, resolve_listing,
+    revoke_confirmation,
+)
 from app.monitoring.models import WatchInput, WatchNotFoundError, WatchValidationError
 from app.monitoring.service import WatchService
 from app.profitability import (
@@ -61,6 +81,7 @@ from app.profitability import (
     build_market_index,
     enrich_catalog_items,
     evaluate_listing,
+    find_price_comparables,
     get_active_fee_profile,
     import_references_jsonl,
     parse_euros_to_cents,
@@ -367,6 +388,191 @@ def catalog_export(
     )
 
 
+@app.get("/catalog/labels.jsonl")
+def identification_labels_export(request: Request) -> Response:
+    """Télécharge un jeu pilote humain sans données structurées de vendeur."""
+    from app.identification.dataset import build_dataset
+    with connect(settings_from(request).database_path) as connection:
+        payload = build_dataset(connection)
+    return Response(payload, media_type="application/x-ndjson", headers={
+        "Content-Disposition": 'attachment; filename="pokebourse-labels.jsonl"',
+    })
+
+
+@app.get("/annotations", response_class=HTMLResponse)
+def annotation_dashboard_page(
+    request: Request, notice: str | None = Query(default=None, max_length=200),
+    error: str | None = Query(default=None, max_length=300),
+    view: str = Query(default="all", max_length=20), queue_page: int = Query(default=1, ge=1),
+) -> HTMLResponse:
+    """Suit le pilote sans dévoiler de décision sur les lectures en attente."""
+    operator = settings_from(request).review_operator
+    with connect(settings_from(request).database_path) as connection:
+        data = pilot_dashboard(connection, operator)
+    next_item = next((item for item in data.get("items", []) if item["stage"] in ("first", "second")), None)
+    view = view if view in ("all", "available", "waiting", "final") else "all"
+    visible = [item for item in data.get("items", []) if view == "all"
+               or (view == "available" and item["stage"] in ("first", "second"))
+               or (view == "waiting" and item["current"] and item["blocked"])
+               or (view == "final" and item["stage"] == "adjudication")]
+    pages = max(1, (len(visible) + 24) // 25)
+    queue_page = min(queue_page, pages)
+    return templates.TemplateResponse(request=request, name="annotation_dashboard.html", context={
+        "page": "annotations", "operator": operator, "notice": notice, "error": error,
+        "next_item": next_item, "ident_labels": IDENTIFICATION_STATUS_LABELS,
+        "queue_items": visible[(queue_page - 1) * 25:queue_page * 25], "view": view,
+        "queue_page": queue_page, "queue_pages": pages, "queue_total": len(visible), **data,
+    })
+
+
+@app.get("/identification/diagnostics")
+def identification_diagnostic_page(
+    request: Request, limit: int = Query(default=100, ge=1, le=500),
+    status: Literal["unidentified", "ambiguous", "all"] = "unidentified", download: bool = False,
+) -> Response:
+    """Présente les constats locaux, sans modifier les annonces ou leurs validations."""
+    from app.identification.diagnostics import identification_diagnostics
+    with connect(settings_from(request).database_path) as connection:
+        report = identification_diagnostics(connection, limit=limit, status=status)
+    if download:
+        return JSONResponse(report, headers={"Content-Disposition": 'attachment; filename="identification-diagnostics.json"'})
+    return templates.TemplateResponse(request=request, name="identification_diagnostics.html", context={
+        "page": "annotations", "report": report,
+    })
+
+
+@app.post("/annotations/sample")
+def annotation_sample(request: Request) -> RedirectResponse:
+    """Constitue ou complète le pilote à partir des seules données locales."""
+    with connect(settings_from(request).database_path) as connection:
+        added = sample_pilot(connection)
+    message = f"{added} annonce(s) ajoutée(s) à la file." if added else "Aucune nouvelle annonce admissible : importez des annonces ou terminez les lectures en attente."
+    return RedirectResponse(f"/annotations?notice={quote(message)}", status_code=303)
+
+
+@app.get("/annotations/items/{assignment_id}", response_class=HTMLResponse)
+def annotation_assignment_page(
+    request: Request, assignment_id: int, q: str = Query(default="", max_length=100),
+    offset: int = Query(default=0, ge=0), error: str | None = Query(default=None, max_length=300),
+) -> Response:
+    """Impose une lecture aveugle jusqu'à la fin des lectures indépendantes."""
+    from app.identification.resolution import capture_evidence
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            with connection:
+                item = assignment(connection, assignment_id)
+                if item["listing_id"] is not None:
+                    capture_evidence(connection, item["listing_id"])
+                    item = assignment(connection, assignment_id)
+                stage = assignment_stage(connection, item, settings_from(request).review_operator)
+                if stage == "done":
+                    return RedirectResponse("/annotations", status_code=303)
+                blind = stage != "adjudication"
+                data = review_context(connection, item["listing_id"], q, offset, blind=blind)
+                annotation_ids = [item["first_review_id"]] + ([item["second_review_id"]] if item["second_review_id"] else [])
+                compared = [] if blind else [connection.execute(
+                    "SELECT outcome, validated_tcgdex_id, text_sufficient FROM listing_identification_reviews WHERE id=?", (review_id,)
+                ).fetchone() for review_id in annotation_ids]
+        return templates.TemplateResponse(request=request, name="identification_review.html", context={
+            "page": "annotations", "item_id": item["listing_id"], "query": q, "offset": offset,
+            "blind": blind, "error": error, "outcomes": OUTCOMES, "pilot_assignment": item,
+            "assignment_stage": stage, "annotation_ids": ",".join(map(str, annotation_ids)) if not blind else "",
+            "compared_annotations": compared, **data,
+        })
+    except (AnnotationAccessError, LookupError) as exc:
+        return templates.TemplateResponse(request=request, name="annotation_blocked.html",
+            status_code=403 if isinstance(exc, AnnotationAccessError) else 404,
+            context={"page": "annotations", "message": str(exc)})
+
+
+@app.get("/catalog/{item_id}/review", response_class=HTMLResponse)
+def identification_review_page(
+    request: Request, item_id: int,
+    q: str = Query(default="", max_length=100),
+    offset: int = Query(default=0, ge=0),
+    blind: bool = Query(default=True),
+    notice: str | None = Query(default=None, max_length=200),
+    error: str | None = Query(default=None, max_length=300),
+) -> HTMLResponse:
+    """Lecture indépendante par défaut, sans suggestion ni historique visible."""
+    with connect(settings_from(request).database_path) as connection:
+        if not connection.execute("SELECT id FROM catalog_items WHERE id=?", (item_id,)).fetchone():
+            return templates.TemplateResponse(request=request, name="404.html", status_code=404,
+                context={"page": "catalog", "message": "Annonce introuvable."})
+        with connection:
+            data = review_context(connection, item_id, q, offset, blind=blind)
+    return templates.TemplateResponse(request=request, name="identification_review.html", context={
+        "page": "catalog", "item_id": item_id, "query": q, "offset": offset,
+        "blind": blind, "notice": notice, "error": error, "outcomes": OUTCOMES, **data,
+    })
+
+
+@app.post("/catalog/{item_id}/review")
+def identification_review_submit(
+    request: Request, item_id: int, evidence_hash: str = Form(...), revision: int = Form(...),
+    outcome: str = Form(...), review_kind: str = Form(default="decision"),
+    reference_card_id: int | None = Form(default=None), text_sufficient: bool = Form(default=False),
+    comment: str | None = Form(default=None, max_length=2000),
+    annotation_ids: str = Form(default="", max_length=1000),
+    verified_language: str = Form(default="", max_length=100),
+    verified_variant: str = Form(default="", max_length=100),
+    verified_edition: str = Form(default="", max_length=100),
+    verified_condition: str = Form(default="", max_length=100),
+    assignment_id: int | None = Form(default=None), assignment_stage: str | None = Form(default=None),
+) -> Response:
+    """Enregistre une révision avec identité locale fixe et contrôle du snapshot."""
+    try:
+        review = ReviewInput.model_validate({
+            "outcome": outcome, "review_kind": review_kind, "validated_card_id": reference_card_id,
+            "text_sufficient": text_sufficient, "comment": comment,
+            "reviewed_annotation_ids": [int(value.strip()) for value in annotation_ids.split(",") if value.strip()],
+            "verified_attributes": {key: {"status": "verified" if value.strip() else "unknown", "value": value.strip() or None}
+                for key, value in (("language", verified_language), ("variant", verified_variant),
+                                   ("edition", verified_edition), ("condition", verified_condition))},
+        })
+        with connect(settings_from(request).database_path) as connection:
+            save_review(connection, item_id, review, expected_hash=evidence_hash, expected_revision=revision,
+                        operator=settings_from(request).review_operator,
+                        assignment_id=assignment_id, assignment_stage=assignment_stage)
+    except IdentificationConflictError as exc:
+        path = f"/annotations/items/{assignment_id}" if assignment_id is not None else f"/catalog/{item_id}/review"
+        return HTMLResponse(f"<p>{str(exc)}</p><a href='{path}'>Recharger la fiche</a>", status_code=409)
+    except LookupError:
+        return HTMLResponse("Annonce introuvable.", status_code=404)
+    except AnnotationAccessError as exc:
+        return templates.TemplateResponse(request=request, name="annotation_blocked.html", status_code=403,
+            context={"page": "annotations", "message": str(exc)})
+    except (ValueError, ValidationError) as exc:
+        message = str(exc) if not isinstance(exc, ValidationError) else "Validation invalide : vérifiez le résultat, la carte choisie et la suffisance du texte."
+        path = f"/annotations/items/{assignment_id}" if assignment_id is not None else f"/catalog/{item_id}/review"
+        return RedirectResponse(f"{path}?error={quote(message[:300])}", status_code=303)
+    if assignment_id is not None:
+        return RedirectResponse("/annotations?notice=Lecture+enregistr%C3%A9e", status_code=303)
+    return RedirectResponse(f"/catalog/{item_id}/review?notice=Lecture+enregistr%C3%A9e", status_code=303)
+
+
+@app.post("/catalog/reidentify-all")
+def reidentify_catalog_all(request: Request) -> RedirectResponse:
+    """Réexamine toutes les annonces non identifiées avec le référentiel courant."""
+    with connect(settings_from(request).database_path) as connection:
+        report = reidentify_catalog(connection)
+    labels = {
+        "identified": "identifiée(s)",
+        "ambiguous": "à vérifier",
+        "lot": "lot(s)",
+        "unidentified": "non identifiée(s)",
+    }
+    details = ", ".join(
+        f"{labels.get(status, status)} {count}"
+        for status, count in report.items()
+        if status != "examined"
+    )
+    msg = f"Réexamen terminé : {report['examined']} annonce(s) réexaminée(s)."
+    if details:
+        msg += f" Résultat : {details}."
+    return RedirectResponse(url=f"/catalog?notice={quote(msg)}", status_code=303)
+
+
 @app.post("/catalog/{item_id}/reidentify")
 def reidentify_item(request: Request, item_id: int) -> RedirectResponse:
     with connect(settings_from(request).database_path) as connection:
@@ -384,16 +590,33 @@ def catalog_item(
     request: Request,
     item_id: int,
     notice: str | None = Query(default=None, max_length=200),
+    error: str | None = Query(default=None, max_length=300),
 ) -> HTMLResponse:
     with connect(settings_from(request).database_path) as connection:
         item = catalog_item_detail(connection, item_id)
         seller_profile_row = None
+        cardmarket_view = None
+        comparables: dict[str, list[dict[str, Any]]] = {
+            "listings": [],
+            "sales": [],
+        }
+        cardmarket_ready = cardmarket_service.credentials_configured(
+            settings_from(request)
+        )
         if item is not None:
             fee_profile = get_active_fee_profile(connection)
             market_index = build_market_index(
                 connection, fee_profile.min_catalog_samples
             )
             evaluation = evaluate_listing(item, fee_profile, market_index)
+            comparables = find_price_comparables(
+                connection, item, evaluation["reference_price_cents"]
+            )
+            identification = resolve_listing(connection, item_id)
+            identification_candidates = identification.result.candidates[:5]
+            identification_search = latest_search_for_item(connection, item_id)
+            cardmarket_rows = cardmarket_service.prices_for_item(connection, item)
+            cardmarket_view = _cardmarket_view(cardmarket_rows)
             seller_profile_row = seller_service_from(request).profile_for_item(
                 connection,
                 platform=item["source_name"],
@@ -420,8 +643,230 @@ def catalog_item(
             "seller_rating": reliability_rating(seller_profile),
             "notice": notice,
             "ident_labels": IDENTIFICATION_STATUS_LABELS,
+            "cardmarket": cardmarket_view,
+            "cardmarket_ready": cardmarket_ready,
+            "comparables": comparables,
+            "identification": identification,
+            "identification_candidates": identification_candidates,
+            "identification_search": identification_search,
+            "error": error,
         },
     )
+
+
+def _reference_payload(card: object) -> dict[str, object]:
+    return {
+        "id": card.id, "tcgdex_id": card.tcgdex_id, "name": card.name,
+        "set_name": card.set_name, "local_id": card.local_id,
+        "image_url": card.image_url, "rarity": card.rarity, "language": "fr",
+    }
+
+
+@app.get("/catalog/{item_id}/identification")
+def catalog_identification_candidates(
+    request: Request, item_id: int, name: str = Query(default="", max_length=200),
+    local_id: str = Query(default="", max_length=50), set_name: str = Query(default="", max_length=200),
+    tcgdex_id: str = Query(default="", max_length=100), page: int = Query(default=1, ge=1),
+) -> JSONResponse:
+    from app.tcgdex.cache import TcgdexCache
+    from app.identification.reference_search import search_references
+    with connect(settings_from(request).database_path) as connection:
+        if not catalog_item_detail(connection, item_id):
+            return JSONResponse({"detail": "Annonce introuvable"}, status_code=404)
+        cache = TcgdexCache(connection)
+        search = search_references(cache, name=name, local_id=local_id or None, set_name=set_name or None,
+                                   tcgdex_id=tcgdex_id or None, limit=21, offset=(page - 1) * 20)
+        cards = search.cards
+    return JSONResponse({"items": [_reference_payload(card) for card in cards[:20]], "page": page,
+                         "has_next": len(cards) > 20, "approximate": search.approximate})
+
+
+@app.post("/catalog/{item_id}/identification/search")
+def catalog_identification_search(
+    request: Request, item_id: int, name: str = Form(default=""), local_id: str = Form(default=""),
+    set_name: str = Form(default=""), tcgdex_id: str = Form(default=""), force: int = Form(default=0),
+) -> RedirectResponse:
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            with connection:
+                search_id = enqueue_search(connection, item_id, {"name": name, "local_id": local_id, "set_name": set_name, "tcgdex_id": tcgdex_id}, force=bool(force))
+        return RedirectResponse(f"/catalog/{item_id}?notice={quote(f'Recherche {search_id} en attente du worker.')}", status_code=303)
+    except (ValueError, LookupError) as error:
+        return RedirectResponse(f"/catalog/{item_id}?error={quote(str(error))}", status_code=303)
+
+
+@app.get("/catalog/{item_id}/identification/search/{search_id}")
+def catalog_identification_search_status(request: Request, item_id: int, search_id: int) -> JSONResponse:
+    with connect(settings_from(request).database_path) as connection:
+        search = get_search_for_item(connection, item_id, search_id)
+        if search is None:
+            return JSONResponse({"detail": "Recherche introuvable pour cette annonce"}, status_code=404)
+        return JSONResponse({"id": search["id"], "status": search["status"], "attempts": search["attempts"], "partial": bool(search["partial"]), "error_code": search["error_code"], "result_card_ids": json.loads(search["result_card_ids_json"])})
+
+
+@app.post("/catalog/{item_id}/identification/confirm")
+def catalog_identification_confirm(
+    request: Request, item_id: int, reference_card_id: int = Form(...),
+    evidence_hash: str = Form(...), revision: int = Form(...), reason: str = Form(default=""),
+) -> RedirectResponse:
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            with connection:
+                confirm_card(connection, item_id, reference_card_id, evidence_hash, revision, reason or None)
+        return RedirectResponse(f"/catalog/{item_id}?notice={quote('Carte confirmée manuellement.')}", status_code=303)
+    except (ValueError, LookupError) as error:
+        return RedirectResponse(f"/catalog/{item_id}?error={quote(str(error))}", status_code=303)
+
+
+@app.post("/catalog/{item_id}/identification/revoke")
+def catalog_identification_revoke(request: Request, item_id: int, evidence_hash: str = Form(...), revision: int = Form(...)) -> RedirectResponse:
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            with connection:
+                revoke_confirmation(connection, item_id, evidence_hash, revision)
+        return RedirectResponse(f"/catalog/{item_id}?notice={quote('Confirmation retirée ; résolution automatique réactivée.')}", status_code=303)
+    except ValueError as error:
+        return RedirectResponse(f"/catalog/{item_id}?error={quote(str(error))}", status_code=303)
+
+
+@app.post("/catalog/{item_id}/identification/reclassify-unit")
+def catalog_identification_reclassify(request: Request, item_id: int, evidence_hash: str = Form(...), revision: int = Form(...), reason: str = Form(...)) -> RedirectResponse:
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            with connection:
+                reclassify_unit(connection, item_id, evidence_hash, revision, reason)
+        return RedirectResponse(f"/catalog/{item_id}?notice={quote('Classement lot corrigé et historisé.')}", status_code=303)
+    except ValueError as error:
+        return RedirectResponse(f"/catalog/{item_id}?error={quote(str(error))}", status_code=303)
+
+
+@app.post("/catalog/{item_id}/cardmarket/refresh")
+def catalog_item_cardmarket_refresh(request: Request, item_id: int) -> RedirectResponse:
+    settings = settings_from(request)
+    with connect(settings.database_path) as connection:
+        item = catalog_item_detail(connection, item_id)
+        if item is None:
+            return RedirectResponse(url="/catalog?error=Annonce+introuvable", status_code=303)
+        try:
+            snapshot = cardmarket_service.refresh_price_for_item(
+                connection, item, settings
+            )
+        except CardmarketNotConfiguredError:
+            return RedirectResponse(
+                url=f"/catalog/{item_id}?error={quote('API Cardmarket non configurée : renseignez les 4 variables CARDMARKET_* (voir documentation).')}",
+                status_code=303,
+            )
+        except CardmarketNotFoundError as error:
+            return RedirectResponse(
+                url=f"/catalog/{item_id}?error={quote(str(error))}",
+                status_code=303,
+            )
+        except CardmarketRateLimitError:
+            return RedirectResponse(
+                url=f"/catalog/{item_id}?error={quote('Limite de requêtes Cardmarket atteinte — réessayez dans quelques minutes.')}",
+                status_code=303,
+            )
+        except CardmarketError as error:
+            return RedirectResponse(
+                url=f"/catalog/{item_id}?error={quote(f'Erreur Cardmarket : {error}')}",
+                status_code=303,
+            )
+    if snapshot is not None and snapshot.best_known_price_cents is not None:
+        euros, cents = divmod(snapshot.best_known_price_cents, 100)
+        msg = quote(
+            f"Prix Cardmarket actualisé : {snapshot.card_name} "
+            f"({euros},{cents:02d} {snapshot.currency})."
+        )
+    else:
+        msg = quote("Prix Cardmarket actualisé, mais aucun prix de vente disponible.")
+    return RedirectResponse(url=f"/catalog/{item_id}?notice={msg}", status_code=303)
+
+
+def _cardmarket_view(rows: list[Any]) -> dict[str, Any] | None:
+    """Construit la vue d'affichage : produit unique ou fourchette multi-produits."""
+    if not rows:
+        return None
+    trends = [
+        int(row["trend_price_cents"])
+        for row in rows
+        if row["trend_price_cents"] is not None
+    ]
+    return {
+        "rows": rows,
+        "count": len(rows),
+        "single": rows[0] if len(rows) == 1 else None,
+        "currency": rows[0]["currency"],
+        "trend_min": min(trends) if trends else None,
+        "trend_max": max(trends) if trends else None,
+    }
+
+
+@app.post("/cardmarket/sync")
+def cardmarket_sync(request: Request) -> RedirectResponse:
+    """Télécharge le price guide officiel Cardmarket et synchronise les cotes."""
+    with connect(settings_from(request).database_path) as connection:
+        try:
+            result = cardmarket_guide.sync_price_guide(connection)
+        except Exception as error:  # Réseau, JSON invalide, fichier indisponible…
+            return RedirectResponse(
+                url=f"/profitability?error={quote(f'Synchronisation Cardmarket impossible : {error}')}",
+                status_code=303,
+            )
+    guide_date = (result["created_at"] or "")[:10]
+    msg = (
+        f"Cotes Cardmarket synchronisées : {result['synced']} cartes "
+        f"(price guide officiel du {guide_date}"
+        + (f", {result['skipped']} produits sans nom ignorés" if result["skipped"] else "")
+        + ")."
+    )
+    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
+
+
+@app.post("/cardmarket/aliases/sync")
+def cardmarket_aliases_sync(request: Request) -> RedirectResponse:
+    """Synchronise les noms de cartes multilingues (TCGdex → card_name_aliases)."""
+    with connect(settings_from(request).database_path) as connection:
+        try:
+            result = cardmarket_aliases.sync_name_aliases(connection)
+        except Exception as error:
+            return RedirectResponse(
+                url=f"/profitability?error={quote(f'Synchronisation des noms impossible : {error}')}",
+                status_code=303,
+            )
+    total = sum(result["per_locale"].values())
+    locales = " · ".join(
+        f"{locale.upper()} {count}" for locale, count in result["per_locale"].items()
+    )
+    msg = f"Noms multilingues synchronisés : {total} alias ({locales})."
+    if result["skipped"]:
+        msg += f" Locales ignorées (API indisponible) : {', '.join(result['skipped'])}."
+    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
+
+
+@app.post("/cardmarket/sync-all")
+def cardmarket_sync_all(request: Request) -> RedirectResponse:
+    """Synchronise cotes + noms en une seule action (« Tout synchroniser »)."""
+    from app.cardmarket import daily as cardmarket_daily
+
+    with connect(settings_from(request).database_path) as connection:
+        try:
+            result = cardmarket_daily.run_daily_sync(connection)
+            cardmarket_daily.mark_success(connection, "manuel · " + cardmarket_daily.summarize(result))
+        except Exception as error:
+            cardmarket_daily.mark_attempt(connection, f"manuel en échec : {error}")
+            return RedirectResponse(
+                url=f"/profitability?error={quote(f'Synchronisation impossible : {error}')}",
+                status_code=303,
+            )
+    guide_date = (result["guide"]["created_at"] or "")[:10]
+    alias_total = sum(result["aliases"]["per_locale"].values())
+    msg = (
+        f"Cotes + noms synchronisés : {result['guide']['synced']} cotes Cardmarket "
+        f"(price guide du {guide_date}) et {alias_total} alias multilingues."
+    )
+    if result["aliases"]["skipped"]:
+        msg += f" Locales ignorées (API indisponible) : {', '.join(result['aliases']['skipped'])}."
+    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
 
 
 @app.post("/catalog/{item_id}/purchase")
@@ -445,7 +890,7 @@ def catalog_item_purchase(
 
         seller_profile_id = item["seller_profile_id"]
         if seller_profile_id is None and item["seller"]:
-            platform = item["source_name"] if item["source_name"] in ("vinted", "leboncoin") else "vinted"
+            platform = item["source_name"] if item["source_name"] in ("vinted", "leboncoin", "ebay", "wallapop") else "vinted"
             ext_id = item["seller_external_id"] or f"seller-{item['seller']}"
             existing_pid = seller_repository.find_profile_id(
                 connection, platform=platform, seller_external_id=ext_id
@@ -501,7 +946,7 @@ def sellers_directory(
         service = seller_service_from(request)
         sellers = service.list_sellers_directory(
             connection,
-            platform=platform if platform in ("vinted", "leboncoin") else None,
+            platform=platform if platform in ("vinted", "leboncoin", "ebay", "wallapop") else None,
             sort=sort if sort in ("reputation", "opportunities", "purchases", "name") else "reputation",
             only_favorites=bool(favorites),
             query=q.strip(),
@@ -663,6 +1108,9 @@ def profitability(
             verdict=active_verdict,
             sort=active_sort,
         )
+        cardmarket_count = connection.execute(
+            "SELECT COUNT(*) AS n FROM cardmarket_prices"
+        ).fetchone()["n"]
     return templates.TemplateResponse(
         request=request,
         name="profitability.html",
@@ -674,6 +1122,7 @@ def profitability(
             "selected_sort": active_sort,
             "notice": notice,
             "error": error,
+            "cardmarket_count": cardmarket_count,
             "reference_kind_labels": REFERENCE_KIND_LABELS,
             "prefill": {
                 "name": prefill_name,

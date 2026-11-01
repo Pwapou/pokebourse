@@ -9,7 +9,7 @@
 
 > **Plateforme locale d’aide à la décision pour la détection d'opportunités, l’identification et l’arbitrage d’achat-revente de cartes Pokémon.**
 
-Pokébourse analyse le marché d'occasion (Vinted, Leboncoin, imports manuels, extension de navigation), identifie formellement les cartes grâce au catalogue officiel **TCGdex**, et calcule la rentabilité nette exacte de chaque annonce en tenant compte de tous les frais réels (commissions, frais de port, emballage, cotes de marché).
+Pokébourse analyse le marché d'occasion (Vinted, Leboncoin, eBay, Wallapop, imports manuels, extension de navigation), identifie formellement les cartes grâce au catalogue officiel **TCGdex**, et calcule la rentabilité nette exacte de chaque annonce en tenant compte de tous les frais réels (commissions, frais de port, emballage, cotes de marché).
 
 ---
 
@@ -107,7 +107,79 @@ Le moteur d'identification (`app/identification/`) compare chaque annonce au ré
 3. 🔵 **Lot / Coffret (`lot`)** : Détection explicite de termes de vrac, boosters scellés, coffrets ou displays. **Règle absolue : aucun lot n'est jamais rattaché arbitrairement à une seule carte**.
 4. ⚪ **Non identifiée (`unidentified`)** : Annonce au libellé trop vague. Elle reste consultable et réexaminable à la demande via le bouton **Réexaminer l’identification**.
 
+> **Mise à jour du référentiel** : le bouton **« Réexaminer l’identification »** de la page Catalogue relance le moteur sur toutes les annonces non identifiées avec le référentiel courant — à utiliser après une synchronisation complète du catalogue TCGdex pour rattacher les annonces importées alors que le référentiel était encore incomplet. Les confirmations humaines restent prioritaires.
+
+#### Recherche approfondie et confirmation humaine
+
+La fiche annonce permet de rechercher dans le cache local, de mettre en file une recherche TCGdex ciblée, de comparer les candidats, puis de confirmer ou retirer une carte. Les preuves, décisions et recherches sont persistées dans SQLite et incluses dans les sauvegardes. Une modification de prix ne retire pas une confirmation ; une modification des preuves d’identité la signale « à revoir ». Un faux classement en lot doit être corrigé avec un motif avant toute confirmation unitaire.
+
+L’enrichissement automatique des annonces non résolues est **désactivé par défaut**. Pour l’activer, définir `TCGDEX_AUTO_ENRICH=true` sur les services `app` et `worker`. La recherche manuelle reste disponible sans ce réglage. `TCGDEX_SEARCHES_PER_TICK` borne le nombre de recherches par passage du worker (1 par défaut, maximum 10). Sans worker, une demande reste « En attente du worker ».
+
+Seuls le nom, le numéro, l’extension ou l’identifiant de carte sont envoyés à TCGdex, jamais le titre brut, la description ou le vendeur. Le catalogue fourni est français : une langue étrangère explicite n’est pas remplacée silencieusement par une référence française. Une référence trouvée ne fournit pas de cote de revente.
+
 ---
+
+### Validation humaine — premier lot de préparation ML
+
+Depuis **Annotations → Diagnostic des annonces**, examinez les annonces non
+identifiées ou ambiguës : candidats locaux, faute de nom possible, contradictions
+et inventaire du catalogue. Le diagnostic est en lecture seule et téléchargeable
+en JSON. Une faute comme « dracofeu 4/102 » peut proposer **Dracaufeu** ; cette
+suggestion reste à confirmer par une personne. La recherche manuelle du formulaire
+de validation accepte aussi les noms approchés, en les signalant explicitement.
+
+Le même diagnostic est disponible en CLI :
+
+```bash
+docker compose run --rm app pokemon-arbitrage diagnose-identification --status all --limit 100 --json
+```
+
+Voir [la recherche lexicale et ses limites](docs/IDENTIFICATION_LEXICALE.md).
+
+Le menu **Annotations** ouvre `/annotations`, le tableau de suivi du pilote.
+Cliquez **Constituer la file** pour sélectionner jusqu’à **300 annonces**, puis
+**Continuer les lectures**. La file propose des cas variés, conserve les
+probabilités de sélection et prévoit **60 doubles lectures** lorsque les 300
+annonces sont disponibles. **Compléter la file** ajoute les nouveaux cas après
+de nouveaux imports. Filtres et pagination permettent de retrouver les lectures
+disponibles, celles qui attendent un autre opérateur et les décisions à valider.
+
+Les lectures du pilote ne changent pas immédiatement l’annonce. Une fois la ou
+les lectures terminées, **Valider / arbitrer** enregistre la décision finale.
+La seconde lecture exige un opérateur distinct, configuré côté serveur par
+`POKEMON_REVIEW_OPERATOR` ; premier avis, suggestions et historique restent
+masqués dans ce parcours. Le suivi distingue avancement, accord entre lecteurs
+avant arbitrage et diagnostic des décisions finales. Ces résultats décrivent
+le pilote et ne certifient pas la précision en production.
+
+Depuis une fiche annonce, **Valider ou corriger l’identité** ouvre le formulaire
+`/catalog/{id}/review?blind=false`. Recherchez une carte par nom ou identifiant
+TCGdex dans tout le catalogue local, puis enregistrez une **décision** pour
+actualiser l’annonce. Vous pouvez aussi marquer un lot, un objet hors périmètre,
+une carte absente, des preuves insuffisantes ou retirer une validation.
+
+Le lien **Lecture indépendante sans suggestion** masque suggestions et historique.
+Une **annotation indépendante** conserve une lecture sans modifier l’identification ;
+un **arbitrage** relie les annotations concernées à une décision. La langue, la
+variante, l’édition et l’état se vérifient séparément et restent inconnus si les
+champs sont laissés vides. Ce pilote porte uniquement sur le texte.
+
+Les décisions et les observations sont historisées. Une nouvelle collecte
+identique ou un changement de prix conserve la validation ; une modification des
+preuves demande un réexamen. Le formulaire refuse les corrections concurrentes
+obsolètes. Les anciens boutons de confirmation restent compatibles, mais leurs
+confirmations ne deviennent pas automatiquement des labels d’apprentissage.
+
+Téléchargez le jeu pilote depuis **Exporter les validations JSONL**, ou utilisez :
+
+```bash
+docker compose run --rm app pokemon-arbitrage export-labels --output /opt/pokemon-arbitrage/labels-pilote.jsonl
+```
+
+Le fichier doit être nouveau. Il inclut un manifeste, les catalogues TCGdex figés
+et les lectures, avec leurs motifs d’exclusion du futur apprentissage. Aucun
+modèle n’est entraîné ni activé. Voir [l’état de la phase 0](docs/ML_PHASE0.md)
+pour le périmètre livré et les étapes restantes avant les 300 annotations pilotes.
 
 ### 4. La Fiche Détaillée & Simulation d'Arbitrage
 
@@ -120,7 +192,7 @@ En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'ana
   $$\text{Gain Net} = \text{Prix de revente estimé} - \text{Commission plateforme} - \text{Frais fixes} - \text{Port/Emballage} - (\text{Prix d'achat} + \text{Port aller})$$
   $$\text{ROI} = \frac{\text{Gain Net}}{\text{Prix d'achat} + \text{Port aller}}$$
 - **Profil Vendeur** : évaluation de la réputation du vendeur, bouton d'ajout aux favoris et consultation des avis.
-- **Valeur de marché Cardmarket (API officielle)** : deuxième source de prix affichée à côté du prix de l'annonce (tendance + moyennes 1/7/30 jours), avec repli automatique : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce reste affiché. Un bouton « Actualiser » interroge l'API produit par produit (aucun crawl). Configuration par quatre variables d'environnement : `CARDMARKET_APP_TOKEN`, `CARDMARKET_APP_SECRET`, `CARDMARKET_ACCESS_TOKEN`, `CARDMARKET_ACCESS_SECRET` (identifiants créés depuis la page de profil de votre compte Cardmarket). Sans ces variables, la fonctionnalité reste désactivée proprement.
+- **Valeur de marché Cardmarket (fichiers officiels)** : deuxième source de prix affichée à côté du prix de l'annonce (tendance + moyennes de vente 1/7/30 jours), avec repli automatique : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce reste affiché. C'est aussi le **dernier repli du moteur de rentabilité** (prix tendance le plus bas des produits assortis, en l'absence de cote dédiée et de médiane du catalogue). **Synchronisation automatique quotidienne** par le worker vers 03:20 (heure de Paris), après la régénération du price guide (~02:45), plus bouton **« Tout synchroniser maintenant »** (cotes + noms) sur la page Rentabilité. Source : fichiers publics publiés chaque jour par Cardmarket (public, gratuit, sans compte — ~80 000 cartes Pokémon).
 - **Bouton d'enregistrement d'achat** : un clic permet de convertir l'annonce observée en achat officiel dans votre carnet de suivi.
 
 ---
@@ -134,6 +206,7 @@ Accessible via la page **Rentabilité** (`/profitability`), le moteur permet de 
 1. **Modèle de prix hybride** :
    - **Cote de marché dédiée prioritaire** : issue de `market_references` (ventes conclues Cardmarket, eBay réelles ou estimations manuelles avec source et date d'observation).
    - **Repli sur la médiane du catalogue** : calculée sur les autres annonces identiques (même nom, numéro, langue, état, variante et devise).
+   - **Dernier repli : prix tendance Cardmarket** : si aucune référence ni médiane n'existe, le moteur utilise le plus bas des prix tendances des produits Cardmarket assortis (correspondance par nom de base, pont multilingue FR · EN · KO · JA · ZH via les alias TCGdex) — volontairement prudent, car les fichiers publics Cardmarket ne précisent pas l'extension. Limité aux annonces en EUR.
 2. **Profil de frais personnalisable** :
    - Commission de revente en points de base (ex: 500 bps = 5,00 %).
    - Frais fixes vendeur (€) et coût d'emballage/expédition (€).
@@ -171,7 +244,7 @@ Le worker d'arrière-plan (`python -m app.worker`) exécute les veilles périodi
 - **Contrôle manuel à la demande** : bouton **Contrôler ⚡** pour déclencher une vérification immédiate.
 - **Supervision en direct (`/agents`)** :
   - Suivi des états : *Opérationnel*, *Dégradé*, *Bloqué*, *Hors-ligne*, *Arrêté*.
-  - Sonde d'IP publique de sortie et signal de vie périodique (*heartbeat*).
+  - IP publique de sortie détectée via `https://api.ipify.org` à chaque démarrage du worker, enregistrée pour l’agent et ses collecteurs, puis affichée sur `/agents`. En cas d’échec de la sonde, l’interface affiche « IP inconnue » sans interrompre le worker. L’URL est personnalisable avec `POKEMON_SUPERVISION_IP_PROBE_URL`.
   - **Résilience anti-bot** : en cas d'erreur 403 / 429 ou CAPTCHA, le collecteur concerné se suspend temporairement sans jamais bloquer les autres plateformes ni le serveur web.
 
 ---

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
-ListingPlatform = Literal["vinted", "leboncoin"]
+ListingPlatform = Literal["vinted", "leboncoin", "ebay", "wallapop"]
 
 _OFFICIAL_DOMAINS: dict[str, tuple[str, ...]] = {
     "vinted": (
@@ -19,11 +19,34 @@ _OFFICIAL_DOMAINS: dict[str, tuple[str, ...]] = {
         "leboncoin.fr",
         "www.leboncoin.fr",
     ),
+    "ebay": (
+        "ebay.fr",
+        "www.ebay.fr",
+        "ebay.com",
+        "www.ebay.com",
+    ),
+    "wallapop": (
+        "wallapop.com",
+        "www.wallapop.com",
+        "es.wallapop.com",
+        "fr.wallapop.com",
+        "it.wallapop.com",
+    ),
 }
 
 _OFFICIAL_IMAGE_DOMAINS: dict[str, tuple[str, ...]] = {
     "vinted": ("images.vinted.net",),
     "leboncoin": ("img.leboncoin.fr",),
+    "ebay": (
+        "i.ebayimg.com",
+        "ebayimg.com",
+        "thumbs.ebaystatic.com",
+        "galleryplus.ebayimg.com",
+    ),
+    "wallapop": (
+        "cdn.wallapop.com",
+        "wallapop.com",
+    ),
 }
 
 _PRICE_SPACES = re.compile(r"[\s\u00a0\u202f]")
@@ -135,7 +158,11 @@ class CollectedListing(BaseModel):
         vinted_image = str(source or "") == "vinted" and re.fullmatch(
             r"images\d*\.vinted\.net", host
         )
-        if host not in allowed and not vinted_image:
+        ebay_image = str(source or "") == "ebay" and (
+            host.endswith(".ebayimg.com") or host.endswith(".ebaystatic.com")
+        )
+        wallapop_image = str(source or "") == "wallapop" and host.endswith(".wallapop.com")
+        if host not in allowed and not vinted_image and not ebay_image and not wallapop_image:
             raise ValueError("URL d’image hors domaine officiel de la plateforme")
         return value
 

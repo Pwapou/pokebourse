@@ -34,6 +34,13 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "0008_create_pokemon_reference_catalog.sql",
             "0009_create_seller_profiles.sql",
             "0010_create_purchases_and_seller_stats.sql",
+            "0011_create_cardmarket_prices.sql",
+            "0012_identification_research.sql",
+            "0013_identification_reviews.sql",
+            "0014_annotation_pilot.sql",
+            "0015_cardmarket_name_aliases.sql",
+            "0016_add_ebay_wallapop_platforms.sql",
+            "0017_create_cardmarket_sync_state.sql",
         ]
         assert second_applied == []
         assert {
@@ -54,9 +61,22 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "seller_profiles",
             "seller_enrichment_queue",
             "purchases",
+            "cardmarket_prices",
+            "listing_identity_evidence",
+            "listing_identification_decisions",
+            "identification_searches",
+            "identification_search_listings",
+            "listing_identification_snapshots",
+            "listing_identification_reviews",
+            "identification_catalog_versions",
+            "annotation_pilots",
+            "annotation_sampling_batches",
+            "annotation_pilot_items",
+            "card_name_aliases",
+            "cardmarket_sync_state",
             "schema_migrations",
         } <= tables
-        assert migration_count == 10
+        assert migration_count == 17
         check_database(connection)
 
 
@@ -71,7 +91,7 @@ def test_data_survives_reopening_database(tmp_path: Path) -> None:
 
     with connect(database_path) as connection:
         source = connection.execute(
-            "SELECT name, kind, enabled FROM sources"
+            "SELECT name, kind, enabled FROM sources WHERE name = 'demo'"
         ).fetchone()
         assert dict(source) == {"name": "demo", "kind": "demo", "enabled": 0}
         check_database(connection)
@@ -92,6 +112,34 @@ def test_check_rejects_uninitialized_database(tmp_path: Path) -> None:
     with connect(tmp_path / "arbitrage.db") as connection:
         with pytest.raises(RuntimeError, match="Base non initialisée"):
             check_database(connection)
+
+
+def test_invalid_table_rebuild_rolls_back_and_restores_foreign_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with connect(tmp_path / "invalid-rebuild.db") as connection:
+        connection.executescript("""
+            CREATE TABLE schema_migrations(version TEXT PRIMARY KEY);
+            CREATE TABLE parent(id INTEGER PRIMARY KEY);
+            CREATE TABLE child(parent_id INTEGER REFERENCES parent(id) ON DELETE CASCADE);
+            INSERT INTO parent VALUES (1);
+            INSERT INTO child VALUES (1);
+        """)
+        script = """BEGIN IMMEDIATE;
+            CREATE TABLE parent_new(id INTEGER PRIMARY KEY);
+            DROP TABLE parent;
+            ALTER TABLE parent_new RENAME TO parent;
+            INSERT INTO schema_migrations VALUES ('9999_invalid.sql');
+            COMMIT;
+        """
+        monkeypatch.setattr("app.storage.migration_runner.migration_files", lambda: [("9999_invalid.sql", script)])
+        with pytest.raises(RuntimeError, match="9999_invalid.sql"):
+            apply_migrations(connection)
+        assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+        assert connection.execute("SELECT id FROM parent").fetchone()[0] == 1
+        assert connection.execute("SELECT parent_id FROM child").fetchone()[0] == 1
+        assert connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 0
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
 def test_v11_migration_marks_legacy_fees_for_confirmation(tmp_path: Path) -> None:

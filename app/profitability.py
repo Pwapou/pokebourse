@@ -17,6 +17,8 @@ from pydantic import (
 )
 
 from app.catalog import MAX_IMPORT_BYTES
+from app.cardmarket import daily as cardmarket_daily
+from app.cardmarket.aliases import base_card_name
 
 Verdict = Literal["opportunite", "surveiller", "non_rentable", "sans_cote"]
 SortOrder = Literal["profit_desc", "roi_desc", "price_asc"]
@@ -473,15 +475,24 @@ def list_references(
 
 
 class MarketIndex:
+    """Index des prix de revente : références importées, médiane du catalogue,
+    puis repli Cardmarket (prix tendance du price guide officiel, en EUR)."""
+
     def __init__(
         self,
         references_by_key: Mapping[str, Mapping[str, Any]],
         strict_catalog_prices: Mapping[str, list[tuple[int, int]]],
         min_catalog_samples: int,
+        cardmarket_trends_by_base: Mapping[str, list[int]] | None = None,
+        alias_card_ids_by_name: Mapping[str, list[int]] | None = None,
+        english_name_by_card_id: Mapping[int, str] | None = None,
     ) -> None:
         self._references = references_by_key
         self._strict_prices = strict_catalog_prices
         self._min_samples = min_catalog_samples
+        self._cardmarket_by_base = cardmarket_trends_by_base or {}
+        self._alias_card_ids = alias_card_ids_by_name or {}
+        self._english_names = english_name_by_card_id or {}
 
     def resolve(
         self, item: Mapping[str, Any], target_currency: str
@@ -553,7 +564,49 @@ class MarketIndex:
                     None,
                 )
 
+        cardmarket_trend, product_count = self._cardmarket_trend(
+            item, target_currency
+        )
+        if cardmarket_trend is not None:
+            return cardmarket_trend, "cardmarket_trend", product_count, None
+
         return None, None, 0, None
+
+    def _cardmarket_trend(
+        self, item: Mapping[str, Any], target_currency: str
+    ) -> tuple[int | None, int]:
+        """Repli : prix tendance Cardmarket (le plus bas des produits assortis).
+
+        Même stratégie que prices_for_item : nom de base direct, puis pont
+        multilingue via la carte référencée ou les alias (fr, en, ko, ja, zh-tw).
+        Réservé aux évaluations en EUR, les cotes Cardmarket étant en euros.
+        """
+        if target_currency.upper() != "EUR":
+            return None, 0
+        name = str(item.get("name") or "").strip()
+
+        trends = list(self._cardmarket_by_base.get(base_card_name(name), []))
+        if not trends:
+            card_ids: list[int] = []
+            ref_card_id = item.get("reference_card_id")
+            if ref_card_id is not None:
+                card_ids.append(int(ref_card_id))
+            for card_id in self._alias_card_ids.get(name.casefold(), []):
+                if card_id not in card_ids:
+                    card_ids.append(card_id)
+            for card_id in card_ids:
+                english = self._english_names.get(card_id)
+                if not english:
+                    continue
+                trends = list(
+                    self._cardmarket_by_base.get(base_card_name(english), [])
+                )
+                if trends:
+                    break
+
+        if not trends:
+            return None, 0
+        return min(trends), len(trends)
 
 
 def build_market_index(
@@ -594,10 +647,37 @@ def build_market_index(
         )
         strict_prices[strict_key].append((int(row["id"]), int(row["price_cents"])))
 
+    cardmarket_by_base: dict[str, list[int]] = defaultdict(list)
+    for row in connection.execute(
+        """
+        SELECT name_base, trend_price_cents
+        FROM cardmarket_prices
+        WHERE name_base IS NOT NULL AND name_base != ''
+          AND trend_price_cents IS NOT NULL
+          AND currency = 'EUR'
+        """
+    ).fetchall():
+        cardmarket_by_base[str(row["name_base"])].append(int(row["trend_price_cents"]))
+
+    alias_card_ids: dict[str, list[int]] = defaultdict(list)
+    english_names: dict[int, str] = {}
+    for row in connection.execute(
+        "SELECT card_id, locale, name FROM card_name_aliases"
+    ).fetchall():
+        name_key = str(row["name"]).strip().casefold()
+        card_id = int(row["card_id"])
+        if name_key and card_id not in alias_card_ids[name_key]:
+            alias_card_ids[name_key].append(card_id)
+        if row["locale"] == "en":
+            english_names[card_id] = str(row["name"])
+
     return MarketIndex(
         references_by_key=references_by_key,
         strict_catalog_prices=strict_prices,
         min_catalog_samples=min_catalog_samples,
+        cardmarket_trends_by_base=cardmarket_by_base,
+        alias_card_ids_by_name=alias_card_ids,
+        english_name_by_card_id=english_names,
     )
 
 
@@ -749,6 +829,9 @@ def summarize_evaluations(evaluations: Sequence[Mapping[str, Any]]) -> dict[str,
     by_median = sum(
         1 for row in evaluated if row["reference_source"] == "catalog_median"
     )
+    by_cardmarket = sum(
+        1 for row in evaluated if row["reference_source"] == "cardmarket_trend"
+    )
     roi_candidates = [
         int(row["roi_bps"]) for row in opportunities if row["roi_bps"] is not None
     ]
@@ -757,6 +840,7 @@ def summarize_evaluations(evaluations: Sequence[Mapping[str, Any]]) -> dict[str,
         "evaluated_count": len(evaluated),
         "reference_match_count": by_reference,
         "median_match_count": by_median,
+        "cardmarket_match_count": by_cardmarket,
         "missing_count": sum(1 for row in evaluations if row["verdict"] == "sans_cote"),
         "opportunity_count": len(opportunities),
         "watch_count": sum(1 for row in evaluations if row["verdict"] == "surveiller"),
@@ -785,7 +869,7 @@ def evaluate_catalog(
         """
         SELECT id, external_id, name, set_name, card_number, language, condition,
                variant, edition, grading_company, grade, certification_number,
-               price_cents, currency, seller, url, imported_at
+               price_cents, currency, seller, url, imported_at, reference_card_id
         FROM catalog_items
         ORDER BY imported_at DESC, id DESC
         """
@@ -841,6 +925,7 @@ def profitability_page_data(
         "sets": sets,
         "saved_references": list_references(connection, limit=50),
         "reference_count": reference_count,
+        "cardmarket_sync": cardmarket_daily.load_state(connection),
     }
 
 
@@ -863,3 +948,120 @@ def enrich_catalog_items(
     profile = get_active_fee_profile(connection)
     market_index = build_market_index(connection, profile.min_catalog_samples)
     return [evaluate_listing(row, profile, market_index) for row in rows], profile
+
+
+def _same_card(
+    candidate_name: str,
+    candidate_set: str,
+    candidate_card_id: int | None,
+    *,
+    name_key: str,
+    set_key: str,
+    reference_card_id: int | None,
+) -> bool:
+    if (
+        reference_card_id is not None
+        and candidate_card_id is not None
+        and int(candidate_card_id) == int(reference_card_id)
+    ):
+        return True
+    return (
+        normalize_token(candidate_name) == name_key
+        and normalize_token(candidate_set) == set_key
+    )
+
+
+def find_price_comparables(
+    connection: sqlite3.Connection,
+    item: Mapping[str, Any],
+    reference_price_cents: int | None,
+    *,
+    limit: int = 2,
+) -> dict[str, list[dict[str, Any]]]:
+    """Preuves de prix : annonces comparables et achats déjà revendus.
+
+    Retourne jusqu'à ``limit`` annonces du catalogue pour la même carte,
+    triées par proximité du prix avec l'estimation, puis jusqu'à ``limit``
+    achats au statut ``vendu``. Chaque ligne porte ``delta_cents`` (prix
+    observé moins prix estimé, en centimes).
+    """
+    if reference_price_cents is None:
+        return {"listings": [], "sales": []}
+
+    item_dict = dict(item)
+    name_key = normalize_token(str(item_dict.get("name") or ""))
+    set_key = normalize_token(str(item_dict.get("set_name") or ""))
+    reference_card_id = item_dict.get("reference_card_id")
+    condition_key = normalize_token(str(item_dict.get("condition") or ""))
+    currency = str(item_dict.get("currency") or "EUR").upper()
+    item_id = int(item_dict["id"])
+
+    listing_rows = connection.execute(
+        """
+        SELECT c.id, c.name, c.set_name, c.card_number, c.condition,
+               c.price_cents, c.currency, c.seller, c.url, c.is_active,
+               c.last_seen_at, c.reference_card_id, s.name AS source_name
+        FROM catalog_items c
+        JOIN sources s ON s.id = c.source_id
+        WHERE c.id != ? AND c.currency = ?
+        """,
+        (item_id, currency),
+    ).fetchall()
+
+    listings: list[dict[str, Any]] = []
+    for row in listing_rows:
+        row_dict = dict(row)
+        if not _same_card(
+            str(row_dict["name"] or ""),
+            str(row_dict["set_name"] or ""),
+            row_dict["reference_card_id"],
+            name_key=name_key,
+            set_key=set_key,
+            reference_card_id=reference_card_id,
+        ):
+            continue
+        row_dict["delta_cents"] = int(row_dict["price_cents"]) - int(
+            reference_price_cents
+        )
+        listings.append(row_dict)
+
+    listings.sort(
+        key=lambda row: (
+            0 if row["is_active"] else 1,
+            abs(row["delta_cents"]),
+            0
+            if normalize_token(str(row["condition"] or "")) == condition_key
+            else 1,
+            -int(row["id"]),
+        )
+    )
+
+    sale_rows = connection.execute(
+        """
+        SELECT id, card_name, set_name, card_number, condition,
+               price_paid_cents, currency, platform, status, purchased_at
+        FROM purchases
+        WHERE status = 'vendu' AND currency = ?
+        ORDER BY purchased_at DESC, id DESC
+        """,
+        (currency,),
+    ).fetchall()
+
+    sales: list[dict[str, Any]] = []
+    for row in sale_rows:
+        row_dict = dict(row)
+        if not (
+            normalize_token(str(row_dict["card_name"] or "")) == name_key
+            and (
+                not row_dict["set_name"]
+                or normalize_token(str(row_dict["set_name"])) == set_key
+            )
+        ):
+            continue
+        row_dict["delta_cents"] = int(row_dict["price_paid_cents"]) - int(
+            reference_price_cents
+        )
+        sales.append(row_dict)
+    sales.sort(key=lambda row: abs(row["delta_cents"]))
+
+    return {"listings": listings[:limit], "sales": sales[:limit]}
