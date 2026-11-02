@@ -46,6 +46,9 @@
         <button class="btn btn-primary" id="btn-send-pokebourse" title="Transmettre les cartes sélectionnées à Pokébourse locale">
           🚀 Envoyer (<span id="send-count">0</span>) à Pokébourse
         </button>
+        <button class="btn btn-secondary" id="btn-preview-pokebourse" title="Ouvrir la prévisualisation de l’annonce sélectionnée dans Pokébourse locale, sans l’enregistrer">
+          🔍 Prévisualiser
+        </button>
         <button class="btn btn-secondary" id="btn-export-jsonl" title="Télécharger le fichier .jsonl pour les cartes sélectionnées">
           Exporter JSONL
         </button>
@@ -59,6 +62,16 @@
       <div id="status-message" class="status-banner" style="display: none;"></div>
     </section>
 
+    <details class="ocr-panel">
+      <summary>Lire une photo de carte (OCR local)</summary>
+      <p>Choisissez une photo enregistrée sur votre appareil et une annonce dans la liste. La photo est envoyée à Pokébourse sur cet ordinateur, seulement lorsque vous lancez l’analyse.</p>
+      <p>Les propositions sont à vérifier : aucune carte n’est confirmée automatiquement. Pour un lot, analysez chaque carte séparément.</p>
+      <label for="ocr-image">Photo de la carte (JPEG, PNG ou WebP)</label>
+      <input id="ocr-image" type="file" accept="image/jpeg,image/png,image/webp">
+      <button class="btn btn-secondary" id="btn-ocr" type="button">Analyser la photo</button>
+      <div id="ocr-result" class="ocr-result" role="status" aria-live="polite"></div>
+    </details>
+
     <!-- Liste des annonces capturées -->
     <main class="listings-container" id="listings-container">
       <div class="empty-state" id="empty-state">
@@ -71,6 +84,9 @@
 
     <!-- Pied de page -->
     <footer class="popup-footer">
+      <a href="http://localhost:8000/#capture" target="_blank" rel="noopener noreferrer" class="footer-link">
+        Guide de capture ↗
+      </a>
       <a href="http://localhost:8000/catalog" target="_blank" rel="noopener noreferrer" class="footer-link">
         Ouvrir Pokébourse locale ↗
       </a>

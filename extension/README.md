@@ -52,20 +52,24 @@ En cliquant sur l'icône Pokébourse :
 - **Tout vider** : nettoyez la liste en un clic.
 
 ### 3. Export et Synchronisation avec Pokébourse
-Le popup met à disposition 3 modes de transfert :
-1. **🚀 Envoyer à Pokébourse locale (avec estimation financière en direct)** :
-   Transmet les cartes sélectionnées via l'API locale (`http://localhost:8000/imports`).
-   - Le backend identifie instantanément la carte avec le référentiel officiel TCGdex.
-   - Le moteur calcule en direct le **prix de revente estimé** (cote Cardmarket/eBay ou médiane), le **bénéfice net** et le **ROI**.
-   - Le popup affiche immédiatement les résultats sous chaque carte :
-     * Si la carte est cotée : Prix d'achat, Prix de revente estimé, Bénéfice net (+XX €), ROI (+XX%) et verdict (Opportunité / À surveiller).
-     * Si la carte n'a pas encore de cote dans Pokébourse : statut « Sans cote » clair avec un lien direct `+ Renseigner une cote` vers `/profitability#cotes`.
-     * L’identité est affichée séparément de la cote : « Carte à identifier », « Plusieurs cartes possibles », « Carte identifiée · cote non renseignée » ou « Lot ». Le lien « Identifier cette carte » ouvre la fiche de recherche et de confirmation.
-     * Lien d'accès direct vers la fiche de l'annonce dans Pokébourse.
-2. **⬇️ Télécharger .jsonl** :
+Le popup met à disposition 4 modes de transfert :
+1. **🔍 Prévisualiser dans Pokébourse (recommandé, une annonce à la fois)** :
+   Sélectionnez **exactement une** annonce (comportement explicite : avec zéro ou plusieurs annonces cochées, le popup vous le signale et rien n'est envoyé ni validé silencieusement). Le popup vérifie que Pokébourse locale répond (`http://localhost:8000/health`) puis ouvre un nouvel onglet de prévisualisation (`POST /previsualiser-capture`) avec **uniquement les données déjà capturées depuis la page ouverte**.
+   - Chaque champ est présenté avec sa provenance : **extrait** de la page, **saisi/corrigé** par vous (ancienne et nouvelle valeur affichées côte à côte), ou **manquant** — jamais inventé.
+   - L'identification proposée (détecteur + matcher + référentiel TCGdex local) affiche statut, candidats, score et motif ; ce n'est **pas** une confirmation humaine et ne le devient pas sans action explicite. Un lot ne reçoit jamais arbitrairement l'identité d'une carte unitaire.
+   - La rentabilité indicative utilise uniquement les références locales (cotes enregistrées, médiane des comparables, Cardmarket relié de façon fiable) : achat, port (celui de l'annonce prime, y compris à zéro ; celui du profil en repli), coût d'acquisition, revente estimée avec source/nature/date, frais, gain net, marge et ROI. Ce n'est ni un prix temps réel garanti, ni une vente conclue, ni une preuve d'état ou d'authenticité.
+   - Après correction éventuelle (la langue doit être choisie explicitement, jamais déduite), **« Confirmer et ajouter l'annonce »** enregistre via le flux transactionnel existant : déduplication, pseudonyme vendeur limité aux champs publics autorisés, `first_seen_at` préservé en cas de doublon.
+   - **Aucune écriture n'a lieu pendant la prévisualisation.** Si Pokébourse est indisponible, le popup l'indique clairement et vos captures restent enregistrées dans l'extension.
+2. **🚀 Envoyer à Pokébourse** :
+   Sélectionnez une annonce. L'extension récupère son image principale si elle est disponible sur un domaine d'images pris en charge, puis la transmet au moteur OCR local. Les indices reconnus alimentent l'identification et restent à vérifier. Un onglet de prévisualisation s'ouvre même si le prix, la devise ou l'image manquent : complétez les champs requis et confirmez pour enregistrer l'annonce.
+   - La récupération est limitée à une image HTTPS, 8 Mo, sans redirection ni cookies, sur les domaines Vinted, eBay, Leboncoin et Wallapop reconnus. Une image inaccessible ne bloque pas la prévisualisation.
+   - Le texte OCR brut n'est pas enregistré. L'analyse ne confirme pas automatiquement l'identité et n'attribue pas de carte à un lot.
+3. **⬇️ Télécharger .jsonl** :
    Génère un fichier horodaté pour la sélection, importable manuellement via le formulaire web ou en CLI.
-3. **📋 Copier JSONL** :
+4. **📋 Copier JSONL** :
    Place les cartes sélectionnées dans le presse-papier.
+
+Les captures sans prix ou sans devise restent accessibles dans l'extension et peuvent être complétées en prévisualisation. L'export JSONL exige un prix et une devise connus pour chaque annonce sélectionnée ; aucune valeur par défaut n'est inventée.
 
 ---
 
@@ -82,8 +86,32 @@ Conforme à 100% aux exigences modernes **Manifest V3** de Google Chrome :
 
 ## 🧪 Tests automatisés
 
-La compatibilité du manifest, des fichiers graphiques et du format d'échange JSONL avec le backend Pokébourse est validée par les tests d'intégration :
+Le repli d'extraction des numéros isolés exclut aussi les ventes avec cartes
+supplémentaires/offertes et les cartes « au choix ». Les mentions de protection,
+de photos ou « pas un lot » ne déclenchent pas ce garde-fou. Les fractions et
+numéros préfixés restent des indices capturés ; seul le backend décide du statut
+et interdit l'identité unitaire effective d'un lot. Les tests comparent ces cas
+entre l'extension et le détecteur backend.
+
+Les règles T02 distinguent aussi les noms comme « Gem Pack 2 » des packs
+explicitement proposés (« pack Pokémon », « pack de 3 boosters », « pack 151
+scellé »). Un numéro étiqueté comme numéro de série n'est ni une quantité vendue
+ni un numéro de carte ; cette exclusion s'applique aussi aux fractions et
+préfixes. Les quantités écrites et les négations sont testées avec le backend.
+Les protections fondées sur les noms du catalogue, les conflits de langues et
+l'état déclaré brut relèvent du backend ; aucun matcher n'est ajouté à
+l'extension.
+
+La compatibilité du manifest, des fichiers graphiques et du format d'échange JSONL avec le backend Pokébourse est validée par les tests d'intégration. Le parcours de prévisualisation (transmission des champs capturés, sélection unique, application indisponible) est couvert à la fois côté popup (Playwright) et côté serveur (analyse sans écriture, correction conservée, enregistrement confirmé, doublon) :
 ```bash
-docker compose exec app pytest tests/test_chrome_extension.py -v
+docker compose exec app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v
 ```
 Tous les tests sont au vert.
+
+### Test de bout en bout (Chromium + extension chargée)
+
+Le parcours complet « capture → Envoyer → OCR → prévisualisation → confirmation → fiche » est couvert par un test e2e hermétique (`tests/test_extension_e2e.py`) : un Chromium réel est lancé sous Xvfb avec l'extension chargée, une annonce Vinted simulée localement est capturée par le content script, le popup envoie l'image à l'OCR local (photo JPEG simulée lisible par Tesseract), la prévisualisation sans écriture est vérifiée (aucune ligne en base avant confirmation), puis la confirmation explicite enregistre la fiche via le flux transactionnel (`import_jsonl`). Aucun appel réseau réel : la page annonce, son image et les autres destinations sont interceptés par Playwright. Le test exige Xvfb et s'auto-saute s'il est indisponible :
+```bash
+docker compose exec app pytest tests/test_extension_e2e.py -v
+```
+Ce test ne valide pas le comportement sur une marketplace réelle.

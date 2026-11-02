@@ -1,0 +1,2482 @@
+{
+  "id": "2026-11-02-30-liens",
+  "label": "30 annonces Vinted et eBay",
+  "created_at": "2026-11-02T21:54:06.787837+00:00",
+  "source": "15 annonces Vinted récentes et 15 titres publics eBay ; aucune annonce importée dans le catalogue",
+  "note": "Résultats indicatifs sans vérité terrain confirmée. Les photos eBay ne sont pas testées. L’OCR complète le texte sans le remplacer.",
+  "items": [
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+      "title": "Carte Pokémon - Noadkoko 129/128 - 30 ans célébrations - FR /R",
+      "image_url": "https://images1.vinted.net/t/06_00159_KZZevb61JxwYbeqQzjZxXpJH/f800/173466bb.webp?s=ac15f01bd28e61f33989fdc59a606b03e8058728",
+      "index": 1,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [
+            "Noadkoko"
+          ],
+          "numbers": [
+            "150"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Noadkoko",
+        "detected_number": "150",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Noadkoko » (151), « Noadkoko » (Aquapolis), « Noadkoko » (Aquapolis)).",
+        "candidates": [
+          {
+            "tcgdex_id": "sv03.5-103",
+            "name": "Noadkoko",
+            "set_name": "151",
+            "local_id": "103"
+          },
+          {
+            "tcgdex_id": "ecard2-12",
+            "name": "Noadkoko",
+            "set_name": "Aquapolis",
+            "local_id": "12"
+          },
+          {
+            "tcgdex_id": "ecard2-13",
+            "name": "Noadkoko",
+            "set_name": "Aquapolis",
+            "local_id": "13"
+          }
+        ]
+      },
+      "image": "images/01.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Noadkoko",
+        "detected_number": "129/128",
+        "confidence": 59,
+        "reason": "Correspondance partielle avec « Noadkoko d'Alola » (30ᵉ Anniversaire) : nom partiel ; numéro 129 exact ; extension contradictoire. Vérification requise.",
+        "candidates": [
+          {
+            "tcgdex_id": "30th-129",
+            "name": "Noadkoko d'Alola",
+            "set_name": "30ᵉ Anniversaire",
+            "local_id": "129"
+          },
+          {
+            "tcgdex_id": "sv03.5-103",
+            "name": "Noadkoko",
+            "set_name": "151",
+            "local_id": "103"
+          },
+          {
+            "tcgdex_id": "ecard2-12",
+            "name": "Noadkoko",
+            "set_name": "Aquapolis",
+            "local_id": "12"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Noadkoko",
+        "detected_number": "129/128",
+        "confidence": 59,
+        "reason": "Correspondance partielle avec « Noadkoko d'Alola » (30ᵉ Anniversaire) : nom partiel ; numéro 129 exact ; extension contradictoire. Vérification requise.",
+        "candidates": [
+          {
+            "tcgdex_id": "30th-129",
+            "name": "Noadkoko d'Alola",
+            "set_name": "30ᵉ Anniversaire",
+            "local_id": "129"
+          },
+          {
+            "tcgdex_id": "sv03.5-103",
+            "name": "Noadkoko",
+            "set_name": "151",
+            "local_id": "103"
+          },
+          {
+            "tcgdex_id": "ecard2-12",
+            "name": "Noadkoko",
+            "set_name": "Aquapolis",
+            "local_id": "12"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+      "title": "Lots de 100 cartes Pokémon avec holographiques et reverses",
+      "image_url": "https://images1.vinted.net/t/02_012dd_8RfwxQfRGwtT2KikjPJb5sYg/f800/a220dd60.webp?s=a24861202983c77925201a2d9e40fecea7f06762",
+      "index": 2,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "candidates",
+        "recognized": {
+          "names": [],
+          "numbers": [
+            "1"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/02.webp",
+      "title_only": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      },
+      "combined": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+      "title": "Lots de 100 cartes Pokémon avec brillantes",
+      "image_url": "https://images1.vinted.net/t/06_01724_7d9Xh2u9PhcVzrgtiQxwYvmF/f800/1299b149.webp?s=02f254a565a6dcb863eebc14a38a2cd44fd64198",
+      "index": 3,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/03.webp",
+      "title_only": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      },
+      "combined": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+      "title": "Carte Pokemon 87/127 Psykokwak",
+      "image_url": "https://images1.vinted.net/t/02_025ad_6t1guSf99f9NRCzPx8P6H2tR/f800/e9612228.webp?s=34e6944ea2cceb3da2f226499fe2ab1933e6b034",
+      "index": 4,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [
+            "Défenseur"
+          ],
+          "numbers": [
+            "054"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Défenseur",
+        "detected_number": "054",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Défenseur » (Indomptable), « Défenseur » (Set de Base)).",
+        "candidates": [
+          {
+            "tcgdex_id": "hgss3-72",
+            "name": "Défenseur",
+            "set_name": "Indomptable",
+            "local_id": "72"
+          },
+          {
+            "tcgdex_id": "base1-80",
+            "name": "Défenseur",
+            "set_name": "Set de Base",
+            "local_id": "80"
+          },
+          {
+            "tcgdex_id": "me01-054",
+            "name": "Abra",
+            "set_name": "Méga-Évolution",
+            "local_id": "054"
+          }
+        ]
+      },
+      "image": "images/04.webp",
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "pl1-87",
+        "card_name": "Psykokwak",
+        "set_name": "Platine",
+        "local_id": "87",
+        "detected_name": "Psykokwak",
+        "detected_number": "87/127",
+        "confidence": 85,
+        "reason": "nom exact ; numéro 87 exact",
+        "candidates": [
+          {
+            "tcgdex_id": "pl1-87",
+            "name": "Psykokwak",
+            "set_name": "Platine",
+            "local_id": "87"
+          },
+          {
+            "tcgdex_id": "sv03.5-054",
+            "name": "Psykokwak",
+            "set_name": "151",
+            "local_id": "054"
+          },
+          {
+            "tcgdex_id": "sv03.5-175",
+            "name": "Psykokwak",
+            "set_name": "151",
+            "local_id": "175"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "pl1-87",
+        "card_name": "Psykokwak",
+        "set_name": "Platine",
+        "local_id": "87",
+        "detected_name": "Psykokwak",
+        "detected_number": "87/127",
+        "confidence": 85,
+        "reason": "nom exact ; numéro 87 exact",
+        "candidates": [
+          {
+            "tcgdex_id": "pl1-87",
+            "name": "Psykokwak",
+            "set_name": "Platine",
+            "local_id": "87"
+          },
+          {
+            "tcgdex_id": "sv03.5-054",
+            "name": "Psykokwak",
+            "set_name": "151",
+            "local_id": "054"
+          },
+          {
+            "tcgdex_id": "sv03.5-175",
+            "name": "Psykokwak",
+            "set_name": "151",
+            "local_id": "175"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+      "title": "Carte Pokemon 118/127 Poke tour",
+      "image_url": "https://images1.vinted.net/t/02_018f6_4LYEW316zxeT4YZtvpSZ6xZt/f800/859f6089.webp?s=f33e7b1917be5cba7d6a9dcc4589f6f7a5786a8f",
+      "index": 5,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [
+            "TRAIVER\n\nDresser\n\n|\n\n|\n\nPoké"
+          ],
+          "numbers": [
+            "105"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/05.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "118/127",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "swsh12.5-118",
+            "name": "Argouste",
+            "set_name": "Zénith Suprême",
+            "local_id": "118"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "118/127",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "swsh12.5-118",
+            "name": "Argouste",
+            "set_name": "Zénith Suprême",
+            "local_id": "118"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+      "title": "Lots de 100 cartes Pokémon avec reverses/holo",
+      "image_url": "https://images1.vinted.net/t/05_01b27_yzqVBi3ztk7Yft8e16Nh7KrN/f800/8e75a9ec.webp?s=4e39d46c938ff2cfc671452629d73f8a188f6ce9",
+      "index": 6,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/06.webp",
+      "title_only": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      },
+      "combined": {
+        "status": "lot",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 95,
+        "reason": "Mention explicite de lot ou produit scellé : « Lots de 100 cartes »",
+        "candidates": []
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10642130722-carte-pokemon",
+      "title": "Carte Pokémon",
+      "image_url": "https://images1.vinted.net/t/05_02311_WTS83MDrjdK8yzcjsyu7jaKL/f800/72d9b95b.webp?s=22d285b80e0de13570d9ce7297887e939e7013c5",
+      "index": 7,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/07.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641988212-carte-pokemon",
+      "title": "Carte Pokémon",
+      "image_url": "https://images1.vinted.net/t/05_00517_WwEWpMRZHX2J76KagrcJWtRn/f800/e9e9c4c9.webp?s=5f5e1f855d9aee98497dd24a5c31c4d9b59b59dd",
+      "index": 8,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [
+            "Pikachu"
+          ],
+          "numbers": [
+            "mbre"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Pikachu",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Pikachu » (151), « Pikachu » (151), « Pikachu » (30ᵉ Anniversaire)).",
+        "candidates": [
+          {
+            "tcgdex_id": "sv03.5-025",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "025"
+          },
+          {
+            "tcgdex_id": "sv03.5-173",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "173"
+          },
+          {
+            "tcgdex_id": "30th-023",
+            "name": "Pikachu",
+            "set_name": "30ᵉ Anniversaire",
+            "local_id": "023"
+          }
+        ]
+      },
+      "image": "images/08.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+      "title": "Carte Pokemon 104/127 Espace temps brisé",
+      "image_url": "https://images1.vinted.net/t/06_02705_Umc42Tv7sMqmx7vzsioqpC6M/f800/34ea1293.webp?s=0eb4af812b3d92c693d32d2992af0de7c5819391",
+      "index": 9,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [
+            "Espace-Temps brisé"
+          ],
+          "numbers": [
+            "m"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Espace-Temps brisé",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Correspondance partielle avec « Espace-Temps brisé » (Platine) : nom exact. Vérification requise.",
+        "candidates": [
+          {
+            "tcgdex_id": "pl1-104",
+            "name": "Espace-Temps brisé",
+            "set_name": "Platine",
+            "local_id": "104"
+          }
+        ]
+      },
+      "image": "images/09.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "104/127",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sv10.5w-104",
+            "name": "Aflamanoir",
+            "set_name": "Flamme Blanche",
+            "local_id": "104"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "104/127",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sv10.5w-104",
+            "name": "Aflamanoir",
+            "set_name": "Flamme Blanche",
+            "local_id": "104"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans",
+      "title": "Carte Pokémon ex 30 ans",
+      "image_url": "https://images1.vinted.net/t/05_01e78_JgGYHrXA2fibyNWB5WwW6k6W/f800/7453e7ed.webp?s=5042d17b117f53f4f1279ef25e9dbb3fd14cd77e",
+      "index": 10,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/10.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "30",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sv06.5-030",
+            "name": "Absol",
+            "set_name": "Fable Nébuleuse",
+            "local_id": "030"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "30",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sv06.5-030",
+            "name": "Absol",
+            "set_name": "Fable Nébuleuse",
+            "local_id": "030"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+      "title": "Leuphorie EX 101/115 - Ex forces cachées",
+      "image_url": "https://images1.vinted.net/t/05_002e0_XrztoTU36E9QNXBsFzBNp9n6/f800/01f59fac.webp?s=9db047065be1b1a13056e8b0e87b4f923402cc03",
+      "index": 11,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "candidates",
+        "recognized": {
+          "names": [
+            "Leuphorie ex"
+          ],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Leuphorie ex",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Leuphorie ex » (EX Forces Cachées), « Leuphorie-ex » (Mascarade Crépusculaire), « Leuphorie-ex » (Mascarade Crépusculaire)).",
+        "candidates": [
+          {
+            "tcgdex_id": "ex10-101",
+            "name": "Leuphorie ex",
+            "set_name": "EX Forces Cachées",
+            "local_id": "101"
+          },
+          {
+            "tcgdex_id": "sv06-134",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "134"
+          },
+          {
+            "tcgdex_id": "sv06-201",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "201"
+          }
+        ]
+      },
+      "image": "images/11.webp",
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "ex10-101",
+        "card_name": "Leuphorie ex",
+        "set_name": "EX Forces Cachées",
+        "local_id": "101",
+        "detected_name": "Leuphorie ex",
+        "detected_number": "101/115",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 101 exact ; extension « EX Forces Cachées »",
+        "candidates": [
+          {
+            "tcgdex_id": "ex10-101",
+            "name": "Leuphorie ex",
+            "set_name": "EX Forces Cachées",
+            "local_id": "101"
+          },
+          {
+            "tcgdex_id": "sv06-134",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "134"
+          },
+          {
+            "tcgdex_id": "sv06-201",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "201"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "ex10-101",
+        "card_name": "Leuphorie ex",
+        "set_name": "EX Forces Cachées",
+        "local_id": "101",
+        "detected_name": "Leuphorie ex",
+        "detected_number": "101/115",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 101 exact ; extension « EX Forces Cachées »",
+        "candidates": [
+          {
+            "tcgdex_id": "ex10-101",
+            "name": "Leuphorie ex",
+            "set_name": "EX Forces Cachées",
+            "local_id": "101"
+          },
+          {
+            "tcgdex_id": "sv06-134",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "134"
+          },
+          {
+            "tcgdex_id": "sv06-201",
+            "name": "Leuphorie-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "201"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10641930023-carte-pokemon",
+      "title": "Carte Pokémon",
+      "image_url": "https://images1.vinted.net/t/02_024cc_hXDxA4grSrdRGJ2ikQR7hTiG/f800/62f3115c.webp?s=91b5c229c73f993e3c7fc09f25a3d70d3fb2bd73",
+      "index": 12,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": [
+            "pe"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "unidentified",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": null,
+        "confidence": 0,
+        "reason": "Preuves insuffisantes : aucun nom ni numéro explicite.",
+        "candidates": []
+      },
+      "image": "images/12.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+      "title": "Chef-de-Fer 214 SAR",
+      "image_url": "https://images1.vinted.net/t/06_00acb_3MhGXBLGZYjEQePojLdhnvdG/f800/b8d937d0.webp?s=4aaa9d7d0c329f4f0dbe0aa20b8cd240329a2f5e",
+      "index": 13,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "candidates",
+        "recognized": {
+          "names": [
+            "N"
+          ],
+          "numbers": []
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "N",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« N » (Collection Classique 30ᵉ Anniversaire), « N » (Explorateurs Obscurs), « N » (Impact des Destins)).",
+        "candidates": [
+          {
+            "tcgdex_id": "30th-c-021",
+            "name": "N",
+            "set_name": "Collection Classique 30ᵉ Anniversaire",
+            "local_id": "021"
+          },
+          {
+            "tcgdex_id": "bw5-96",
+            "name": "N",
+            "set_name": "Explorateurs Obscurs",
+            "local_id": "96"
+          },
+          {
+            "tcgdex_id": "xy10-105",
+            "name": "N",
+            "set_name": "Impact des Destins",
+            "local_id": "105"
+          }
+        ]
+      },
+      "image": "images/13.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Chef-de-Fer",
+        "detected_number": "214",
+        "confidence": 45,
+        "reason": "Correspondance partielle avec « Chef-de-Fer » (Étincelles Déferlantes) : nom exact ; numéro contradictoire. Vérification requise.",
+        "candidates": [
+          {
+            "tcgdex_id": "sv08-132",
+            "name": "Chef-de-Fer",
+            "set_name": "Étincelles Déferlantes",
+            "local_id": "132"
+          },
+          {
+            "tcgdex_id": "sv03-214",
+            "name": "Absol-ex",
+            "set_name": "Flammes Obsidiennes",
+            "local_id": "214"
+          },
+          {
+            "tcgdex_id": "sv06-214",
+            "name": "Amphinobi-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "214"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Chef-de-Fer",
+        "detected_number": "214",
+        "confidence": 45,
+        "reason": "Correspondance partielle avec « Chef-de-Fer » (Étincelles Déferlantes) : nom exact ; numéro contradictoire. Vérification requise.",
+        "candidates": [
+          {
+            "tcgdex_id": "sv08-132",
+            "name": "Chef-de-Fer",
+            "set_name": "Étincelles Déferlantes",
+            "local_id": "132"
+          },
+          {
+            "tcgdex_id": "sv03-214",
+            "name": "Absol-ex",
+            "set_name": "Flammes Obsidiennes",
+            "local_id": "214"
+          },
+          {
+            "tcgdex_id": "sv06-214",
+            "name": "Amphinobi-ex",
+            "set_name": "Mascarade Crépusculaire",
+            "local_id": "214"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+      "title": "Carte pokémon florizzar",
+      "image_url": "https://images1.vinted.net/t/06_010ee_QcQPTteXrWniV2pVpAn9Pkue/f800/9288dc98.webp?s=2cd39050c97a0e5ed3a1d9f5a63245f7bf709cf7",
+      "index": 14,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "lot",
+        "recognized": {
+          "names": [],
+          "numbers": [
+            "004/078"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": "004/078",
+        "confidence": 40,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Aligatueur » (EX Forces Cachées), « Aligatueur » (Neo Genesis), « Apitrini » (Lumière Triomphale)).",
+        "candidates": [
+          {
+            "tcgdex_id": "ex10-4",
+            "name": "Aligatueur",
+            "set_name": "EX Forces Cachées",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "neo1-4",
+            "name": "Aligatueur",
+            "set_name": "Neo Genesis",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "A2a-004",
+            "name": "Apitrini",
+            "set_name": "Lumière Triomphale",
+            "local_id": "004"
+          }
+        ]
+      },
+      "image": "images/14.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": null,
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "sm6-107",
+            "name": "Carte d’Excavation de Fossiles",
+            "set_name": "Lumière Interdite",
+            "local_id": "107"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Carte",
+        "detected_number": "004/078",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Carte » (Frontières Franchies), « Carte » (Impulsion Turbo)).",
+        "candidates": [
+          {
+            "tcgdex_id": "bw7-136",
+            "name": "Carte",
+            "set_name": "Frontières Franchies",
+            "local_id": "136"
+          },
+          {
+            "tcgdex_id": "xy8-150",
+            "name": "Carte",
+            "set_name": "Impulsion Turbo",
+            "local_id": "150"
+          },
+          {
+            "tcgdex_id": "ex10-4",
+            "name": "Aligatueur",
+            "set_name": "EX Forces Cachées",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "vinted",
+      "url": "https://www.vinted.fr/items/10640626189-azurill-115103",
+      "title": "azurill 115/103",
+      "image_url": "https://images1.vinted.net/t/01_01f62_BXQX84aT2t4XZN36wZ36a3KX/f800/dbc912e0.webp?s=c768900aab59e0e230d81d49cf11ddee2cd3426e",
+      "index": 15,
+      "image_status": "analysée localement",
+      "ocr": {
+        "status": "no_match",
+        "recognized": {
+          "names": [],
+          "numbers": [
+            "195/103"
+          ]
+        }
+      },
+      "ocr_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": null,
+        "detected_number": "195/103",
+        "confidence": 40,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Aide de Nina » (151), « Archéduc de Hisui VSTAR » (Astres Radieux), « Aérozélite : Lame d’Air » (Harmonie des Esprits)).",
+        "candidates": [
+          {
+            "tcgdex_id": "sv03.5-195",
+            "name": "Aide de Nina",
+            "set_name": "151",
+            "local_id": "195"
+          },
+          {
+            "tcgdex_id": "swsh10-195",
+            "name": "Archéduc de Hisui VSTAR",
+            "set_name": "Astres Radieux",
+            "local_id": "195"
+          },
+          {
+            "tcgdex_id": "sm11-195",
+            "name": "Aérozélite : Lame d’Air",
+            "set_name": "Harmonie des Esprits",
+            "local_id": "195"
+          }
+        ]
+      },
+      "image": "images/15.webp",
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Azurill",
+        "detected_number": "115/103",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Azurill » (Diamant & Perle), « Azurill » (EX Espèces Delta), « Azurill » (EX Tempête de sable)).",
+        "candidates": [
+          {
+            "tcgdex_id": "dp1-69",
+            "name": "Azurill",
+            "set_name": "Diamant & Perle",
+            "local_id": "69"
+          },
+          {
+            "tcgdex_id": "ex11-20",
+            "name": "Azurill",
+            "set_name": "EX Espèces Delta",
+            "local_id": "20"
+          },
+          {
+            "tcgdex_id": "ex2-31",
+            "name": "Azurill",
+            "set_name": "EX Tempête de sable",
+            "local_id": "31"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Azurill",
+        "detected_number": "115/103",
+        "confidence": 45,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Azurill » (Diamant & Perle), « Azurill » (EX Espèces Delta), « Azurill » (EX Tempête de sable)).",
+        "candidates": [
+          {
+            "tcgdex_id": "dp1-69",
+            "name": "Azurill",
+            "set_name": "Diamant & Perle",
+            "local_id": "69"
+          },
+          {
+            "tcgdex_id": "ex11-20",
+            "name": "Azurill",
+            "set_name": "EX Espèces Delta",
+            "local_id": "20"
+          },
+          {
+            "tcgdex_id": "ex2-31",
+            "name": "Azurill",
+            "set_name": "EX Tempête de sable",
+            "local_id": "31"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/306719880013",
+      "title": "Dracaufeu ex 199/165 - NM - Pokémon EV3.5 : 151 - Français",
+      "index": 16,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "sv03.5-199",
+        "card_name": "Dracaufeu-ex",
+        "set_name": "151",
+        "local_id": "199",
+        "detected_name": "Dracaufeu EX",
+        "detected_number": "199/165",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 199 exact ; extension « 151 »",
+        "candidates": [
+          {
+            "tcgdex_id": "sv03.5-199",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "199"
+          },
+          {
+            "tcgdex_id": "sv03.5-006",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "006"
+          },
+          {
+            "tcgdex_id": "sv03.5-183",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "183"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "sv03.5-199",
+        "card_name": "Dracaufeu-ex",
+        "set_name": "151",
+        "local_id": "199",
+        "detected_name": "Dracaufeu EX",
+        "detected_number": "199/165",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 199 exact ; extension « 151 »",
+        "candidates": [
+          {
+            "tcgdex_id": "sv03.5-199",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "199"
+          },
+          {
+            "tcgdex_id": "sv03.5-006",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "006"
+          },
+          {
+            "tcgdex_id": "sv03.5-183",
+            "name": "Dracaufeu-ex",
+            "set_name": "151",
+            "local_id": "183"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/314836778377",
+      "title": "carte Pokémon 58/102 Pikachu GOLD METAL EB07.5 - Célébrations",
+      "index": 17,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Pikachu",
+        "detected_number": "58/102",
+        "confidence": 59,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Pikachu » (Célébrations), « Pikachu » (Set de Base)).",
+        "candidates": [
+          {
+            "tcgdex_id": "cel25-5",
+            "name": "Pikachu",
+            "set_name": "Célébrations",
+            "local_id": "5"
+          },
+          {
+            "tcgdex_id": "base1-58",
+            "name": "Pikachu",
+            "set_name": "Set de Base",
+            "local_id": "58"
+          },
+          {
+            "tcgdex_id": "cel25-8",
+            "name": "Pikachu Surfeur V",
+            "set_name": "Célébrations",
+            "local_id": "8"
+          }
+        ]
+      },
+      "combined": {
+        "status": "ambiguous",
+        "tcgdex_id": null,
+        "card_name": null,
+        "set_name": null,
+        "local_id": null,
+        "detected_name": "Pikachu",
+        "detected_number": "58/102",
+        "confidence": 59,
+        "reason": "Ambiguïté : plusieurs cartes possibles (« Pikachu » (Célébrations), « Pikachu » (Set de Base)).",
+        "candidates": [
+          {
+            "tcgdex_id": "cel25-5",
+            "name": "Pikachu",
+            "set_name": "Célébrations",
+            "local_id": "5"
+          },
+          {
+            "tcgdex_id": "base1-58",
+            "name": "Pikachu",
+            "set_name": "Set de Base",
+            "local_id": "58"
+          },
+          {
+            "tcgdex_id": "cel25-8",
+            "name": "Pikachu Surfeur V",
+            "set_name": "Célébrations",
+            "local_id": "8"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/188297168172",
+      "title": "Carte Pokémon Française - Dracaufeu 4/102 Holo - Set de Base",
+      "index": 18,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/389444053811",
+      "title": "Carte Pokémon Dracaufeu set de base 4/102",
+      "index": 19,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/167982527425",
+      "title": "Dracaufeu Charizard 4/102 Set de Base Wizards FR PCA 2",
+      "index": 20,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/358610033975",
+      "title": "CGC 8.5 Charizard/Dracaufeu 4/102 Holo Base Set",
+      "index": 21,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/188160633088",
+      "title": "Carte Pokémon Dracaufeu 4/102 Édition 1 - Set de Base - FR - Etat correct",
+      "index": 22,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/404472812925",
+      "title": "Charizard/Dracaufeu 4/102 - Holo - Base Set/Set de base",
+      "index": 23,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/298431309845",
+      "title": "Carte Pokemon Dracaufeu 4/102 HOLO Set de Base Edition 2",
+      "index": 24,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/407016716035",
+      "title": "Carte Pokemon Dracaufeu 4/102 Holo Set de base Edition 1",
+      "index": 25,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-4",
+        "card_name": "Dracaufeu",
+        "set_name": "Set de Base",
+        "local_id": "4",
+        "detected_name": "Dracaufeu",
+        "detected_number": "4/102",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Set de Base » ; variante « Holo »",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-4",
+            "name": "Dracaufeu",
+            "set_name": "Set de Base",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base5-4",
+            "name": "Dracaufeu obscur",
+            "set_name": "Team Rocket",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "ex14-4",
+            "name": "Dracaufeu δ",
+            "set_name": "EX Gardiens de Cristal",
+            "local_id": "4"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/134107668325",
+      "title": "1995 Pikachu Gnaw Pokemon Card 58/102 Rare. 40 HP",
+      "index": 26,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base1-58",
+        "card_name": "Pikachu",
+        "set_name": "Set de Base",
+        "local_id": "58",
+        "detected_name": "Pikachu",
+        "detected_number": "58/102",
+        "confidence": 85,
+        "reason": "nom exact ; numéro 58 exact",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-58",
+            "name": "Pikachu",
+            "set_name": "Set de Base",
+            "local_id": "58"
+          },
+          {
+            "tcgdex_id": "sv03.5-025",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "025"
+          },
+          {
+            "tcgdex_id": "sv03.5-173",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "173"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base1-58",
+        "card_name": "Pikachu",
+        "set_name": "Set de Base",
+        "local_id": "58",
+        "detected_name": "Pikachu",
+        "detected_number": "58/102",
+        "confidence": 85,
+        "reason": "nom exact ; numéro 58 exact",
+        "candidates": [
+          {
+            "tcgdex_id": "base1-58",
+            "name": "Pikachu",
+            "set_name": "Set de Base",
+            "local_id": "58"
+          },
+          {
+            "tcgdex_id": "sv03.5-025",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "025"
+          },
+          {
+            "tcgdex_id": "sv03.5-173",
+            "name": "Pikachu",
+            "set_name": "151",
+            "local_id": "173"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/256579893665",
+      "title": "Carte Pokémon Pyrobut V 035/192 EB02 Clash des Rebelles NEUF",
+      "index": 27,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "swsh2-35",
+        "card_name": "Pyrobut V",
+        "set_name": "Clash des Rebelles",
+        "local_id": "35",
+        "detected_name": "Pyrobut V",
+        "detected_number": "035/192",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 35 exact ; extension « Clash des Rebelles »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh2-35",
+            "name": "Pyrobut V",
+            "set_name": "Clash des Rebelles",
+            "local_id": "35"
+          },
+          {
+            "tcgdex_id": "swsh1-35",
+            "name": "Pyrobut",
+            "set_name": "Épée et Bouclier",
+            "local_id": "35"
+          },
+          {
+            "tcgdex_id": "swsh2-178",
+            "name": "Pyrobut V",
+            "set_name": "Clash des Rebelles",
+            "local_id": "178"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "swsh2-35",
+        "card_name": "Pyrobut V",
+        "set_name": "Clash des Rebelles",
+        "local_id": "35",
+        "detected_name": "Pyrobut V",
+        "detected_number": "035/192",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 35 exact ; extension « Clash des Rebelles »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh2-35",
+            "name": "Pyrobut V",
+            "set_name": "Clash des Rebelles",
+            "local_id": "35"
+          },
+          {
+            "tcgdex_id": "swsh1-35",
+            "name": "Pyrobut",
+            "set_name": "Épée et Bouclier",
+            "local_id": "35"
+          },
+          {
+            "tcgdex_id": "swsh2-178",
+            "name": "Pyrobut V",
+            "set_name": "Clash des Rebelles",
+            "local_id": "178"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/256234628123",
+      "title": "Carte Pokémon Dracolosse 131/195 HOLO EB12 Tempête Argentée NEUF",
+      "index": 28,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "swsh12-131",
+        "card_name": "Dracolosse",
+        "set_name": "Tempête Argentée",
+        "local_id": "131",
+        "detected_name": "Dracolosse",
+        "detected_number": "131/195",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 131 exact ; extension « Tempête Argentée »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh12-131",
+            "name": "Dracolosse",
+            "set_name": "Tempête Argentée",
+            "local_id": "131"
+          },
+          {
+            "tcgdex_id": "swsh12-130",
+            "name": "Draco",
+            "set_name": "Tempête Argentée",
+            "local_id": "130"
+          },
+          {
+            "tcgdex_id": "sv03.5-149",
+            "name": "Dracolosse",
+            "set_name": "151",
+            "local_id": "149"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "swsh12-131",
+        "card_name": "Dracolosse",
+        "set_name": "Tempête Argentée",
+        "local_id": "131",
+        "detected_name": "Dracolosse",
+        "detected_number": "131/195",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 131 exact ; extension « Tempête Argentée »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh12-131",
+            "name": "Dracolosse",
+            "set_name": "Tempête Argentée",
+            "local_id": "131"
+          },
+          {
+            "tcgdex_id": "swsh12-130",
+            "name": "Draco",
+            "set_name": "Tempête Argentée",
+            "local_id": "130"
+          },
+          {
+            "tcgdex_id": "sv03.5-149",
+            "name": "Dracolosse",
+            "set_name": "151",
+            "local_id": "149"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/135227993348",
+      "title": "Carte Pokémon REVERSE Rocabot 073/159 EB12.5 Zenith Suprême FR NEUF",
+      "index": 29,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "swsh12.5-073",
+        "card_name": "Rocabot",
+        "set_name": "Zénith Suprême",
+        "local_id": "073",
+        "detected_name": "Rocabot",
+        "detected_number": "073/159",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 073 exact ; extension « Zénith Suprême »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh12.5-073",
+            "name": "Rocabot",
+            "set_name": "Zénith Suprême",
+            "local_id": "073"
+          },
+          {
+            "tcgdex_id": "sm2-73",
+            "name": "Rocabot",
+            "set_name": "Gardiens Ascendants",
+            "local_id": "73"
+          },
+          {
+            "tcgdex_id": "sv09-084",
+            "name": "Rocabot",
+            "set_name": "Aventures Ensemble",
+            "local_id": "084"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "swsh12.5-073",
+        "card_name": "Rocabot",
+        "set_name": "Zénith Suprême",
+        "local_id": "073",
+        "detected_name": "Rocabot",
+        "detected_number": "073/159",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 073 exact ; extension « Zénith Suprême »",
+        "candidates": [
+          {
+            "tcgdex_id": "swsh12.5-073",
+            "name": "Rocabot",
+            "set_name": "Zénith Suprême",
+            "local_id": "073"
+          },
+          {
+            "tcgdex_id": "sm2-73",
+            "name": "Rocabot",
+            "set_name": "Gardiens Ascendants",
+            "local_id": "73"
+          },
+          {
+            "tcgdex_id": "sv09-084",
+            "name": "Rocabot",
+            "set_name": "Aventures Ensemble",
+            "local_id": "084"
+          }
+        ]
+      }
+    },
+    {
+      "platform": "ebay",
+      "url": "https://www.ebay.fr/itm/333772510908",
+      "title": "Dracolosse fossile 4/62 holo",
+      "index": 30,
+      "image_status": "non fournie ; titre public seul testé",
+      "ocr": null,
+      "ocr_only": null,
+      "title_only": {
+        "status": "identified",
+        "tcgdex_id": "base3-4",
+        "card_name": "Dracolosse",
+        "set_name": "Fossile",
+        "local_id": "4",
+        "detected_name": "Dracolosse",
+        "detected_number": "4/62",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Fossile »",
+        "candidates": [
+          {
+            "tcgdex_id": "base3-4",
+            "name": "Dracolosse",
+            "set_name": "Fossile",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "dv1-4",
+            "name": "Draco",
+            "set_name": "Coffre des Dragons",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base3-19",
+            "name": "Dracolosse",
+            "set_name": "Fossile",
+            "local_id": "19"
+          }
+        ]
+      },
+      "combined": {
+        "status": "identified",
+        "tcgdex_id": "base3-4",
+        "card_name": "Dracolosse",
+        "set_name": "Fossile",
+        "local_id": "4",
+        "detected_name": "Dracolosse",
+        "detected_number": "4/62",
+        "confidence": 100,
+        "reason": "nom exact ; numéro 4 exact ; extension « Fossile »",
+        "candidates": [
+          {
+            "tcgdex_id": "base3-4",
+            "name": "Dracolosse",
+            "set_name": "Fossile",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "dv1-4",
+            "name": "Draco",
+            "set_name": "Coffre des Dragons",
+            "local_id": "4"
+          },
+          {
+            "tcgdex_id": "base3-19",
+            "name": "Dracolosse",
+            "set_name": "Fossile",
+            "local_id": "19"
+          }
+        ]
+      }
+    }
+  ]
+}

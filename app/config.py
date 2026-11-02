@@ -31,6 +31,7 @@ class Settings(BaseModel):
     cardmarket_daily_sync_utc: str = Field(
         default="02:20", pattern=r"^([01]\d|2[0-3]):[0-5]\d$"
     )
+    page_fetch_allowed_hosts: tuple[str, ...] = ()
     tcgdex_auto_enrich: bool = False
     tcgdex_searches_per_tick: int = Field(default=1, ge=0, le=10)
     tcgdex_sync_interval_seconds: int = Field(default=1, ge=1, le=60)
@@ -67,6 +68,10 @@ class Settings(BaseModel):
             values["supervision_suspend_seconds"] = float(suspend)
         if probe := os.getenv("POKEMON_SUPERVISION_IP_PROBE_URL"):
             values["supervision_ip_probe_url"] = probe
+        if allowed := os.getenv("POKEMON_PAGE_FETCH_ALLOWED_HOSTS"):
+            values["page_fetch_allowed_hosts"] = tuple(
+                entry.strip().lower() for entry in allowed.split(",") if entry.strip()
+            )
         if auto_enrich := os.getenv("TCGDEX_AUTO_ENRICH"):
             values["tcgdex_auto_enrich"] = auto_enrich.strip().lower() in ("1", "true", "yes", "on")
         if search_limit := os.getenv("TCGDEX_SEARCHES_PER_TICK"):

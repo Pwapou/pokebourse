@@ -18,6 +18,7 @@ from app.profitability import (
     update_active_fee_profile,
     upsert_reference,
 )
+from app.purchases import purchases_page_data
 from app.sellers import repository
 from app.sellers.models import SellerProfile
 from app.sellers.service import SellerService
@@ -116,6 +117,30 @@ def test_purchases_and_seller_stats(connection: sqlite3.Connection) -> None:
     assert summary is not None
     assert summary["purchases_count"] == 2
     assert summary["total_spent_cents"] == (8000 + 500) + (12000 + 300)
+
+
+def test_purchase_portfolio_counts_all_rows_and_separates_currencies(connection: sqlite3.Connection) -> None:
+    connection.executemany(
+        "INSERT INTO purchases (seller_name, card_name, price_paid_cents, shipping_paid_cents, currency, status) VALUES (?, ?, ?, ?, ?, ?)",
+        [("vendeur", "carte", 100, 25, "EUR", "commande")] * 1001
+        + [("vendeur", "carte", 200, 0, "USD", "vendu")],
+    )
+    result = purchases_page_data(connection, status="vendu")
+    assert result["total_count"] == 1002
+    assert result["ongoing_count"] == 1001
+    assert result["totals_by_currency"] == {"EUR": 125125, "USD": 200}
+    assert len(result["purchases"]) == 1
+
+
+def test_purchase_status_and_sale_price_update(connection: sqlite3.Connection) -> None:
+    purchase_id = repository.record_purchase(connection, seller_name="vendeur", card_name="carte", price_paid_cents=500)
+    assert repository.update_purchase_status(connection, purchase_id, status="vendu", sale_price_cents=1299)
+    purchase = repository.list_purchases(connection)[0]
+    assert purchase["status"] == "vendu"
+    assert purchase["sale_price_cents"] == 1299
+    assert not repository.update_purchase_status(connection, -1, status="recu", sale_price_cents=None)
+    with pytest.raises(ValueError):
+        repository.update_purchase_status(connection, purchase_id, status="invalide", sale_price_cents=0)
 
 
 def test_seller_favorite_and_notes(connection: sqlite3.Connection) -> None:
@@ -282,3 +307,29 @@ def test_web_routes_sellers_and_purchase_recording(test_env: tuple[Path, TestCli
     assert res_detail_updated.status_code == 200
     assert "Gengar Holo" in res_detail_updated.text
     assert "24,50" in res_detail_updated.text or "27,40" in res_detail_updated.text
+
+
+def test_imported_purchase_never_invents_seller_platform(test_env: tuple[Path, TestClient]) -> None:
+    """Un import eBay crée un vendeur eBay ; un domaine inconnu reste sans profil."""
+    db_path, client = test_env
+    content = (
+        '{"external_id":"e1","name":"Pikachu","set_name":"151",'
+        '"price_cents":8325,"seller":"vendeur-ebay","url":"https://www.ebay.fr/itm/123"}\n'
+        '{"external_id":"e2","name":"Pikachu","set_name":"151",'
+        '"price_cents":100,"seller":"autre","url":"https://ebay.fr.example.com/item"}\n'
+    ).encode()
+    assert client.post("/imports", files={"file": ("test.jsonl", content, "application/x-ndjson")}).status_code == 200
+    for item_id in (1, 2):
+        response = client.post(
+            f"/catalog/{item_id}/purchase",
+            data={"price_paid": "1.00", "shipping_paid": "0", "status": "commande"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+    with connect(db_path) as conn:
+        rows = conn.execute("SELECT platform, seller_name, seller_profile_id FROM purchases ORDER BY id").fetchall()
+        assert rows[0]["platform"] == "ebay"
+        assert rows[0]["seller_profile_id"] is not None
+        assert rows[1]["platform"] is None
+        assert rows[1]["seller_profile_id"] is None
+        assert conn.execute("SELECT platform FROM seller_profiles").fetchone()["platform"] == "ebay"

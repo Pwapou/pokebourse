@@ -54,6 +54,37 @@ def test_parse_euros_and_percent_helpers() -> None:
         parse_percent_to_bps("150", "Commission", max_bps=10_000)
 
 
+@pytest.mark.parametrize(
+    ("listing_shipping", "profile_shipping", "expected_cost", "expected_source"),
+    [(250, 500, 1250, "annonce"), (0, 500, 1000, "annonce"),
+     (None, 500, 1500, "profil"), (None, None, None, "inconnu"),
+     (250, None, 1250, "annonce")],
+)
+def test_listing_shipping_overrides_profile_in_catalog(
+    tmp_path: Path, listing_shipping: int | None, profile_shipping: int | None,
+    expected_cost: int | None, expected_source: str,
+) -> None:
+    with connect(tmp_path / "shipping.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection, buyer_shipping_cents=profile_shipping)
+        import_jsonl(connection, jsonl({"external_id": "s1", "name": "Pikachu", "set_name": "151", "price_cents": 1000, "shipping_cents": listing_shipping}))
+        rows, _, _ = evaluate_catalog(connection)
+        assert rows[0]["total_cost_cents"] == expected_cost
+        assert rows[0]["buyer_shipping_source"] == expected_source
+        assert ("buyer_shipping_cents" in rows[0]["missing_fee_fields"]) == (expected_cost is None)
+
+
+def test_listing_shipping_changes_net_profit(tmp_path: Path) -> None:
+    with connect(tmp_path / "shipping-profit.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection, buyer_shipping_cents=500)
+        import_jsonl(connection, jsonl({"external_id": "s1", "name": "Pikachu", "set_name": "151", "price_cents": 1000, "shipping_cents": 250}))
+        upsert_reference(connection, ReferenceInput(name="Pikachu", set_name="151", reference_price_cents=2000))
+        rows, _, _ = evaluate_catalog(connection)
+        assert rows[0]["total_cost_cents"] == 1250
+        assert rows[0]["net_profit_cents"] == 450
+
+
 def test_reference_matching_priority_and_secret_rare_isolation(tmp_path: Path) -> None:
     with connect(tmp_path / "profit.db") as connection:
         apply_migrations(connection)
@@ -502,7 +533,7 @@ def seed_cardmarket_bridge(connection, extra_locales: bool = True) -> None:
     connection.commit()
 
 
-def test_cardmarket_trend_fallback_via_multilingual_alias(tmp_path: Path) -> None:
+def test_cardmarket_name_alias_does_not_prove_a_price(tmp_path: Path) -> None:
     with connect(tmp_path / "cm-alias.db") as connection:
         apply_migrations(connection)
         configure_fees(connection)
@@ -522,25 +553,13 @@ def test_cardmarket_trend_fallback_via_multilingual_alias(tmp_path: Path) -> Non
 
         evaluations, summary, _ = evaluate_catalog(connection)
         row = evaluations[0]
-        # Repli Cardmarket : le plus bas des prix tendances des produits assortis.
-        assert row["reference_price_cents"] == 30000
-        assert row["reference_source"] == "cardmarket_trend"
-        assert row["sample_count"] == 2
-        assert row["reference_quality"] == {
-            "match": "partielle",
-            "kind": "cardmarket_trend",
-            "observed_at": None,
-            "sample_count": 2,
-            "sample_unit": "produits",
-            "missing_dimensions": ["extension", "variante", "langue du prix", "état du prix"],
-        }
-        # 30000 - 1500 (commission 5 %) - 200 (envoi) - 20000 = 8300
-        assert row["net_profit_cents"] == 8300
-        assert row["verdict"] == "opportunite"
-        assert summary["cardmarket_match_count"] == 1
+        assert row["reference_price_cents"] is None
+        assert row["net_profit_cents"] is None
+        assert row["verdict"] == "sans_cote"
+        assert summary["cardmarket_match_count"] == 0
 
 
-def test_cardmarket_trend_fallback_direct_name_and_korean_alias(tmp_path: Path) -> None:
+def test_cardmarket_name_in_any_language_does_not_prove_a_price(tmp_path: Path) -> None:
     with connect(tmp_path / "cm-direct.db") as connection:
         apply_migrations(connection)
         configure_fees(connection)
@@ -567,14 +586,40 @@ def test_cardmarket_trend_fallback_direct_name_and_korean_alias(tmp_path: Path) 
 
         evaluations, summary, _ = evaluate_catalog(connection)
         by_id = {row["external_id"]: row for row in evaluations}
-        # Nom anglais : correspondance directe sur le nom de base.
-        assert by_id["drac-en"]["reference_source"] == "cardmarket_trend"
-        assert by_id["drac-en"]["reference_price_cents"] == 30000
-        assert by_id["drac-en"]["verdict"] == "opportunite"
-        # Nom coréen : pont multilingue via les alias (ko → en).
-        assert by_id["drac-ko"]["reference_source"] == "cardmarket_trend"
-        assert by_id["drac-ko"]["reference_price_cents"] == 30000
-        assert summary["cardmarket_match_count"] == 2
+        assert by_id["drac-en"]["reference_price_cents"] is None
+        assert by_id["drac-ko"]["reference_price_cents"] is None
+        assert summary["cardmarket_match_count"] == 0
+
+
+def test_cardmarket_only_uses_unique_explicit_identity_and_positive_price(tmp_path: Path) -> None:
+    with connect(tmp_path / "cm-explicit.db") as connection:
+        apply_migrations(connection)
+        configure_fees(connection)
+        seed_cardmarket_bridge(connection)
+        import_jsonl(connection, jsonl(listing("drac", 20000, name="Dracaufeu-ex", set_name="Flammes Obsidiennes", card_number="125/197")))
+        card_id = connection.execute("SELECT id FROM pokemon_reference_cards WHERE tcgdex_id = 'sv03-125'").fetchone()[0]
+        with connection:
+            connection.execute("UPDATE catalog_items SET reference_card_id = ?, identification_status = 'identified'", (card_id,))
+            connection.execute("UPDATE cardmarket_prices SET tcg_dex_id = 'sv03-125' WHERE product_id = 9001")
+        row = evaluate_catalog(connection)[0][0]
+        assert row["reference_source"] == "cardmarket_trend"
+        assert row["reference_price_cents"] == 35000
+        with connection:
+            connection.execute("UPDATE catalog_items SET variant = 'reverse'")
+        assert evaluate_catalog(connection)[0][0]["reference_price_cents"] is None
+        with connection:
+            connection.execute("UPDATE catalog_items SET variant = NULL")
+        with connection:
+            connection.execute("UPDATE cardmarket_prices SET tcg_dex_id = 'sv03-125' WHERE product_id = 9002")
+        assert evaluate_catalog(connection)[0][0]["reference_price_cents"] is None
+        with connection:
+            connection.execute("DELETE FROM cardmarket_prices WHERE product_id = 9002")
+            connection.execute("UPDATE cardmarket_prices SET trend_price_cents = 0 WHERE product_id = 9001")
+        assert evaluate_catalog(connection)[0][0]["reference_price_cents"] is None
+        with connection:
+            connection.execute("UPDATE cardmarket_prices SET trend_price_cents = 35000 WHERE product_id = 9001")
+            connection.execute("UPDATE catalog_items SET identification_status = 'ambiguous'")
+        assert evaluate_catalog(connection)[0][0]["reference_price_cents"] is None
 
 
 def test_reference_and_median_take_priority_over_cardmarket(tmp_path: Path) -> None:

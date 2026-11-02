@@ -83,12 +83,25 @@ def prices_for_item(
     row_data = dict(item)
     name = str(row_data.get("name") or "").strip()
 
+    # Un lien explicite produit ↔ carte est plus précis que le nom. Ne pas
+    # inférer ce lien à partir d'un simple alias ou d'un nom unique.
+    ref_tcgdex_id = row_data.get("ref_tcgdex_id")
+    if row_data.get("identification_status") == "identified" and ref_tcgdex_id:
+        exact_rows = connection.execute(
+            """SELECT product_id, card_name, expansion_name, language,
+                      trend_price_cents, avg1_price_cents, avg7_price_cents,
+                      avg30_price_cents, currency, tcg_dex_id, fetched_at, name_base
+               FROM cardmarket_prices WHERE tcg_dex_id = ? AND currency = 'EUR'""",
+            (str(ref_tcgdex_id),),
+        ).fetchall()
+        if exact_rows:
+            return exact_rows
+
     rows = find_prices_by_base_name(connection, base_card_name(name))
     if rows:
         return rows
 
     card_ids: list[int] = []
-    ref_tcgdex_id = row_data.get("ref_tcgdex_id")
     if ref_tcgdex_id:
         ref_row = connection.execute(
             "SELECT id FROM pokemon_reference_cards WHERE tcgdex_id = ?",

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Mes achats · Pokébourse{% endblock %}
+{% block breadcrumb %}Mes achats{% endblock %}
+{% block content %}
+{% if notice %}<div class="alert success" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+<section class="page-heading">
+    <div><span class="eyebrow">PORTEFEUILLE RÉEL</span><h1>Mes achats</h1><p>Tous les achats enregistrés depuis une annonce ou une fiche vendeur. Montants réellement payés, en centimes exacts.</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/catalog">Trouver une annonce</a><a class="button secondary" href="/sellers">Annuaire vendeurs</a></div>
+</section>
+
+<section class="stats-grid stats-grid-three" aria-label="Synthèse des achats">
+    <article class="stat-card"><div class="stat-top"><span>ACHATS ENREGISTRÉS</span><span class="stat-icon violet" aria-hidden="true">▤</span></div><strong>{{ total_count }}</strong><small>Tous statuts confondus</small></article>
+    <article class="stat-card accent"><div class="stat-top"><span>COÛT TOTAL PAYÉ</span><span class="stat-icon" aria-hidden="true">€</span></div>{% for currency, total in totals_by_currency.items() %}<strong>{{ total|money(currency) }}</strong>{% else %}<strong>—</strong>{% endfor %}<small>Prix payés + ports, par devise</small></article>
+    <article class="stat-card"><div class="stat-top"><span>EN COURS</span><span class="stat-icon blue" aria-hidden="true">◷</span></div><strong>{{ ongoing_count }}</strong><small>Commandés, reçus ou en vente</small></article>
+</section>
+
+<section class="panel">
+    <div class="filters" role="group" aria-label="Filtrer par statut">
+        {% for key in status_options %}
+        {% set label = 'Tous' if key == 'all' else status_labels[key] %}
+        <a class="radio-pill {{ 'pill-current' if status == key else '' }}" href="/achats{{ '' if key == 'all' else '?status=' + key }}" {% if status == key %}aria-current="true"{% endif %}>{{ label }} <b>{% if key == 'all' %}{{ total_count }}{% else %}{{ counts[key] }}{% endif %}</b></a>
+        {% endfor %}
+    </div>
+    {% if purchases %}
+    <div class="table-wrap"><table>
+        <thead><tr><th>CARTE</th><th>VENDEUR</th><th>DATE</th><th class="align-right">PRIX PAYÉ</th><th class="align-right">PORT</th><th>STATUT ET VENTE</th><th>NOTES</th></tr></thead>
+        <tbody>
+            {% for purchase in purchases %}
+            <tr>
+                <td>{% if purchase.catalog_item_id %}<a class="row-link" href="/catalog/{{ purchase.catalog_item_id }}">{{ purchase.card_name }}</a>{% else %}{{ purchase.card_name }}{% endif %}<span class="cell-sub">{{ purchase.set_name or 'Extension inconnue' }}{% if purchase.card_number %} · N° {{ purchase.card_number }}{% endif %}{% if purchase.condition %} · {{ purchase.condition }}{% endif %}</span></td>
+                <td>{% if purchase.seller_profile_id %}<a class="row-link" href="/sellers/{{ purchase.seller_profile_id }}">{{ purchase.seller_name }}</a>{% else %}{{ purchase.seller_name }}{% endif %}</td>
+                <td class="nowrap">{{ purchase.purchased_at|date }}</td>
+                <td class="align-right"><strong class="price">{{ purchase.price_paid_cents|money(purchase.currency) }}</strong></td>
+                <td class="align-right">{{ purchase.shipping_paid_cents|money(purchase.currency) }}</td>
+                <td>
+                    <form method="post" action="/achats/{{ purchase.id }}/update">
+                        <label for="purchase-status-{{ purchase.id }}">Statut</label>
+                        <select id="purchase-status-{{ purchase.id }}" name="status" required>
+                            {% for key, label in status_labels.items() %}<option value="{{ key }}" {% if purchase.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
+                        <label for="purchase-sale-{{ purchase.id }}">Prix de vente réel ({{ purchase.currency }})</label>
+                        <input id="purchase-sale-{{ purchase.id }}" type="number" min="0" step="0.01" name="sale_price" value="{% if purchase.sale_price_cents is not none %}{{ '%d.%02d'|format(purchase.sale_price_cents // 100, purchase.sale_price_cents % 100) }}{% endif %}" placeholder="Inconnu">
+                        <button class="button secondary small" type="submit">Enregistrer</button>
+                    </form>
+                </td>
+                <td class="cell-sub">{{ purchase.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    <p class="table-note">Le prix de vente réel est facultatif. Aucune plus-value réelle n’est calculée : les frais de vente réels ne sont pas enregistrés.</p>
+    {% else %}
+    <div class="empty-state compact">
+        <h3>{{ 'Aucun achat avec ce statut' if status != 'all' else 'Aucun achat enregistré' }}</h3>
+        <p>{% if status != 'all' %}Changez de filtre pour voir les autres statuts.{% else %}Les achats s’enregistrent depuis une fiche annonce (« Marquer comme achetée ») ou depuis une fiche vendeur.{% endif %}</p>
+        {% if status == 'all' %}<a class="button primary" href="/catalog">Parcourir le catalogue</a>{% else %}<a class="button secondary" href="/achats">Tous les achats</a>{% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

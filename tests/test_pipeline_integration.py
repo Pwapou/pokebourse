@@ -151,6 +151,66 @@ def test_full_pipeline_lot_does_not_forge_profitability(test_db: Path) -> None:
         assert eval_res["verdict"] == "sans_cote"
 
 
+@pytest.mark.parametrize("description", [
+    "vendu avec 3 cartes en plus",
+    "vendue avec trois cartes supplémentaires",
+    "+ 3 cartes offertes",
+])
+def test_extra_cards_import_keeps_lot_without_effective_unit_identity(test_db: Path, description: str) -> None:
+    """L'ingestion et la réidentification ne publient pas la carte principale d'un lot."""
+    with connect(test_db) as conn:
+        source_id = ensure_collection_source(conn, "vinted")
+        with conn:
+            batch_id = int(conn.execute(
+                "INSERT INTO import_batches (source_id, input_checksum, status) VALUES (?, 'extra-cards', 'completed')",
+                (source_id,),
+            ).lastrowid)
+        listing = make_listing("extra-cards", "Dracaufeu 4/102 Set de Base")
+        listing.raw_data["description"] = description
+        result = ingest_collected_listings(conn, [listing], platform="vinted", import_batch_id=batch_id)
+        assert result.created_count == 1
+        row = conn.execute("SELECT * FROM catalog_items WHERE external_id='extra-cards'").fetchone()
+        item_id = row["id"]
+        assert row["is_lot"] == 1
+        assert row["identification_status"] == "lot"
+        assert row["reference_card_id"] is None
+        assert row["card_number"] is None
+        assert "lot" in row["identification_reason"]
+
+        reidentify_catalog_item(conn, item_id)
+        detail = catalog_item_detail(conn, item_id)
+        assert detail["is_lot"] == 1
+        assert detail["identification_status"] == "lot"
+        assert detail["reference_card_id"] is None
+        assert detail["card_number"] is None
+        fee_profile = get_active_fee_profile(conn)
+        evaluation = evaluate_listing(detail, fee_profile, build_market_index(conn, fee_profile.min_catalog_samples))
+        assert evaluation["verdict"] == "sans_cote"
+
+
+def test_language_conflict_remains_unresolved_after_ingestion_and_reidentification(test_db: Path) -> None:
+    """Un nom et un numéro exacts ne masquent pas les langues contradictoires."""
+    with connect(test_db) as conn:
+        source_id = ensure_collection_source(conn, "vinted")
+        with conn:
+            batch_id = int(conn.execute(
+                "INSERT INTO import_batches (source_id, input_checksum, status) VALUES (?, 'conflicting-languages', 'completed')",
+                (source_id,),
+            ).lastrowid)
+        listing = make_listing("conflicting-languages", "Dracaufeu 4/102 Set de Base VF")
+        listing.raw_data["description"] = "English, near-mint"
+        ingest_collected_listings(conn, [listing], platform="vinted", import_batch_id=batch_id)
+        row = conn.execute("SELECT * FROM catalog_items WHERE external_id='conflicting-languages'").fetchone()
+        assert row["identification_status"] == "ambiguous"
+        assert row["reference_card_id"] is None
+        assert row["is_lot"] == 0
+        assert "langues multiples ou contradictoires" in row["identification_reason"]
+        reidentify_catalog_item(conn, row["id"])
+        detail = catalog_item_detail(conn, row["id"])
+        assert detail["identification_status"] == "ambiguous"
+        assert detail["reference_card_id"] is None
+
+
 def test_reimport_preserves_first_seen_and_updates_price(test_db: Path) -> None:
     with connect(test_db) as conn:
         source_id = ensure_collection_source(conn, "vinted")

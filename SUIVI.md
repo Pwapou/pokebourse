@@ -252,3 +252,115 @@ Les achats historiques marqués « vendu » ne fournissent pas de prix de revent
 ### Radar — observations et décisions
 
 La migration 0019 ajoute les décisions locales, les observations économiques et leurs événements. Les états connus à la migration sont marqués comme historiques, sans événement rétroactif. Les collecteurs, imports et captures enregistrent leurs observations dans la transaction d'ingestion ; les révisions d'identité restent distinctes des événements de prix. Le radar visuel et les étapes suivantes restent à développer.
+
+---
+
+## 15. Recherche Avancée Multi-Critères & Externe (`/search`) — novembre 2026
+
+- **Migration SQLite `0020_search_indexes.sql`** :
+  - Création d'index composites sur `catalog_items` (`is_lot`, `identification_status`, `price_cents`, `reference_card_id`, `set_name`, `currency`) pour accélérer le filtrage complexe.
+  - Création d'index sur `pokemon_reference_cards` (`tcgdex_id`, `local_id`, `name`, `set_id`, `rarity`) pour les recherches instantanées dans le référentiel officiel.
+- **Moteur de recherche unifié (`app/search/service.py`)** :
+  - Formulaire unique avec portées modulables : Tout, Cartes du référentiel, Annonces observées.
+  - Filtres complets : texte libre, extension, rareté officielle, année ou intervalle d'années de sortie (`release_date`), prix min/max, état, langue, variante, société de gradation et note, source, statut d'identification et exclusion des lots.
+  - Respect strict des règles d'intégrité : aucun filtre de rareté ou d'année n'est appliqué à une annonce non identifiée ; aucun lot n'est rattaché à une carte unitaire.
+  - Détection exacte et suggestions approchées basées sur le lexique trigramme officiel.
+  - Export CSV conforme (`/search/export.csv`) avec encodage UTF-8 BOM, séparateur point-virgule et protection anti-injection CSV.
+- **Recherche externe contrôlée (`app/search/external.py`)** :
+  - Déclenchement uniquement sur action explicite via le paramètre `external=1`.
+  - Résilience locale totale : les résultats locaux s'affichent même en cas de coupure réseau ou d'indisponibilité externe.
+  - TCGdex : enfilage des demandes de complétion dans `identification_searches` avec déduplication stricte des critères pour traitement ordonné par le worker.
+  - eBay : requêtes bornées avec connecteur officiel, backoff exponentiel et quotas.
+  - Vinted et Leboncoin : signalées avec statut explicite « Non disponible » et motif (respect des CGU et protections anti-bot documentées dans `SOURCES.md`).
+  - Importation contrôlée en un clic (`POST /search/external/import`) avec déduplication `(source_id, external_id)`, préservation inviolable de `first_seen_at` et enregistrement de l'historique dans `listing_observations`.
+- **Validation** : 31 tests automatisés dédiés dans `tests/test_search.py`.
+
+---
+
+## 16. Tendances de Marché & Radar d'Arbitrage (`/trends`) — novembre 2026
+
+- **Module dédié (`app/trends/`) et interface Jinja2 (`app/templates/trends.html`)** :
+  - Calcul des variations de prix officielles Cardmarket : évolution des moyennes `avg7` vs `avg30` (moyen terme) et `avg1` vs `avg7` (court terme), avec variations en centimes et points de base (`bps`) arrondies en `ROUND_HALF_UP`.
+  - Exclusion stricte des produits dont le prix de référence est nul ou incomplet pour éliminer les variations aberrantes.
+  - Activité des annonces récentes : calcul du nombre d'annonces observées par carte dans le catalogue local sur 7 ou 30 jours, présenté avec honnêteté comme un proxy d'activité d'offres sans jamais prétendre faussement être un volume de ventes conclues.
+  - Radar des meilleures opportunités : sélection et tri des annonces générant le meilleur gain net estimé et ROI selon les cotes de marché officielles enregistrées, avec indicateur de fraîcheur des données.
+  - Filtres dynamiques : fenêtre temporelle (7j, 30j), extension officielle, rareté et seuil minimal d'annonces observées.
+- **Validation** : 17 tests automatisés dédiés dans `tests/test_trends.py`.
+
+---
+
+## 17. Assistance Visuelle & OCR Local (`/ocr/suggestions`) — novembre 2026
+
+- **Module serveur (`app/identification/ocr.py`) & script client (`app/static/ocr.js`)** :
+  - Moteur de reconnaissance optique 100 % local et conteneurisé basé sur Tesseract (`fra+eng`, page segmentation mode 11) intégré à l'image Docker (`Dockerfile`).
+  - Respect strict de la vie privée et politique « zéro persistance » : l'image est décodée en mémoire vive via Pillow, nettoyée de ses métadonnées EXIF (`ImageOps.exif_transpose`), et convertie en flux PNG éphémère sans jamais être écrite sur disque ni stockée en base de données.
+  - Bornes de sécurité : fichier limité à 8 Mo, résolution maximale de 12 millions de pixels, sémaphore de concurrence borné à 2 slots et timeout strict de 20 secondes.
+  - Extraction ciblée des indices : recherche dans le texte extrait du nom de la carte, du numéro imprimé (fraction `X/Y` ou numéro isolé), de l'extension et des points de vie (PV).
+  - Suggestions en 1 clic : interrogation du cache local TCGdex pour remonter les cartes candidates les plus pertinentes et préremplir le formulaire de réconciliation (`catalog_detail.html`).
+- **Validation** : tests unitaires et web dans `tests/test_ocr_local.py` et `tests/test_ocr_web.py`.
+
+---
+
+## 18. Parcours d'Import Enrichi : Saisie par URL & Prévisualisation Chrome — novembre 2026
+
+- **Saisie assistée par URL (`app/manual_listing.py`, `app/templates/manual_listing.html`)** :
+  - Reconnaissance syntaxique locale d'URL pour eBay, Vinted, Leboncoin et Wallapop sans téléchargement de la page distante.
+  - Détection instantanée des doublons existants par `(source, external_id)` (`app/listing_identity.py`).
+  - Pré-analyse indicative en lecture seule (`/ajouter-annonce/analyser` via `app/listing_preview.py`) : propose une identification et une estimation de rentabilité sans modifier la base de données.
+  - Enregistrement transactionnel via `app.catalog.import_jsonl` avec déduplication et préservation de `first_seen_at`.
+- **Prévisualisation avant confirmation depuis l'extension Chrome (`app/capture_preview.py`, `app/templates/capture_preview.html`)** :
+  - Nouveau mode recommandé dans le popup de l'extension Chrome Manifest V3 : sélection d'une annonce unique et ouverture dans un nouvel onglet Pokébourse (`POST /previsualiser-capture`).
+  - Affichage transparent de l'origine de chaque champ : extrait de la page, proposé par le système, saisi/corrigé par l'utilisateur, ou manquant (jamais inventé).
+  - Identification indicative (statut, candidats, score) et rentabilité indicative basées sur les références locales sans écriture en base.
+  - Bouton « Confirmer et ajouter l'annonce » déclenchant l'ingestion transactionnelle finale.
+- **Extraction bornée de métadonnées HTML (`app/collectors/page_extract.py`)** : extracteur passif de métadonnées de page.
+- **Validation** : tests dans `tests/test_manual_listing.py`, `tests/test_capture_preview.py`, `tests/test_listing_preview.py` et `tests/test_page_extract.py`.
+
+---
+
+## 19. Simplification de l'Interface & Architecture de Navigation Cible — novembre 2026
+
+- **Mise en œuvre du document de cadrage `TASKING_SIMPLIFICATION_CIBLE.md`** :
+  - Parcours utilisateur clarifié : « Capturer → Décider → Suivre l'achat ».
+  - Navigation principale restructurée dans `app/templates/base.html` :
+    1. **Accueil** (`/`) : météo du marché, KPIs, opportunités prioritaires et état du système.
+    2. **Opportunités** (`/catalog`) : fusion du catalogue et de l'analyse de rentabilité avec filtres de verdicts (`opportunite`, `surveiller`, `non_rentable`, `sans_cote`), tris financiers et export CSV.
+    3. **Recherche** (`/search`) : moteur multi-critères et externe.
+    4. **Tendances** (`/trends`) : mouvements de prix et activité des annonces.
+    5. **Mes achats** (`/achats`) : carnet de suivi d'investissements.
+    6. **Réglages** (`/reglages`) : frais, seuils, cotes de marché et synchronisation Cardmarket (remplaçant `/profitability` qui redirige de façon transparente).
+    7. **Gestion avancée** (`/gestion`) : hub réunissant les modules spécialisés (Vendeurs, Veilles, Imports, TCGdex, Annotations ML, Agents, Sauvegardes).
+  - Bouton global « Ajouter des annonces » en topbar (URL, Extension Chrome, JSONL, Veille).
+  - Maquettes cibles de référence créées dans `app/static/prototype-cible.html`, `prototype-cible.css` et `prototype-cible.js`.
+- **Validation** : tests de navigation et de compatibilité dans `tests/test_simplification_navigation.py` et `tests/test_simplification_avancee.py`.
+
+---
+
+## 20. Suivi des Achats & Prix de Vente Réel (`/achats`) — novembre 2026
+
+- **Migration SQLite `0021_purchase_sale_price.sql`** :
+  - Ajout de la colonne `sale_price_cents INTEGER DEFAULT NULL` dans la table `purchases`.
+- **Interface dédiée (`app/templates/achats.html`) et service métier (`app/purchases.py`)** :
+  - Suivi des 4 statuts du cycle de vie : `📦 Commandé` $\rightarrow$ `📬 Reçu` $\rightarrow$ `🏷️ En vente` $\rightarrow$ `💰 Vendu`.
+  - Saisie facultative du prix de vente réel constaté (`sale_price_cents`) lors du passage à `vendu`.
+  - Synthèse financière rigoureuse des montants investis par devise (EUR, USD, GBP).
+  - Règle financière stricte : les frais de revente réels n'étant pas collectés sur chaque canal de sortie, aucune rentabilité réalisée théorique n'est calculée pour éviter les fausses affirmations.
+- **Validation** : tests dans `tests/test_sellers_directory_and_purchases.py`.
+
+---
+
+## 21. Renforcement de l'Extraction des Preuves d'Identification — novembre 2026
+
+- **Implémentation des spécifications `PROMPT_PATCH_EXTRACTION.md`** :
+  - **Prise en charge des numéros isolés** dans `app/identification/detector.py` et `extension/content/content.js` : extraction d'un numéro seul de 2 à 3 chiffres (`<= 300`) sous garde-fous stricts (pas un lot, pas une année `1900-2099`, pas de symbole monétaire ou pourcentage accolé, pas une note de gradation, présence préalable d'un nom ou d'une extension).
+  - **Remontée de l'incertitude dans le matcher** (`app/identification/matcher.py`) : tout numéro sans dénominateur remonte `numéro isolé, sans dénominateur` dans `uncertain_fields` et plafonne la classification automatique à `ambiguous` (score maximal de 79, jamais de classement `identified` arbitraire).
+  - **Prise en charge de certificateurs additionnels** : reconnaissance de `CollectAura` (variantes `Collect'Aura`, `Collect Aura`) et des formats avec grade accolé (`PSA10`, `PCA9.5`). La gradation reste neutre sur le score de confiance d'identification.
+- **Validation** : tests dans `tests/test_identification.py`, `tests/test_candidate_number_warning.py` et `tests/test_chrome_extension.py`.
+
+---
+
+## 22. Bilan Global Actualisé de la Suite de Tests (Novembre 2026)
+
+- **452 tests automatisés passants sur 43 suites** (0 échec, exécution rapide et entièrement hermétique).
+- **Zéro appel réseau réel** : tous les tests utilisent des simulateurs (mocks) ou le référentiel SQLite local embarqué (`seed_data.py`).
+- **Idempotence des 21 migrations SQLite** : rejeu intégral de `0001` à `0021` validé sans dérive de schéma (`test_migrations.py`).

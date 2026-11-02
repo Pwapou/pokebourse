@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Gestion avancée · Pokébourse{% endblock %}
+{% block breadcrumb %}Gestion avancée{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><span class="eyebrow">MODULES SECONDAIRES</span><h1>Gestion avancée</h1><p>Vendeurs, veilles, imports, référentiel, annotations ML, agents et sauvegardes. Chaque carte indique son état réel en base — rien n’est estimé ni inventé.</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/">← Accueil</a><a class="button secondary" href="/catalog">Voir les opportunités</a></div>
+</section>
+
+<div class="gestion-grid">
+    <article class="panel gestion-card">
+        <span class="section-kicker">ANNUAIRE</span>
+        <h2>Vendeurs</h2>
+        <p class="gestion-state">{{ vendeurs_count }} profil{{ 's' if vendeurs_count > 1 }} suivi{{ 's' if vendeurs_count > 1 }}</p>
+        <p class="cell-sub">Favoris, notes, réputation, achats et annonces par vendeur.</p>
+        <a class="step-link" href="/sellers">Ouvrir l’annuaire →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">SURVEILLANCE</span>
+        <h2>Veilles</h2>
+        <p class="gestion-state">{{ veilles_actives }} active{{ 's' if veilles_actives > 1 }} sur {{ veilles_total }}</p>
+        <p class="cell-sub">Création, pause, reprise, historique et suppression des recherches surveillées.</p>
+        <a class="step-link" href="/watches">Ouvrir les veilles →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">FLUX DE DONNÉES</span>
+        <h2>Imports et erreurs</h2>
+        <p class="gestion-state">{{ imports_total }} lot{{ 's' if imports_total > 1 }} importé{{ 's' if imports_total > 1 }}</p>
+        <p class="cell-sub">
+            {% if imports_echoues or import_failures %}
+            <span class="state-badge amber">{{ imports_echoues }} lot{{ 's' if imports_echoues > 1 }} en échec · {{ import_failures }} ligne{{ 's' if import_failures > 1 }} rejetée{{ 's' if import_failures > 1 }}</span>
+            {% else %}
+            <span class="state-badge green">Aucun échec répertorié</span>
+            {% endif %}
+        </p>
+        <a class="step-link" href="/#import">Nouvel import →</a>
+        <a class="step-link" href="/imports/failures/report">Rapport d’erreurs →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">RÉFÉRENTIEL OFFICIEL</span>
+        <h2>TCGdex</h2>
+        <p class="gestion-state">{{ tcgdex_cartes }} cartes · {{ tcgdex_sets }} extensions en cache</p>
+        <p class="cell-sub">
+            {% if tcgdex_jobs_en_erreur %}
+            <span class="state-badge red">{{ tcgdex_jobs_en_erreur }} job{{ 's' if tcgdex_jobs_en_erreur > 1 }} en échec</span>
+            {% elif tcgdex_jobs_en_cours %}
+            <span class="state-badge blue">{{ tcgdex_jobs_en_cours }} job{{ 's' if tcgdex_jobs_en_cours > 1 }} en cours</span>
+            {% else %}
+            <span class="state-badge neutral">Aucune synchronisation active</span>
+            {% endif %}
+        </p>
+        <a class="step-link" href="/tcgdex">Ouvrir le référentiel →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">ESPACE DE PRÉPARATION ML</span>
+        <h2>Annotations ML</h2>
+        {% if annotations_pilot %}
+        <p class="gestion-state">Pilote n°{{ annotations_pilot.id }} · {{ annotations_total }} item{{ 's' if annotations_total > 1 }} tiré{{ 's' if annotations_total > 1 }} (cible {{ annotations_pilot.target_size }})</p>
+        <p class="cell-sub"><span class="state-badge blue">{{ annotations_premiere_lecture }} première{{ 's' if annotations_premiere_lecture > 1 }} lecture{{ 's' if annotations_premiere_lecture > 1 }}</span> Doubles lectures aveugles et arbitrage conservés.</p>
+        {% else %}
+        <p class="gestion-state">Aucun pilote lancé</p>
+        <p class="cell-sub">Tirage stratifié, doubles lectures indépendantes et export reproductible.</p>
+        {% endif %}
+        <a class="step-link" href="/annotations">Ouvrir l’espace ML →</a>
+        <a class="step-link" href="/identification/diagnostics">Diagnostic d’identification →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">SUPERVISION</span>
+        <h2>Agents et incidents</h2>
+        <p class="gestion-state">{{ agents_total }} agent{{ 's' if agents_total > 1 }} déclaré{{ 's' if agents_total > 1 }}</p>
+        <p class="cell-sub">
+            {% if incidents_actifs %}
+            <span class="state-badge red">{{ incidents_actifs }} incident{{ 's' if incidents_actifs > 1 }} actif{{ 's' if incidents_actifs > 1 }}</span>
+            {% else %}
+            <span class="state-badge green">Aucun incident actif</span>
+            {% endif %}
+        </p>
+        <a class="step-link" href="/agents">Ouvrir la supervision →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">CONTRÔLE QUALITÉ</span>
+        <h2>Validations OCR</h2>
+        <p class="gestion-state">Campagnes sur annonces réelles</p>
+        <p class="cell-sub">Comparer titre seul, OCR seul et résultat combiné, campagne après campagne.</p>
+        <a class="step-link" href="/validations/ocr">Ouvrir les validations →</a>
+    </article>
+
+    <article class="panel gestion-card">
+        <span class="section-kicker">PERSISTANCE</span>
+        <h2>Sauvegardes</h2>
+        {% if derniere_sauvegarde %}
+        <p class="gestion-state">Dernière sauvegarde : {{ derniere_sauvegarde.created_at|date }}</p>
+        <p class="cell-sub">Création, téléchargement, restauration confirmée et contrôle d’intégrité.</p>
+        {% else %}
+        <p class="gestion-state">Aucune sauvegarde enregistrée</p>
+        <p class="cell-sub">Une sauvegarde chaude peut être créée à tout moment depuis l’écran dédié.</p>
+        {% endif %}
+        <a class="step-link" href="/backups">Ouvrir les sauvegardes →</a>
+    </article>
+</div>
+{% endblock %}

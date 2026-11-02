@@ -161,7 +161,8 @@ def test_explicit_false_lot_reclassification_allows_review(connection: sqlite3.C
 
 def test_human_can_choose_reference_outside_candidates(connection: sqlite3.Connection) -> None:
     with connection:
-        connection.execute("UPDATE catalog_items SET original_title='Carte inconnue' WHERE id=1")
+        connection.execute("UPDATE catalog_items SET original_title='Carte inconnue', raw_data=? WHERE id=1",
+                           (json.dumps({"name": None, "set_name": None, "card_number": None, "description": None}),))
     assert resolve_listing(connection, 1).result.candidates == []
     save(connection, matched(connection))
     assert resolve_listing(connection, 1).result.matched_card.tcgdex_id == "base1-4"

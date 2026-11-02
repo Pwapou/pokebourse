@@ -1,0 +1,78 @@
+{
+  "schema_version": "identification-labels-v1",
+  "catalog_version": "synthetic-catalog-v1",
+  "annotations": [
+    {
+      "listing_id": "synthetic:single-correct",
+      "status": "annotated",
+      "product_type": "single_card",
+      "identity_determinable": true,
+      "expected_tcgdex_id": "synthetic-set-001",
+      "catalog_presence": "present",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:single-wrong",
+      "status": "annotated",
+      "product_type": "single_card",
+      "identity_determinable": true,
+      "expected_tcgdex_id": "synthetic-set-002",
+      "catalog_presence": "present",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:lot",
+      "status": "annotated",
+      "product_type": "lot",
+      "identity_determinable": false,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "unknown",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:sealed",
+      "status": "annotated",
+      "product_type": "sealed",
+      "identity_determinable": false,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "unknown",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:outside-catalog",
+      "status": "annotated",
+      "product_type": "single_card",
+      "identity_determinable": true,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "absent",
+      "external_identity": "Identité externe synthétique documentée, sans ID TCGdex vérifié"
+    },
+    {
+      "listing_id": "synthetic:choice",
+      "status": "annotated",
+      "product_type": "choice",
+      "identity_determinable": false,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "unknown",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:unannotated",
+      "status": "unannotated",
+      "product_type": "unknown",
+      "identity_determinable": null,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "unknown",
+      "external_identity": null
+    },
+    {
+      "listing_id": "synthetic:arbitration",
+      "status": "needs_arbitration",
+      "product_type": "unknown",
+      "identity_determinable": null,
+      "expected_tcgdex_id": null,
+      "catalog_presence": "unknown",
+      "external_identity": null
+    }
+  ]
+}

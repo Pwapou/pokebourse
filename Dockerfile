@@ -10,7 +10,10 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 COPY scripts ./scripts
 
-RUN groupadd --system app \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app \
     && useradd --system --gid app --create-home app \
     && pip install --no-cache-dir . \
     && playwright install --with-deps chromium \

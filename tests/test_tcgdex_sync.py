@@ -308,6 +308,6 @@ def test_migration_0018_upgrades_existing_catalog_without_touching_it(tmp_path: 
                     connection.executescript(script)
         TcgdexCache(connection).seed_initial_if_empty()
         before = connection.execute("SELECT count(*) FROM pokemon_reference_cards").fetchone()[0]
-        assert apply_migrations(connection) == ["0018_tcgdex_sync_jobs.sql", "0019_radar_observations.sql"]
+        assert apply_migrations(connection) == [version for version, _ in migration_files() if version >= "0018"]
         assert connection.execute("SELECT count(*) FROM pokemon_reference_cards").fetchone()[0] == before
         assert apply_migrations(connection) == []

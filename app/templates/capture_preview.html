@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Prévisualisation de capture · Pokébourse{% endblock %}
+{% block breadcrumb %}Prévisualisation{% endblock %}
+{% block content %}
+{% set badge_class = {"extraite": "green", "proposée": "blue", "saisie": "neutral", "corrigée": "amber", "manquante": "red"} %}
+<section class="page-heading"><div><span class="eyebrow">CAPTURE EXTENSION</span><h1>Prévisualiser une annonce capturée</h1><p>Vérifiez chaque information avant l’enregistrement : rien n’est écrit tant que vous ne confirmez pas.</p></div><a class="button secondary" href="/catalog">Voir les annonces</a></section>
+{% if error %}<div class="alert error" role="alert"><strong>Impossible de continuer.</strong> {{ error }}</div>{% endif %}
+<form method="post" action="/previsualiser-capture/confirmer" class="manual-listing-form capture-preview-form">
+<input type="hidden" name="platform" value="{{ platform }}">
+<input type="hidden" name="external_id" value="{{ external_id }}">
+<input type="hidden" name="url" value="{{ listing_url }}">
+<input type="hidden" name="ocr_status" value="{{ values.get('ocr_status', '') }}">
+{% for key in ("name", "set_name", "card_number") %}<input type="hidden" name="proposed_{{ key }}" value="{{ values.get('proposed_' ~ key, '') }}">{% endfor %}
+{% if ocr_result %}{% for name in ocr_result.names %}<input type="hidden" name="ocr_names" value="{{ name }}">{% endfor %}{% for number in ocr_result.numbers %}<input type="hidden" name="ocr_numbers" value="{{ number }}">{% endfor %}{% endif %}
+{% for key in ("title", "description", "name", "set_name", "card_number", "language", "condition", "seller", "price", "shipping", "currency", "image_url") %}<input type="hidden" name="captured_{{ key }}" value="{{ captured[key] }}">
+{% endfor %}
+<section class="panel manual-listing-panel"><h2>1. Extrait de l’annonce</h2>
+<p><strong>Plateforme :</strong> {{ platform }} · <strong>Identifiant :</strong> {{ external_id }}<br><a href="{{ listing_url }}" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce dans un nouvel onglet ↗</a></p>
+{% if preview_image_url %}<p><img class="capture-preview-image" src="{{ preview_image_url }}" alt="Image principale de l’annonce" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='<span class=&quot;state-badge neutral&quot;>Image indisponible — consultez l’annonce.</span>'"></p>{% elif values.image_url %}<p><span class="state-badge red">Adresse de l’image invalide ou non publique.</span></p>{% else %}<p><span class="state-badge red">Image principale manquante</span></p>{% endif %}
+<div class="alert" role="status">La provenance de chaque champ est indiquée : <span class="state-badge green">Extraite</span> de la page, <span class="state-badge neutral">Saisie</span> ou <span class="state-badge amber">Corrigée</span> par vous, ou <span class="state-badge red">Manquante</span>. Une valeur absente n’est jamais remplacée par zéro.</div>
+<label><span class="filter-label">Titre de l’annonce <span class="state-badge {{ badge_class[provenance.title] }}">{{ provenance.title }}</span></span><input type="text" name="title" maxlength="500" value="{{ values.title }}">{% if provenance.title == 'corrigée' %}<small>Capturé : « {{ captured.title }} »</small>{% endif %}</label>
+<label><span class="filter-label">Description de l’annonce <span class="state-badge {{ badge_class[provenance.description] }}">{{ provenance.description }}</span></span><textarea name="description" maxlength="10000" rows="3">{{ values.description }}</textarea>{% if provenance.description == 'corrigée' %}<small>Capturé : « {{ captured.description }} »</small>{% endif %}</label>
+<label><span class="filter-label">Nom de la carte <span class="state-badge {{ badge_class[provenance.name] }}">{{ provenance.name }}</span></span><input type="text" name="name" maxlength="200" value="{{ values.name }}">{% if provenance.name == 'corrigée' %}<small>Capturé : « {{ captured.name }} »</small>{% endif %}</label>
+<label><span class="filter-label">Extension <span class="state-badge {{ badge_class[provenance.set_name] }}">{{ provenance.set_name }}</span></span><input type="text" name="set_name" maxlength="200" value="{{ values.set_name }}">{% if provenance.set_name == 'corrigée' %}<small>Capturé : « {{ captured.set_name }} »</small>{% endif %}</label>
+<label><span class="filter-label">Numéro de carte <span class="state-badge {{ badge_class[provenance.card_number] }}">{{ provenance.card_number }}</span></span><input type="text" name="card_number" maxlength="50" value="{{ values.card_number }}" placeholder="Ex. 4/102">{% if provenance.card_number == 'corrigée' %}<small>Capturé : « {{ captured.card_number }} »</small>{% endif %}</label>
+<label><span class="filter-label">Langue * <span class="state-badge {{ badge_class[provenance.language] }}">{{ provenance.language }}</span></span><select name="language" required><option value="">Choisir la langue</option>{% for key, label in [('fr','Français'), ('en','Anglais'), ('ja','Japonais'), ('de','Allemand'), ('es','Espagnol'), ('it','Italien'), ('ko','Coréen'), ('zh','Chinois')] %}<option value="{{ key }}" {% if values.language == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><small>Jamais déduite automatiquement : choisissez-la explicitement.</small></label>
+<label><span class="filter-label">État indiqué par le vendeur <span class="state-badge {{ badge_class[provenance.condition] }}">{{ provenance.condition }}</span></span><input type="text" name="condition" maxlength="100" value="{{ values.condition }}" placeholder="Ex. NM, EX ou inconnu">{% if provenance.condition == 'corrigée' %}<small>Capturé : « {{ captured.condition }} »</small>{% endif %}</label>
+<label><span class="filter-label">Pseudonyme public du vendeur <span class="state-badge {{ badge_class[provenance.seller] }}">{{ provenance.seller }}</span></span><input type="text" name="seller" maxlength="200" value="{{ values.seller }}" autocomplete="off"><small>Champ public uniquement : ni e-mail, ni téléphone, ni adresse.</small></label>
+<label><span class="filter-label">Prix affiché * <span class="state-badge {{ badge_class[provenance.price] }}">{{ provenance.price }}</span></span><input type="text" name="price" inputmode="decimal" required value="{{ values.price }}">{% if provenance.price == 'corrigée' %}<small>Capturé : « {{ captured.price }} »</small>{% endif %}</label>
+<label><span class="filter-label">Devise * <span class="state-badge {{ badge_class[provenance.currency] }}">{{ provenance.currency }}</span></span><input type="text" name="currency" maxlength="3" pattern="[A-Za-z]{3}" required value="{{ values.currency }}" placeholder="Ex. EUR"><small>Code à trois lettres, tel qu’indiqué sur l’annonce.</small>{% if provenance.currency == 'corrigée' %}<small>Capturé : « {{ captured.currency }} »</small>{% endif %}</label>
+<label><span class="filter-label">Frais de port <span class="state-badge {{ badge_class[provenance.shipping] }}">{{ provenance.shipping }}</span></span><input type="text" name="shipping" inputmode="decimal" value="{{ values.shipping }}" placeholder="Vide si inconnu"><small>Vide = inconnu ; 0 = gratuité confirmée. Le port de l’annonce prime sur celui du profil, y compris à zéro.</small>{% if provenance.shipping == 'corrigée' %}<small>Capturé : « {{ captured.shipping }} »</small>{% endif %}</label>
+<label><span class="filter-label">URL de l’image <span class="state-badge {{ badge_class[provenance.image_url] }}">{{ provenance.image_url }}</span></span><input type="url" name="image_url" maxlength="2048" value="{{ values.image_url }}" placeholder="https://…"><small>Adresse HTTPS publique, facultative. Vous pouvez la corriger ou la retirer.</small></label>
+</section>
+<section class="panel manual-listing-panel" aria-label="Identification proposée"><h2>2. Identification proposée</h2>
+{% if ocr_result %}<div class="alert" role="status"><strong>Lecture automatique de l’image :</strong> {{ ocr_result.message }}{% if ocr_result.names %}<p>Noms repérés : {{ ocr_result.names|join(', ') }}.</p>{% endif %}{% if ocr_result.numbers %}<p>Numéros repérés : {{ ocr_result.numbers|join(', ') }}.</p>{% endif %}<p>Ces indices sont à vérifier et ne confirment pas la carte.</p></div>{% endif %}
+{% if preview %}{% set ident = preview.identification %}
+<p><strong>{% if ident.status == 'identified' %}Indices concordants{% elif ident.status == 'ambiguous' %}Identification ambiguë{% elif ident.status == 'lot' %}Lot ou produit scellé{% else %}Non identifiée{% endif %}</strong>{% if ident.confidence is not none %} · Score {{ ident.confidence }}/100 (score de concordance, pas une probabilité){% endif %}</p>
+<p>{{ ident.reason }}</p>
+{% if ident.status == 'lot' %}<p><span class="state-badge amber">Proposée</span> Aucune carte unitaire n’est rattachée à un lot : l’identité d’une carte seule ne sera jamais attribuée arbitrairement.</p>{% endif %}
+{% if ident.matched_card %}<p><span class="state-badge blue">Proposée</span> {{ ident.matched_card.name }} · {{ ident.matched_card.set_name }} · N° {{ ident.matched_card.local_id }} · {{ ident.matched_card.tcgdex_id }}</p>{% endif %}
+{% if ident.candidates and ident.status != 'lot' %}<p>Candidats pertinents à comparer :</p><ul>{% for candidate in ident.candidates[:5] %}<li>{{ candidate.name }} · {{ candidate.set_name }} · N° {{ candidate.local_id }} ({{ candidate.tcgdex_id }}){% if candidate.match_reason %} — {{ candidate.match_reason }}{% endif %}</li>{% endfor %}</ul>{% endif %}
+{% include "_identification_evidence.html" %}
+{% if ident.uncertain_fields %}<p>Champs incertains : {{ ident.uncertain_fields|join(', ') }}.</p>{% endif %}
+{% if ident.missing_fields %}<p>Non résolu : {{ ident.missing_fields|join(', ') }}.</p>{% endif %}
+<p class="table-note">Identité proposée par le moteur : elle n’est <strong>pas</strong> une confirmation humaine et ne sera enregistrée comme telle sans action explicite.</p>
+{% else %}<p>Relancez l’analyse après avoir complété les champs.</p>{% endif %}
+</section>
+<section class="panel manual-listing-panel" aria-label="Marché et rentabilité"><h2>3. Marché et rentabilité indicatifs</h2>
+{% if preview and preview.evaluation %}{% set ev = preview.evaluation %}
+<p>Prix d’achat : {{ ev.price_cents|preview_money(ev.currency) }} · Port : {{ ev.buyer_shipping_cents|preview_money(ev.currency) }} (source : {{ 'annonce' if ev.buyer_shipping_source == 'annonce' else 'profil' if ev.buyer_shipping_source == 'profil' else 'inconnue' }}) · Coût d’acquisition : {{ ev.total_cost_cents|preview_money(ev.currency) if ev.total_cost_cents is not none else 'Inconnu' }}</p>
+<p>Revente estimée : {{ ev.reference_price_cents|preview_money(ev.currency) if ev.reference_price_cents is not none else 'Aucune cote exploitable' }} · Source : {{ ev.reference_source_name or 'Inconnue' }} · Nature : {{ ev.reference_kind_label or 'Non renseignée' }} · Date : {{ ev.reference_observed_at or 'Inconnue' }}</p>
+{% if ev.reference_price_cents is not none %}<p>Frais de vente inclus · Gain net : {{ ev.net_profit_cents|preview_money(ev.currency) }} · Marge : {{ ev.margin_bps|preview_percent }} · ROI : {{ ev.roi_bps|preview_percent }}</p>{% endif %}
+{% if ev.missing_fee_fields %}<p>Données manquantes : {{ ev.missing_fee_fields|join(', ') }}.</p>{% endif %}
+{% else %}<p>{{ preview.evaluation_reason if preview else 'Données insuffisantes pour le calcul.' }}</p>
+{% if preview and preview.evaluation_reason %}<p>Données manquantes empêchant le calcul : {{ preview.evaluation_reason }}</p>{% endif %}{% endif %}
+<p class="table-note">Estimation issue des seules données locales (cotes enregistrées, médiane des annonces comparables, Cardmarket relié de façon fiable). Ce n’est ni un prix temps réel garanti, ni une vente conclue, ni une preuve d’état ou d’authenticité.</p>
+</section>
+<div style="grid-column: 1 / -1" class="capture-preview-actions">
+<button class="button secondary" type="submit" formaction="/previsualiser-capture/analyser" formnovalidate>Relancer l’analyse</button>
+<button class="button primary" type="submit">Confirmer et ajouter l’annonce</button>
+</div>
+<p class="table-note">Aucune annonce, confirmation d’identité ou modification du référentiel n’est enregistrée pendant la prévisualisation. L’enregistrement final utilise le flux transactionnel existant et sa déduplication.</p>
+</form>
+{% endblock %}

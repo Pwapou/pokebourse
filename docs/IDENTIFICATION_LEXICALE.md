@@ -52,10 +52,82 @@ officiel et complet connus de l’extension sont admis ; une valeur inconnue dan
 le référentiel n’est pas transformée en contradiction. Les validations humaines
 applicables conservent leur priorité dans la résolution commune.
 
+### Numéros isolés et organismes de gradation
+
+En repli après les fractions (`175/198`) et les préfixes (`#175`, `n°175`), le
+détecteur backend et `extractCardNumber()` dans l’extension Chrome extraient un
+numéro isolé de deux à trois chiffres (`<= 300`) sous garde-fous stricts :
+annonce non classée comme lot, présence préalable d’un nom de carte ou d’une
+extension, exclusion des années (`1900`–`2099`), des montants et pourcentages
+(`€`, `eur`, `%`), des quantités ou jetons alphanumériques collés (`x3`, `PSA10`)
+et des notes rattachées à un certificateur. Tout numéro dépourvu de dénominateur
+(`set_card_count` nul) remonte `numéro isolé, sans dénominateur` dans
+`uncertain_fields` et plafonne la décision automatique à `ambiguous` (score de
+résultat plafonné à 79, jamais d’`identified` automatique équivalent à une
+fraction exacte).
+
+La détection de gradation couvre `PSA`, `PCA`, `BGS`, `CGC`, `SGS` et
+`COLLECTAURA` (`CollectAura`, `Collect'Aura`, `Collect Aura`), avec note collée
+ou séparée (`1` à `10`, demi-points `.5` uniquement, rejet de `9.25`). Cette
+information descriptive reste neutre sur le score et la génération de candidats
+TCGdex.
+
+## Règles déterministes du détecteur (T02, 2 novembre 2026)
+
+Les cartes réellement ajoutées à la vente (« vendu avec 3 cartes en plus »,
+« vendue avec trois cartes supplémentaires », « + 3 cartes offertes ») déclenchent
+`lot`, avec motif explicite et sans identité unitaire effective. Une protection,
+trois photos, un dénominateur de fraction ou une mention négative (« pas un lot »,
+« sans lot ») ne suffisent pas à classer en lot. Une vente de carte « au choix »
+reste `ambiguous`, sans choix automatique d'une carte, même si le titre contient
+un nom et un numéro exacts.
+
+Le mot français « en » et `VO` seul ne prouvent plus l'anglais ; `langue : EN`,
+« carte anglaise » et `English` restent reconnus. Une langue non observée reste
+inconnue, y compris avec une référence du catalogue français.
+
+`languages` conserve toutes les langues explicites reconnues (français, anglais,
+japonais), dédupliquées et triées. `language` n'est renseigné que si une seule
+valeur est observée. Plusieurs langues, même si le nom et le numéro concordent,
+produisent `ambiguous`, sans identité unitaire automatique et avec motif de
+conflit. Le diagnostic distingue ce cas d'une référence locale absente.
+Les codes courts sont reconnus dans des champs (`langue : FR/EN`,
+`version : JP`), entre parenthèses/crochets (`[EN]`), ou comme marques
+conventionnelles majuscules (`FR`, `JP`, `JA`, `US`). `EN` exige un champ ou
+un encadrement ; `en` dans une phrase et `VO` seul restent sans effet.
+
+`nearmint`, `near-mint` et `near mint` (casse et espaces variables) partagent
+l'état déclaré `Near Mint`, prioritaire sur `mint`. Le suffixe de carte `ex`
+reste significatif mais ne déclare plus l'état `Excellent`. L'abréviation d'état
+exige un contexte explicite, par exemple `état : EX` ou `condition EX`.
+`condition_raw` conserve l'extrait exact retenu, avec sa casse, ses espaces et
+son contexte (`État : EX`), séparément de `condition`. Les textes d'origine
+restent conservés. Les équivalences historiques, dont « très bon état » vers
+`Near Mint`, restent des normalisations de déclarations, jamais des états
+physiquement vérifiés. Une note de gradation seule ne renseigne aucun de ces
+deux champs ; aucune normalisation ne vérifie finition ou authenticité.
+
+`pack` exige un contexte de produit (`pack Pokémon`, `pack de 3 boosters`,
+`pack 151 scellé`). « Gem Pack 2 » ne suffit pas à classer en lot et ne crée
+aucun alias d'extension. Les mentions complètes de noms d'extensions présents
+dans le cache sont protégées des règles de lot. Les numéros explicitement
+étiquetés comme numéros de série sont exclus des quantités et des numéros de
+carte. Les quantités écrites de deux à dix sont reconnues dans les contextes
+de vente couverts par les fixtures, avec les mêmes exclusions de négation.
+
+L'extension aligne ses garde-fous de lot et de vente au choix pour le repli sur
+un numéro isolé. Elle conserve les numéros explicitement observés (fraction ou
+préfixe), sauf si ces nombres sont étiquetés comme numéros de série. Les règles
+de pack, de quantité et de série sont également alignées. L'extension ne possède
+pas le catalogue local et ne décide ni de l'identité, ni des langues, ni de
+l'état. Le backend reste l'autorité. Ces correctifs terminent les règles T02
+sur leurs fixtures ; ils ne démontrent aucun gain global sans benchmark annoté
+et ne valident pas les autres volets de la recette T13.
+
 ## Lecture du diagnostic
 
 Les catégories décrivent les observations du moteur : original indisponible,
-lot, langue hors périmètre, indices insuffisants, aucun candidat local,
+lot, langues contradictoires, langue hors périmètre, indices insuffisants, aucun candidat local,
 contradiction, nom approché, ambiguïté, correspondance partielle ou correspondance
 exacte désormais disponible. **L’absence de candidat local ne prouve pas une absence
 dans TCGdex** : catalogue incomplet, extraction insuffisante et texte non

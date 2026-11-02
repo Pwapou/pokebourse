@@ -14,9 +14,12 @@
         <h1>Sauvegardes</h1>
         <p>Créez, téléchargez et restaurez des copies cohérentes de la base SQLite. Chaque fichier est vérifié après création et avant restauration.</p>
     </div>
-    <form method="post" action="/backups">
-        <button class="button primary" type="submit">Créer une sauvegarde <span>＋</span></button>
-    </form>
+    <div class="heading-actions">
+        <a class="button secondary" href="/gestion">Vue d’ensemble</a>
+        <form method="post" action="/backups">
+            <button class="button primary" type="submit">Créer une sauvegarde <span>＋</span></button>
+        </form>
+    </div>
 </section>
 <section class="panel">
     {% if backups %}

@@ -233,16 +233,21 @@ def test_migration_from_0013_is_additive_and_idempotent(tmp_path: Path) -> None:
 def test_existing_pilot_and_reviews_survive_pending_migrations(tmp_path: Path) -> None:
     """Une évolution ultérieure doit conserver les liens d'un pilote déjà commencé."""
     with connect(tmp_path / "existing-pilot.db") as connection:
-        connection.execute("CREATE TABLE schema_migrations(version TEXT PRIMARY KEY)")
-        for version, script in migration_files():
-            if version < "0015":
-                connection.executescript(script)
+        apply_migrations(connection)
         TcgdexCache(connection).seed_initial_if_empty()
         connection.commit()
         add_items(connection, 1)
         sample_pilot(connection, target_size=1, seed="before-upgrade")
         review_id = read(connection, 1, "reader-1")
         before = assignment(connection, 1)
+        # Préparer l'état historique sans invoquer le code courant sur un schéma
+        # ancien : les nouvelles colonnes n'existaient pas dans ces snapshots.
+        for table, columns in (("listing_identity_evidence", ("observations_json", "pipeline_version", "observations_explicit")),
+                               ("listing_identification_snapshots", ("observations_json", "pipeline_version"))):
+            for column in columns:
+                connection.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
+        connection.execute("DELETE FROM schema_migrations WHERE version='0022_identification_observations.sql'")
+        connection.commit()
         apply_migrations(connection)
         after = assignment(connection, 1)
         assert after["snapshot_id"] == after["current_snapshot_id"] == before["snapshot_id"]

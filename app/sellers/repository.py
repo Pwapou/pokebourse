@@ -251,17 +251,36 @@ def list_purchases(
     connection: sqlite3.Connection,
     *,
     seller_profile_id: int | None = None,
-    limit: int = 100,
+    limit: int | None = 100,
 ) -> list[dict[str, Any]]:
     query = "SELECT * FROM purchases"
     params: list[Any] = []
     if seller_profile_id is not None:
         query += " WHERE seller_profile_id = ?"
         params.append(seller_profile_id)
-    query += " ORDER BY purchased_at DESC, id DESC LIMIT ?"
-    params.append(max(1, limit))
+    query += " ORDER BY purchased_at DESC, id DESC"
+    if limit is not None:
+        query += " LIMIT ?"
+        params.append(max(1, limit))
     rows = connection.execute(query, params).fetchall()
     return [dict(row) for row in rows]
+
+
+def update_purchase_status(
+    connection: sqlite3.Connection, purchase_id: int, *, status: str,
+    sale_price_cents: int | None,
+) -> bool:
+    """Update the purchase lifecycle and recorded sale price, if it exists."""
+    if status not in ("commande", "recu", "en_vente", "vendu"):
+        raise ValueError("Statut d'achat invalide.")
+    if sale_price_cents is not None and sale_price_cents < 0:
+        raise ValueError("Le prix de vente doit être positif ou nul.")
+    with connection:
+        cursor = connection.execute(
+            "UPDATE purchases SET status = ?, sale_price_cents = ?, updated_at = ? WHERE id = ?",
+            (status, sale_price_cents, utc_now(), purchase_id),
+        )
+    return cursor.rowcount > 0
 
 
 def list_listings_for_seller(

@@ -7,6 +7,7 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
+from app.identification.evidence import validate_observations
 
 ListingPlatform = Literal["vinted", "leboncoin", "ebay", "wallapop"]
 
@@ -169,6 +170,8 @@ class CollectedListing(BaseModel):
     @field_validator("raw_data")
     @classmethod
     def validate_raw_data(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if "identity_evidence" in value:
+            validate_observations(value["identity_evidence"])
         try:
             json.dumps(value)
         except (TypeError, ValueError) as error:

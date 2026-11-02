@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Ajouter une annonce · Pokébourse{% endblock %}
+{% block breadcrumb %}Ajouter une annonce{% endblock %}
+{% block content %}
+<section class="page-heading"><div><span class="eyebrow">AJOUT ASSISTÉ</span><h1>Ajouter une annonce par URL</h1><p>Collez l’adresse d’une annonce, puis renseignez et vérifiez les informations avant l’import.</p></div><a class="button secondary" href="/catalog">Voir les annonces</a></section>
+{% if error %}<div class="alert error" role="alert"><strong>Impossible de continuer.</strong> {{ error }}</div>{% endif %}
+{% if stage == 'url' %}
+<section class="panel manual-listing-panel"><h2>1. Adresse de l’annonce</h2>
+<p>Liens HTTPS d’annonces eBay, Vinted, Leboncoin et Wallapop reconnus. Les liens raccourcis ne sont pas pris en charge.</p>
+<form method="post" action="/ajouter-annonce/preparer" class="manual-listing-form">
+<label><span class="filter-label">URL de l’annonce *</span><input type="url" name="url" required maxlength="2048" value="{{ values.url or '' }}" placeholder="https://www.ebay.fr/itm/…"></label>
+<div><button class="button primary" type="submit">Continuer et vérifier les informations</button></div>
+</form>
+<p class="table-note">Les domaines configurés sont analysés automatiquement. Si une page est inaccessible, utilisez l’extension sur l’annonce ouverte ou complétez le formulaire.</p></section>
+{% else %}
+<section class="panel manual-listing-panel"><h2>2. Vérifier et compléter l’annonce</h2>
+{% if fetch_notice %}<div class="alert" role="status">{{ fetch_notice }}</div>{% endif %}
+{% if extraction %}
+<div class="alert" role="status">La plateforme et l’identifiant proviennent de l’adresse. Les champs ci-dessous ont été <strong>extraits de la page récupérée</strong> : vérifiez chaque valeur avant de confirmer. Provenance : <span class="state-badge green">extraite</span> de la page, <span class="state-badge neutral">saisie</span> par vous, <span class="state-badge amber">corrigée</span> ou <span class="state-badge red">manquante</span>.</div>
+{% else %}
+<div class="alert" role="status">La plateforme et l’identifiant proviennent de l’adresse. Le nom proposé peut provenir de l’adresse : vérifiez-le. Le prix, l’état, la livraison et le vendeur ne sont pas extraits ; consultez l’annonce et saisissez-les vous-même.</div>
+{% endif %}
+<p><strong>Plateforme :</strong> {{ values.platform_label }} · <strong>Identifiant :</strong> {{ values.external_id }}<br><a href="{{ values.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce dans un nouvel onglet ↗</a></p>
+{% if extraction %}
+<section class="panel manual-listing-panel" aria-label="Informations extraites de la page"><h3>Informations extraites de la page</h3>
+<ul class="extraction-list">
+{% for entry in extraction %}<li><strong>{{ entry.label }}</strong> :
+{% if entry.status == 'trouvé' %}<span class="state-badge green">Trouvé</span> « {{ entry.value }} » <em>(source : {{ entry.source }})</em>
+{% elif entry.status == 'proposé' %}<span class="state-badge amber">Proposé</span> « {{ entry.value }} » <em>({{ entry.note }})</em>
+{% else %}<span class="state-badge red">Manquant</span>{% endif %}
+</li>{% endfor %}
+</ul>
+{% if values.image_url %}<img class="capture-preview-image" src="{{ values.image_url }}" alt="Image principale de l’annonce" loading="lazy">{% endif %}
+{% if ocr %}<h4>Lecture automatique de l’image (OCR local)</h4>
+{% if ocr.status == 'candidates' %}<p><span class="state-badge green">Lecture effectuée</span> {{ ocr.detail }}</p>
+<ul>{% for name in ocr.names %}<li>Nom reconnu : « {{ name }} » (indice à vérifier)</li>{% endfor %}{% for number in ocr.numbers %}<li>Numéro reconnu : « {{ number }} » (indice à vérifier)</li>{% endfor %}</ul>
+{% if ocr.candidates %}<p>Candidats du catalogue : {% for candidate in ocr.candidates[:5] %}{{ candidate.name }} · {{ candidate.set_name }} · N° {{ candidate.local_id }}{% if not loop.last %} ; {% endif %}{% endfor %}.</p>{% endif %}
+{% elif ocr.status == 'aucun_résultat' %}<p><span class="state-badge neutral">Aucun indice fiable</span> {{ ocr.detail }}</p>
+{% elif ocr.status == 'lot' %}<p><span class="state-badge amber">Lot ou produit scellé</span> {{ ocr.detail }}</p>
+{% else %}<p><span class="state-badge amber">OCR indisponible</span> {{ ocr.detail }} Vous pouvez continuer sans OCR.</p>{% endif %}
+<p class="table-note">Les indices OCR sont des suggestions à vérifier : ils ne confirment ni identité, ni authenticité, ni état. Le texte brut lu n’est pas conservé.</p>
+{% endif %}
+</section>
+{% endif %}
+<form method="post" action="/ajouter-annonce/enregistrer" class="manual-listing-form">
+<input type="hidden" name="url" value="{{ values.url }}">
+<input type="hidden" name="image_url" value="{{ values.image_url or '' }}">
+<input type="hidden" name="captured_image_url" value="{{ values.captured_image_url or '' }}">
+<input type="hidden" name="ocr_names" value="{{ values.ocr_names or '' }}">
+<input type="hidden" name="ocr_status" value="{{ values.get('ocr_status', '') }}">
+{% for key in ("name", "set_name", "card_number") %}<input type="hidden" name="proposed_{{ key }}" value="{{ values.get('proposed_' ~ key, '') }}">{% endfor %}
+<input type="hidden" name="ocr_numbers" value="{{ values.ocr_numbers or '' }}">
+<input type="hidden" name="captured_title" value="{{ values.captured_title or '' }}">
+<input type="hidden" name="captured_description" value="{{ values.captured_description or '' }}">
+<input type="hidden" name="captured_price" value="{{ values.captured_price or '' }}">
+<input type="hidden" name="captured_shipping" value="{{ values.captured_shipping or '' }}">
+<input type="hidden" name="captured_currency" value="{{ values.captured_currency or '' }}">
+<input type="hidden" name="captured_condition" value="{{ values.captured_condition or '' }}">
+<label><span class="filter-label">Titre de l’annonce {% if provenance.show %}<span class="state-badge {{ provenance.badge.title }}">{{ provenance.label.title }}</span>{% endif %}</span><input type="text" name="title" maxlength="500" value="{{ values.title or '' }}" placeholder="Titre lu sur la marketplace">{% if provenance.label.title == 'corrigée' %}<small>Extrait : « {{ values.captured_title }} »</small>{% endif %}</label>
+<label><span class="filter-label">Description de l’annonce {% if provenance.show %}<span class="state-badge {{ provenance.badge.description }}">{{ provenance.label.description }}</span>{% endif %}</span><textarea name="description" maxlength="10000" rows="3">{{ values.description or '' }}</textarea>{% if provenance.label.description == 'corrigée' %}<small>Extrait : « {{ values.captured_description }} »</small>{% endif %}</label>
+<label><span class="filter-label">Nom de la carte *</span><input type="text" name="name" maxlength="200" required value="{{ values.name or '' }}"></label>
+<label><span class="filter-label">Extension *</span><input type="text" name="set_name" maxlength="200" required value="{{ values.set_name or '' }}"></label>
+<label><span class="filter-label">Numéro de carte</span><input type="text" name="card_number" maxlength="50" value="{{ values.card_number or '' }}" placeholder="Ex. 173/165"></label>
+<label><span class="filter-label">Langue *</span><select name="language" required><option value="">Choisir la langue</option>{% for key, label in [('fr','Français'), ('en','Anglais'), ('ja','Japonais'), ('de','Allemand'), ('es','Espagnol'), ('it','Italien'), ('ko','Coréen'), ('zh','Chinois')] %}<option value="{{ key }}" {% if values.language == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label><span class="filter-label">État indiqué par le vendeur {% if provenance.show %}<span class="state-badge {{ provenance.badge.condition }}">{{ provenance.label.condition }}</span>{% endif %}</span><input type="text" name="condition" maxlength="100" value="{{ values.condition or '' }}" placeholder="Ex. NM, EX ou inconnu">{% if provenance.label.condition == 'corrigée' %}<small>Extrait : « {{ values.captured_condition }} »</small>{% endif %}</label>
+<label><span class="filter-label">Pseudonyme public du vendeur</span><input type="text" name="seller" maxlength="200" value="{{ values.seller or '' }}" autocomplete="off"></label>
+<label><span class="filter-label">Prix affiché * {% if provenance.show %}<span class="state-badge {{ provenance.badge.price }}">{{ provenance.label.price }}</span>{% endif %}</span><input type="text" name="price" inputmode="decimal" required value="{{ values.price or '' }}" placeholder="Ex. 45,00">{% if provenance.label.price == 'corrigée' %}<small>Extrait : « {{ values.captured_price }} »</small>{% endif %}</label>
+<label><span class="filter-label">Devise * {% if provenance.show %}<span class="state-badge {{ provenance.badge.currency }}">{{ provenance.label.currency }}</span>{% endif %}</span><select name="currency" required><option value="">Choisir la devise</option>{% for code in ['EUR','USD','GBP','JPY','CHF','CAD','AUD'] %}<option value="{{ code }}" {% if values.currency == code %}selected{% endif %}>{{ code }}</option>{% endfor %}</select><small>Devise explicitement lue ou choisie : aucune devise n’est déduite par défaut.</small>{% if provenance.label.currency == 'corrigée' %}<small>Extrait : « {{ values.captured_currency }} »</small>{% endif %}</label>
+<label><span class="filter-label">Frais de port {% if provenance.show %}<span class="state-badge {{ provenance.badge.shipping }}">{{ provenance.label.shipping }}</span>{% endif %}</span><input type="text" name="shipping" inputmode="decimal" value="{{ values.shipping or '' }}" placeholder="Vide si inconnu"><small>Vide = inconnu ; 0 = gratuité confirmée.</small>{% if provenance.label.shipping == 'corrigée' %}<small>Extrait : « {{ values.captured_shipping }} »</small>{% endif %}</label>
+<div style="grid-column: 1 / -1"><button class="button secondary" type="submit" formaction="/ajouter-annonce/analyser" formnovalidate>Analyser les informations saisies</button> <button class="button primary" type="submit">Confirmer et ajouter l’annonce</button> <a class="button secondary" href="/ajouter-annonce">Changer d’adresse</a></div>
+</form></section>
+{% if preview %}
+<section class="panel manual-listing-panel" aria-label="Résultat de l’analyse">
+<h2>Identification proposée</h2>
+{% set ident = preview.identification %}
+<p><strong>{% if ident.status == 'identified' %}Carte proposée avec indices concordants{% elif ident.status == 'ambiguous' %}Plusieurs cartes possibles{% elif ident.status == 'lot' %}Lot ou produit scellé{% else %}Carte non identifiée{% endif %}</strong>{% if ident.confidence is not none %} · Score {{ ident.confidence }}/100 (ce score n’est pas une probabilité){% endif %}</p>
+<p>{{ ident.reason }}</p>
+{% if ident.matched_card %}<p>{{ ident.matched_card.name }} · {{ ident.matched_card.set_name }} · N° {{ ident.matched_card.local_id }} · {{ ident.matched_card.tcgdex_id }}</p>{% endif %}
+{% if ident.candidates and ident.status != 'lot' %}<ul>{% for candidate in ident.candidates[:5] %}<li>{{ candidate.name }} · {{ candidate.set_name }} · N° {{ candidate.local_id }} ({{ candidate.tcgdex_id }})</li>{% endfor %}</ul>{% endif %}
+{% if ident.uncertain_fields %}<p>À vérifier : {{ ident.uncertain_fields|join(', ') }}</p>{% endif %}
+{% include "_identification_evidence.html" %}
+<h2>Marché et rentabilité indicatifs</h2>
+{% if preview.evaluation %}{% set ev = preview.evaluation %}
+<p>Prix d’achat : {{ ev.price_cents|preview_money(ev.currency) }} · Port : {{ ev.buyer_shipping_cents|preview_money(ev.currency) }} ({{ ev.buyer_shipping_source }}) · Coût total : {{ ev.total_cost_cents|preview_money(ev.currency) }}</p>
+<p>Revente estimée : {{ ev.reference_price_cents|preview_money(ev.currency) }} · Source : {{ ev.reference_source_name or ev.reference_source or 'Inconnue' }} · Nature : {{ ev.reference_kind_label or 'Non renseignée' }} · Date : {{ ev.reference_observed_at or 'Inconnue' }}</p>
+<p>Gain net : {{ ev.net_profit_cents|preview_money(ev.currency) }} · Marge : {{ ev.margin_bps|preview_percent }} · ROI : {{ ev.roi_bps|preview_percent }}</p>
+{% if ev.missing_fee_fields %}<p>Frais manquants : {{ ev.missing_fee_fields|join(', ') }}.</p>{% endif %}
+{% else %}<p>{{ preview.evaluation_reason or 'Données insuffisantes pour le calcul.' }}</p>{% endif %}
+<p class="table-note">Aucune annonce ni identification n’a été enregistrée. Les estimations ne confirment ni vente, ni authenticité, ni état.</p>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

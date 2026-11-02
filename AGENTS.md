@@ -15,14 +15,18 @@ Avant d'écrire ou de modifier du code, consultez les documents spécialisés du
 | [`AGENTS.md`](AGENTS.md) | **Ce guide** : règles d'or, architecture interne, conventions, workflow de dev et commandes de test. | **À lire impérativement avant toute session de travail.** |
 | [`SOURCES.md`](SOURCES.md) | **Audit légal et technique des sources** : conditions d'accès (Vinted, Leboncoin, eBay, Wallapop, TCGdex, Cardmarket), respect des CGU, limitations anti-bot, RGPD et solutions de repli. | Dès qu'une modification touche aux collecteurs, au scraping ou aux API externes. |
 | [`SUIVI.md`](SUIVI.md) | **Historique de stabilisation** : audits du pipeline, corrections passées, intégration de TCGdex, Cardmarket, extension Chrome et ML Phase 0. | Pour comprendre l'historique des choix d'architecture et éviter de réintroduire d'anciens bugs. |
-| [`TASKING_INTEGRATION_DESIGN.md`](TASKING_INTEGRATION_DESIGN.md) | **Directives UI Mosaic × Flowbite** : règles de style CSS/HTML, maquettes prototypes (`app/static/prototype.html`). | Pour toute modification d'un template Jinja2 (`app/templates/`) ou du style (`app/static/style.css`). |
+| [`TASKING_INTEGRATION_DESIGN.md`](TASKING_INTEGRATION_DESIGN.md) | **Directives UI Mosaic × Flowbite** : règles de style CSS/HTML, maquettes prototypes historiques (`prototype.html`) et cibles (`prototype-cible.html`). | Pour toute modification d'un template Jinja2 (`app/templates/`) ou du style (`app/static/style.css`). |
+| [`TASKING_SIMPLIFICATION_CIBLE.md`](TASKING_SIMPLIFICATION_CIBLE.md) | **Spécifications simplification & navigation** : parcours « Capturer → Décider → Suivre l'achat », vues `/achats`, `/reglages`, `/gestion`. | Lors de travaux sur la restructuration des pages ou de la navigation. |
+| [`TASKING_RECHERCHE_TENDANCES.md`](TASKING_RECHERCHE_TENDANCES.md) | **Spécifications Recherche avancée & Tendances** : moteur `/search`, recherche externe, métriques `/trends` (avg7/avg30, activité). | Lors de travaux sur la recherche plein texte/attributs ou les tendances de marché. |
+| [`PROMPT_PATCH_EXTRACTION.md`](PROMPT_PATCH_EXTRACTION.md) | **Spécifications extraction de preuves renforcée** : numéros isolés sous garde-fous, certificateurs additionnels (`CollectAura`), formats collés. | Lors de travaux sur le détecteur d'identification ou le content script de l'extension. |
 | [`TASKING_RECHERCHE_CARTES.md`](TASKING_RECHERCHE_CARTES.md) | **Spécifications recherche approfondie et confirmations TCGdex** : candidats locaux, recherche ciblée worker, file dédupliquée et révisions. | Lors de travaux sur la réconciliation manuelle ou l'intégration TCGdex. |
+| [`TASKING_IDENTIFICATION_FIABLE.md`](TASKING_IDENTIFICATION_FIABLE.md) | **Plan d'identification de bout en bout à réaliser** : preuves, lots, langues, alias, couverture, OCR, validation humaine, benchmark et vision conditionnelle. | Pour fiabiliser le parcours capture → identification → décision et qualifier ses performances. |
 | [`docs/IDENTIFICATION_LEXICALE.md`](docs/IDENTIFICATION_LEXICALE.md) | **Diagnostic lexical & suggestions orthographiques** : index trigrammes, distance d'édition, vocabulaire TCGdex et limitations. | Lors de travaux sur la recherche lexicale ou les faux négatifs d'identification. |
 | [`docs/ML_PHASE0.md`](docs/ML_PHASE0.md) | **Protocole du pilote d'annotation ML Phase 0** : tirage stratifié, doubles lectures indépendantes et export reproductible. | Lors de travaux sur l'annotation, la labellisation ou la préparation du dataset ML. |
 | [`docs/TCGDEX_SYNC.md`](docs/TCGDEX_SYNC.md) | **Enrichissement TCGdex progressif** : sélection d’extensions, file persistante, pause/reprise, cache et limites de couverture. | Lors de travaux sur la synchronisation du référentiel. |
 | [`MACHINE_LEARNING_DESIGN.md`](MACHINE_LEARNING_DESIGN.md) & [`PROMPT_ML_DESIGN.md`](PROMPT_ML_DESIGN.md) | **Spécifications futures ML** : feuille de route pour le rattachement d'entités, ranking LightGBM, embeddings et vérité terrain. | Lors de travaux sur l'amélioration de l'identification automatique des cartes. |
 | [`extension/README.md`](extension/README.md) | **Spécifications de l'extension Chrome** : Manifest V3, content scripts, service worker, formats JSONL et tests associés. | Pour toute tâche liée au module de capture dans le navigateur. |
-| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 18 migrations séquentielles (de `0001` à `0018`). | Avant toute modification de base de données ou de modèle de données. |
+| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 21 migrations séquentielles (de `0001` à `0021`). | Avant toute modification de base de données ou de modèle de données. |
 
 ---
 
@@ -33,6 +37,7 @@ Pokébourse est conçu pour fonctionner **100 % en local**, sans serveur cloud d
 - **Langage** : Python 3.12 (standard moderne, typage strict `type | None`).
 - **Backend Web** : [FastAPI](https://fastapi.tiangolo.com/) (routage asynchrone / synchrone, cycle de vie `lifespan`).
 - **Validation des données** : [Pydantic v2](https://docs.pydantic.dev/) (`BaseModel`, validation stricte des schémas d'annonces).
+- **Traitement d'images & OCR local** : [Pillow](https://python-pillow.org/) + Tesseract OCR (`fra+eng`, exécution 100% locale et éphémère sans stockage de fichier ni appel externe).
 - **Base de données** : SQLite 3 en mode **WAL** (`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;`).
   - Sauvegardes à chaud via l'API en ligne `sqlite3_backup`.
   - Migrations SQL versionnées et séquentielles dans `app/storage/migrations/`.
@@ -98,23 +103,33 @@ pokebourse/
 │   │   ├── leboncoin.py     # Connecteur HTTP Leboncoin
 │   │   ├── ebay.py          # Connecteur HTTP eBay
 │   │   ├── wallapop.py      # Connecteur HTTP Wallapop
+│   │   ├── page_extract.py  # Extraction bornée de métadonnées HTML autorisées
 │   │   ├── normalizer.py    # Transformation vers le modèle unifié
 │   │   ├── service.py       # Ingestion transactionnelle et déduplication
 │   │   └── browser.py       # Collecteur de secours Crawlee/Playwright (désactivé par défaut)
-│   ├── identification/      # Moteur de réconciliation, diagnostic lexical & validation ML
+│   ├── identification/      # Moteur de réconciliation, diagnostic lexical, OCR & validation ML
 │   │   ├── annotation_pilot.py # Tirage stratifié et gestion du pilote d'annotation Phase 0
 │   │   ├── dataset.py       # Export reproductible du dataset de validation ML (labels.jsonl)
-│   │   ├── detector.py      # Détection regex : numéros, extensions, langues, états, lots
+│   │   ├── detector.py      # Détection regex : numéros (fractions, isolés), extensions, langues, états, lots
 │   │   ├── diagnostics.py   # Diagnostic des annonces non résolues et inventaire du catalogue
 │   │   ├── lexical.py       # Recherche approchée par trigrammes et distance d'édition
 │   │   ├── matcher.py       # Rapprochement avec le catalogue TCGdex et calcul de confiance
 │   │   ├── models.py        # IdentificationResult, CardFeatures, statuts (identified, ambiguous, lot, unidentified)
 │   │   ├── normalization.py # Normalisation de chaînes, accents, casse et numéros
+│   │   ├── ocr.py           # Lecture locale éphémère d'images (Tesseract) et suggestions TCGdex
 │   │   ├── pipeline.py      # Orchestration du pipeline de détection et matching
 │   │   ├── reference_search.py # Recherche plein texte et approchée dans le référentiel officiel
 │   │   ├── research.py      # File d'enrichissement approfondi traitée par le worker
 │   │   ├── resolution.py    # Résolution commune : arbitrage automatique vs validations humaines
 │   │   └── reviews.py       # Gestion des validations humaines, double lecture aveugle et audit
+│   ├── search/              # Module de recherche avancée multi-critères
+│   │   ├── models.py        # Modèles de filtres, portées (tout, cartes, annonces) et tris
+│   │   ├── service.py       # Moteur de recherche plein texte, attributs et export CSV
+│   │   └── external.py      # Recherche externe contrôlée (TCGdex, eBay) et import en 1 clic
+│   ├── trends/              # Module Tendances de marché & opportunités
+│   │   ├── models.py        # Modèles de variations de prix (avg7 vs avg30), activité et opportunités
+│   │   ├── service.py       # Calcul des mouvements de prix et agrégation d'activité des annonces
+│   │   └── opportunities.py # Radar des meilleures affaires d'arbitrage
 │   ├── tcgdex/              # Intégration du catalogue officiel Pokémon (TCGdex)
 │   │   ├── client.py        # Client HTTP REST avec backoff et gestion de rate-limit
 │   │   ├── cache.py         # Cache SQLite persistant (pokemon_reference_cards/sets)
@@ -135,13 +150,20 @@ pokebourse/
 │   │   └── service.py       # Logique d'activation, pause, contrôle immédiat
 │   ├── storage/             # Gestion de la persistance SQLite
 │   │   ├── connection.py    # Création des connexions avec WAL et busy_timeout
-│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0018)
+│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0021)
 │   ├── templates/           # Vues HTML Jinja2 (Mosaic × Flowbite)
-│   │   ├── base.html        # Layout global : sidebar sombre, topbar, messages flash
+│   │   ├── base.html        # Layout global : sidebar, topbar, menu « Ajouter des annonces »
 │   │   ├── dashboard.html   # Tableau de bord principal (KPIs, opportunités, imports)
-│   │   ├── catalog.html     # Liste paginée du catalogue avec filtres d'identification
-│   │   ├── catalog_detail.html # Fiche détaillée annonce, rentabilité, comparables et TCGdex
-│   │   ├── profitability.html # Paramétrage des frais, cotes de marché et sync Cardmarket
+│   │   ├── catalog.html     # Opportunités unifiées (catalogue + rentabilité, verdicts, export)
+│   │   ├── catalog_detail.html # Fiche détaillée annonce, rentabilité, comparables, TCGdex & OCR
+│   │   ├── search.html      # Recherche avancée multi-critères et externe
+│   │   ├── trends.html      # Tendances de marché, variations de prix et activité
+│   │   ├── achats.html      # Suivi des achats, cycle de vie et prix de vente réels
+│   │   ├── reglages.html    # Paramétrage des frais, seuils, cotes manuelles et Cardmarket
+│   │   ├── gestion.html     # Hub de gestion avancée (accès aux modules secondaires)
+│   │   ├── manual_listing.html # Saisie manuelle d'annonce par URL avec pré-analyse
+│   │   ├── capture_preview.html # Prévisualisation d'annonce capturée par l'extension Chrome
+│   │   ├── tcgdex_sync.html # Enrichissement et suivi de synchronisation TCGdex
 │   │   ├── watches.html     # Gestion et contrôle des veilles multi-plateformes
 │   │   ├── sellers.html     # Annuaire des vendeurs et carnet d'achats
 │   │   ├── seller_detail.html # Fiche vendeur détaillée et historique d'achats
@@ -151,28 +173,36 @@ pokebourse/
 │   │   ├── annotation_dashboard.html # Tableau de bord du pilote d'annotation ML Phase 0
 │   │   ├── annotation_blocked.html   # Écran d'attente d'un second opérateur
 │   │   ├── identification_diagnostics.html # Diagnostic des annonces non résolues
-│   │   └── identification_review.html # Formulaire de validation humaine et double lecture aveugle
-│   ├── static/              # Fichiers statiques (style.css, forms.js, prototype.html)
+│   │   ├── identification_review.html # Formulaire de validation humaine et double lecture aveugle
+│   │   └── import_detail.html # Détail d'un lot d'import et journal d'erreurs
+│   ├── static/              # Fichiers statiques (style.css, forms.js, ocr.js, prototypes)
+│   ├── capture_preview.py   # Prévisualisation sans écriture des captures Chrome
 │   ├── catalog.py           # Services métier du catalogue (recherche, filtres, pagination, lots)
 │   ├── catalog_export.py    # Génération d'export CSV Excel conforme
+│   ├── gestion.py           # Données de synthèse du hub de gestion avancée
+│   ├── listing_identity.py  # Détection d'annonces identiques et normalisation d'URL
+│   ├── listing_preview.py   # Prévisualisation indicative locale sans écriture
+│   ├── manual_listing.py    # Saisie assistée par URL d'annonce sans téléchargement distant
 │   ├── profitability.py     # Moteur financier (calcul gain net, ROI, cotes de marché, comparables)
+│   ├── purchases.py         # Synthèse des achats, cycle de vie et montants par devise
 │   ├── backups.py           # Logique de sauvegarde SQLite et vérification d'intégrité
 │   ├── cli.py               # Interface CLI Typer (pokemon-arbitrage)
 │   ├── web.py               # Serveur FastAPI et toutes les routes HTTP
 │   └── worker.py            # Point d'entrée de la boucle de veille en arrière-plan
 ├── docs/                    # Documentation technique spécialisée
-│   ├── IDENTIFICATION_LEXICALE.md # Diagnostic lexical, trigrammes et distance d'édition
-│   └── ML_PHASE0.md         # Protocole du pilote d'annotation Phase 0 et double lecture
+│   ├── IDENTIFICATION_LEXICALE.md # Diagnostic lexical, trigrammes, numéros isolés et certificateurs
+│   ├── ML_PHASE0.md         # Protocole du pilote d'annotation Phase 0 et double lecture
+│   └── TCGDEX_SYNC.md       # Enrichissement progressif TCGdex et gestion de file
 ├── extension/               # Module Google Chrome Manifest V3
 │   ├── manifest.json        # Déclarations V3 et permissions minimales
 │   ├── background/          # Service worker Chrome (stockage local et badge)
-│   ├── content/             # Content script injecté (détection Pokémon et extracteurs)
-│   ├── popup/               # Interface popup (liste de captures, exports JSONL, push local)
+│   ├── content/             # Content script injecté (détection Pokémon, extracteurs, numéros isolés)
+│   ├── popup/               # Interface popup (liste de captures, prévisualisation, push local, JSONL)
 │   └── icons/               # Icônes PNG officielles (16, 48, 128 px)
 ├── scripts/                 # Scripts utilitaires en lecture seule ou de test ponctuel
 │   ├── comparables_report.py # Rapport de contrôle des comparables et preuves de prix
 │   └── manual_collect_test.py # Test ponctuel manuel d'une recherche marketplace
-└── tests/                   # 30 suites de tests automatisés (313 tests, 100% passants)
+└── tests/                   # 43 suites de tests automatisés (452 tests, 100% passants)
 ```
 
 ---
@@ -192,11 +222,26 @@ docker compose run --rm app pytest -v
 
 ### Tester un module spécifique
 ```bash
-# Tester l'extension Chrome (Manifest V3, en-têtes et compatibilité JSONL)
-docker compose run --rm app pytest tests/test_chrome_extension.py -v
+# Tester l'extension Chrome et le parcours de prévisualisation
+docker compose run --rm app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v
 
-# Tester le moteur d'identification et la réconciliation TCGdex
-docker compose run --rm app pytest tests/test_identification.py tests/test_tcgdex_cache.py -v
+# Tester le moteur d'identification, numéros isolés et réconciliation TCGdex
+docker compose run --rm app pytest tests/test_identification.py tests/test_candidate_number_warning.py tests/test_tcgdex_cache.py -v
+
+# Tester la recherche avancée multi-critères et externe
+docker compose run --rm app pytest tests/test_search.py -v
+
+# Tester les tendances de marché et opportunités
+docker compose run --rm app pytest tests/test_trends.py -v
+
+# Tester la saisie d'annonce manuelle par URL et la prévisualisation locale
+docker compose run --rm app pytest tests/test_manual_listing.py tests/test_listing_preview.py tests/test_page_extract.py -v
+
+# Tester l'OCR local éphémère (Tesseract)
+docker compose run --rm app pytest tests/test_ocr_local.py tests/test_ocr_web.py -v
+
+# Tester la simplification de la navigation et les pages cibles (/achats, /reglages, /gestion)
+docker compose run --rm app pytest tests/test_simplification_navigation.py tests/test_simplification_avancee.py -v
 
 # Tester la recherche lexicale, les diagnostics et la recherche approfondie
 docker compose run --rm app pytest tests/test_lexical_identification.py tests/test_identification_research.py -v
@@ -210,13 +255,13 @@ docker compose run --rm app pytest tests/test_cardmarket.py tests/test_cardmarke
 # Tester le moteur de rentabilité, comparables et calcul de marge
 docker compose run --rm app pytest tests/test_profitability.py -v
 
-# Tester l'annuaire vendeurs et le suivi des achats
+# Tester l'annuaire vendeurs, le carnet d'achats et les prix de vente réels
 docker compose run --rm app pytest tests/test_sellers_directory_and_purchases.py tests/test_sellers.py -v
 
 # Tester la supervision et les collecteurs (Vinted, Leboncoin, eBay, Wallapop)
 docker compose run --rm app pytest tests/test_supervision.py tests/test_collectors.py -v
 
-# Tester l'idempotence des migrations SQLite (0001 à 0018)
+# Tester l'idempotence des migrations SQLite (0001 à 0021)
 docker compose run --rm app pytest tests/test_migrations.py -v
 ```
 
@@ -246,15 +291,15 @@ docker compose run --rm app python -m scripts.comparables_report
 ## 🚀 6. Guide Pas-à-Pas pour vos Développements (Workflows)
 
 ### Cas 1 : Vous devez modifier le schéma SQLite
-1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (actuellement `0018_tcgdex_sync_jobs.sql`).
-2. Créez un nouveau fichier `0019_<nom_explicite>.sql`.
+1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (actuellement `0021_purchase_sale_price.sql`).
+2. Créez un nouveau fichier `0022_<nom_explicite>.sql`.
 3. Encadrez toujours vos instructions SQL avec :
    ```sql
    BEGIN IMMEDIATE;
    
    -- Vos ALTER TABLE ou CREATE TABLE ici
    
-   INSERT INTO schema_migrations (version) VALUES ('0019_<nom_explicite>.sql');
+   INSERT INTO schema_migrations (version) VALUES ('0022_<nom_explicite>.sql');
    COMMIT;
    ```
 4. Mettez à jour `tests/test_migrations.py` pour inclure le nouveau numéro de migration attendu.

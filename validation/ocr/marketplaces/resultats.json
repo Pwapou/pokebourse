@@ -1,0 +1,61 @@
+[
+  {
+    "platform": "vinted",
+    "url": "https://www.vinted.fr/items/10029477035-pikachu-58102-set-de-base-pokemon-francais-vintage-1999",
+    "title": "Pikachu 58/102 Set de Base Pokémon Français Vintage 1999",
+    "image": "vinted-pikachu-58-102.webp",
+    "ocr_only": {
+      "recognized": {"names": ["Pikachu"], "numbers": ["15"]},
+      "candidates": ["pop9-15", "P-A-015"],
+      "reliable": false,
+      "note": "Le nombre 15 est un faux indice OCR ; il ne correspond pas au 58/102 visible et annoncé."
+    },
+    "title_identification": {
+      "status": "identified",
+      "tcgdex_id": "base1-58",
+      "confidence": 100
+    }
+  },
+  {
+    "platform": "vinted",
+    "url": "https://www.vinted.fr/items/10055440717-dracaufeu-ex-199165",
+    "title": "Dracaufeu ex – 199/165",
+    "image": "vinted-dracaufeu-199-165.webp",
+    "ocr_only": {
+      "recognized": {"names": [], "numbers": ["Dave"]},
+      "candidates": [],
+      "reliable": false,
+      "note": "Le petit numéro stylisé et le nom ne sont pas lus correctement sur la photo."
+    },
+    "title_identification": {
+      "status": "identified",
+      "tcgdex_id": "sv03.5-199",
+      "confidence": 100
+    }
+  },
+  {
+    "platform": "ebay",
+    "url": "https://www.ebay.fr/itm/306719880013",
+    "title": "Dracaufeu ex 199/165 - NM - Pokémon EV3.5 : 151 - Français",
+    "image": null,
+    "image_status": "non testée : page publique bloquée par une erreur/challenge eBay, sans contournement",
+    "title_identification": {
+      "status": "identified",
+      "tcgdex_id": "sv03.5-199",
+      "confidence": 100
+    }
+  },
+  {
+    "platform": "ebay",
+    "url": "https://www.ebay.fr/itm/314836778377",
+    "title": "carte Pokémon 58/102 Pikachu GOLD METAL EB07.5 - Célébrations",
+    "image": null,
+    "image_status": "non testée : page publique bloquée par une erreur/challenge eBay, sans contournement",
+    "title_identification": {
+      "status": "ambiguous",
+      "tcgdex_id": null,
+      "confidence": 59,
+      "note": "Le numéro 58/102 seul ne suffit pas à distinguer la carte métal Célébrations des autres Pikachu."
+    }
+  }
+]

@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% block title %}Tendances · Pokébourse{% endblock %}
+{% block breadcrumb %}Tendances{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">TENDANCES DE MARCHÉ</span>
+        <h1>Tendances de prix &amp; activité</h1>
+        <p>Mouvements de cotes Cardmarket, activité réelle des annonces observées sur 30 jours et meilleures opportunités d'arbitrage.</p>
+    </div>
+    <div class="heading-actions">
+        <span class="status-indicator">
+            <span class="status-dot green" aria-hidden="true"></span>
+            Calculé le {{ trends.computed_at|date }}
+        </span>
+        {% if trends.last_cardmarket_sync_at %}
+        <span class="status-indicator" title="Dernière récupération de données Cardmarket enregistrée">
+            <span class="status-dot blue" aria-hidden="true"></span>
+            Données Cardmarket récupérées : {{ trends.last_cardmarket_sync_at|date }}
+        </span>
+        {% else %}
+        <span class="status-indicator" title="Aucune synchronisation Cardmarket enregistrée">
+            <span class="status-dot amber" aria-hidden="true"></span>
+            Cardmarket non synchronisé
+        </span>
+        {% endif %}
+    </div>
+</section>
+
+{% if trends.is_partial and trends.partial_reason %}
+<div class="alert info" role="status">
+    <strong>Information données :</strong> {{ trends.partial_reason }}
+</div>
+{% endif %}
+
+<section class="stats-grid stats-grid-four" aria-label="Indicateurs de tendances">
+    <div class="stat-card accent">
+        <div class="stat-top">
+            <span>HAUSSES DE PRIX</span>
+            <span class="stat-icon" aria-hidden="true">↗</span>
+        </div>
+        <strong>{{ trends.hausses|length }}</strong>
+        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}</small>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span>BAISSES DE PRIX</span>
+            <span class="stat-icon amber" aria-hidden="true">↘</span>
+        </div>
+        <strong>{{ trends.baisses|length }}</strong>
+        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}</small>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span>ACTIVITÉ DES ANNONCES</span>
+            <span class="stat-icon blue" aria-hidden="true">▤</span>
+        </div>
+        <strong>{{ trends.listing_activity|length }}</strong>
+        <small>Cartes unitaires actives (30 jours glissants)</small>
+    </div>
+    <div class="stat-card accent">
+        <div class="stat-top">
+            <span>MEILLEURES AFFAIRES</span>
+            <span class="stat-icon" aria-hidden="true">★</span>
+        </div>
+        <strong>{{ trends.best_opportunities|length }}</strong>
+        <small>Opportunités avec cote fraîche et calcul complet</small>
+    </div>
+</section>
+
+<section class="panel">
+    <form class="filters" method="get" action="/trends">
+        <label for="trends-period">
+            <span class="filter-label">Période de variation</span>
+            <select id="trends-period" name="period">
+                <option value="7_30" {{ 'selected' if trends.filters.period == '7_30' else '' }}>7 vs 30 jours (avg7 / avg30)</option>
+                <option value="1_7" {{ 'selected' if trends.filters.period == '1_7' else '' }}>1 vs 7 jours (avg1 / avg7)</option>
+            </select>
+        </label>
+        <label for="trends-set">
+            <span class="filter-label">Extension</span>
+            <select id="trends-set" name="set_name">
+                <option value="">Toutes les extensions</option>
+                {% for s in trends.available_sets %}
+                <option value="{{ s }}" {{ 'selected' if trends.filters.set_name == s else '' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label for="trends-rarity">
+            <span class="filter-label">Rareté</span>
+            <select id="trends-rarity" name="rarity">
+                <option value="">Toutes les raretés</option>
+                {% for r in trends.available_rarities %}
+                <option value="{{ r }}" {{ 'selected' if trends.filters.rarity == r else '' }}>{{ r }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label for="trends-language">
+            <span class="filter-label">Langue</span>
+            <select id="trends-language" name="language">
+                <option value="">Toutes les langues</option>
+                {% for l in trends.available_languages %}
+                <option value="{{ l }}" {{ 'selected' if trends.filters.language == l else '' }}>{{ l|upper }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label for="trends-min-obs">
+            <span class="filter-label">Seuil minimal d'annonces</span>
+            <select id="trends-min-obs" name="min_observations">
+                <option value="1" {{ 'selected' if trends.filters.min_observations == 1 else '' }}>1 annonce minimum</option>
+                <option value="2" {{ 'selected' if trends.filters.min_observations == 2 else '' }}>2 annonces minimum</option>
+                <option value="3" {{ 'selected' if trends.filters.min_observations == 3 else '' }}>3 annonces minimum</option>
+                <option value="5" {{ 'selected' if trends.filters.min_observations == 5 else '' }}>5 annonces minimum</option>
+            </select>
+        </label>
+        <button class="button secondary filter-submit" type="submit">Appliquer</button>
+        {% if trends.filters.set_name or trends.filters.rarity or trends.filters.language or trends.filters.period != '7_30' or trends.filters.min_observations != 1 %}
+        <a class="reset-link" href="/trends">Effacer les filtres</a>
+        {% endif %}
+    </form>
+</section>
+
+{% if trends.is_empty %}
+<div class="empty-state">
+    <div class="empty-icon" aria-hidden="true">📈</div>
+    <h2>Aucune donnée de tendance disponible</h2>
+    <p>Le module de tendances a besoin d'annonces importées ou d'une synchronisation du guide Cardmarket pour calculer les variations de prix et l'activité.</p>
+    <div class="search-actions" style="justify-content:center; gap:12px; margin-top:16px;">
+        <a class="button primary" href="/#import">Importer des annonces</a>
+        <a class="button secondary" href="/reglages#marche">Synchroniser Cardmarket</a>
+    </div>
+</div>
+{% else %}
+
+<!-- 1. Variations de prix Cardmarket -->
+<section class="panel" id="variations">
+    <div class="panel-heading">
+        <div>
+            <span class="section-kicker">DONNÉES OFFICIELLES CARDMARKET</span>
+            <h2>Variations de prix ({{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }})</h2>
+            <p>Calcul exact en centimes et points de base à partir des snapshots quotidiens. Exclut les prix nuls ou absents.</p>
+        </div>
+    </div>
+
+    <div class="stack" style="gap:24px; padding:20px;">
+        <!-- Hausses de prix -->
+        <div>
+            <h3 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <span class="stat-icon" style="color:var(--green);" aria-hidden="true">↗</span>
+                Plus fortes hausses de prix
+            </h3>
+            {% if trends.hausses %}
+            <div class="table-wrap">
+                <table class="data-table" aria-label="Plus fortes hausses de prix">
+                    <thead>
+                        <tr>
+                            <th scope="col">Produit Cardmarket</th>
+                            <th scope="col">Extension</th>
+                            <th scope="col" style="text-align:right;">Prix réf.</th>
+                            <th scope="col" style="text-align:right;">Prix récent</th>
+                            <th scope="col" style="text-align:right;">Variation</th>
+                            <th scope="col">Rattachement TCGdex</th>
+                            <th scope="col" style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in trends.hausses %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.card_name }}</strong>
+                                <div style="font-size:10px; color:var(--muted);">Réf. produit #{{ item.product_id }} · {{ item.fetched_at|date }}</div>
+                            </td>
+                            <td>{{ item.expansion_name or '—' }}</td>
+                            <td style="text-align:right;">{{ item.reference_price_cents|money(item.currency) }}</td>
+                            <td style="text-align:right;">{{ item.current_price_cents|money(item.currency) }}</td>
+                            <td style="text-align:right;">
+                                <strong class="profit-figure positive">{{ item.delta_cents|signed_money(item.currency) }}</strong>
+                                <div style="font-size:10px; color:var(--green); font-weight:700;">{{ item.delta_bps|bps_percent(True) }}</div>
+                            </td>
+                            <td>
+                                {% if item.match_status == 'certifie' %}
+                                <span class="badge-ident ident-identified" title="{{ item.attachment_limits }}">✓ {{ item.tcg_dex_id }}</span>
+                                {% elif item.match_status == 'partiel' %}
+                                <span class="badge-ident ident-ambiguous" title="{{ item.attachment_limits }}">~ Partiel</span>
+                                {% elif item.match_status == 'ambigu' %}
+                                <span class="badge-ident ident-ambiguous" title="{{ item.attachment_limits }}">? Multiple</span>
+                                {% else %}
+                                <span class="badge-ident ident-unidentified" title="{{ item.attachment_limits }}">Non rattaché</span>
+                                {% endif %}
+                                <div style="font-size:10px; color:var(--muted); max-width:280px;">{{ item.attachment_limits }}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <a class="button secondary" style="font-size:10px; padding:4px 8px;" href="/search?q={{ item.card_name|urlencode }}">Rechercher</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="font-size:11px; color:var(--muted); margin:0;">Aucune hausse de prix enregistrée sur cette sélection.</p>
+            {% endif %}
+        </div>
+
+        <!-- Baisses de prix -->
+        <div>
+            <h3 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <span class="stat-icon" style="color:var(--amber);" aria-hidden="true">↘</span>
+                Plus fortes baisses de prix
+            </h3>
+            {% if trends.baisses %}
+            <div class="table-wrap">
+                <table class="data-table" aria-label="Plus fortes baisses de prix">
+                    <thead>
+                        <tr>
+                            <th scope="col">Produit Cardmarket</th>
+                            <th scope="col">Extension</th>
+                            <th scope="col" style="text-align:right;">Prix réf.</th>
+                            <th scope="col" style="text-align:right;">Prix récent</th>
+                            <th scope="col" style="text-align:right;">Variation</th>
+                            <th scope="col">Rattachement TCGdex</th>
+                            <th scope="col" style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in trends.baisses %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.card_name }}</strong>
+                                <div style="font-size:10px; color:var(--muted);">Réf. produit #{{ item.product_id }} · {{ item.fetched_at|date }}</div>
+                            </td>
+                            <td>{{ item.expansion_name or '—' }}</td>
+                            <td style="text-align:right;">{{ item.reference_price_cents|money(item.currency) }}</td>
+                            <td style="text-align:right;">{{ item.current_price_cents|money(item.currency) }}</td>
+                            <td style="text-align:right;">
+                                <strong class="profit-figure negative">{{ item.delta_cents|signed_money(item.currency) }}</strong>
+                                <div style="font-size:10px; color:var(--red); font-weight:700;">{{ item.delta_bps|bps_percent(True) }}</div>
+                            </td>
+                            <td>
+                                {% if item.match_status == 'certifie' %}
+                                <span class="badge-ident ident-identified" title="{{ item.attachment_limits }}">✓ {{ item.tcg_dex_id }}</span>
+                                {% elif item.match_status == 'partiel' %}
+                                <span class="badge-ident ident-ambiguous" title="{{ item.attachment_limits }}">~ Partiel</span>
+                                {% elif item.match_status == 'ambigu' %}
+                                <span class="badge-ident ident-ambiguous" title="{{ item.attachment_limits }}">? Multiple</span>
+                                {% else %}
+                                <span class="badge-ident ident-unidentified" title="{{ item.attachment_limits }}">Non rattaché</span>
+                                {% endif %}
+                                <div style="font-size:10px; color:var(--muted); max-width:280px;">{{ item.attachment_limits }}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <a class="button secondary" style="font-size:10px; padding:4px 8px;" href="/search?q={{ item.card_name|urlencode }}">Rechercher</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="font-size:11px; color:var(--muted); margin:0;">Aucune baisse de prix enregistrée sur cette sélection.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- 2. Activité des annonces sur 30 jours -->
+<section class="panel" id="activite">
+    <div class="panel-heading">
+        <div>
+            <span class="section-kicker">PRÉSENCE EN PLACE DE MARCHÉ</span>
+            <h2>Activité des annonces (30 jours glissants)</h2>
+            <p>Nombre d'annonces distinctes observées sur les 30 derniers jours (attention : ne constitue pas un volume de ventes conclues).</p>
+        </div>
+    </div>
+    {% if trends.listing_activity %}
+    <div class="table-wrap">
+        <table class="data-table" aria-label="Activité des annonces sur 30 jours">
+            <thead>
+                <tr>
+                    <th scope="col">Carte officielle (TCGdex)</th>
+                    <th scope="col">Extension</th>
+                    <th scope="col">Rareté</th>
+                    <th scope="col" style="text-align:right;">Activité des annonces</th>
+                    <th scope="col" style="text-align:right;">Nouvelles annonces</th>
+                    <th scope="col" style="text-align:right;">Annonces actives</th>
+                    <th scope="col" style="text-align:right;">Prix observés</th>
+                    <th scope="col" style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in trends.listing_activity %}
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="card-thumb" aria-hidden="true">{{ item.card_name[0]|upper }}</div>
+                            <div>
+                                <strong>{{ item.card_name }}</strong>
+                                {% if item.local_id %}
+                                <span style="font-size:10px; color:var(--muted);"> · N° {{ item.local_id }}</span>
+                                {% endif %}
+                                {% if item.tcgdex_id %}
+                                <div style="font-size:10px; color:var(--muted);">ID TCGdex : {{ item.tcgdex_id }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ item.set_name }}</td>
+                    <td>{{ item.rarity or '—' }}</td>
+                    <td style="text-align:right;">
+                        <strong style="font-size:13px; color:var(--primary);">{{ item.distinct_listings_count }}</strong>
+                        <div style="font-size:10px; color:var(--muted);">distinctes</div>
+                    </td>
+                    <td style="text-align:right;">
+                        <strong style="font-size:13px; color:var(--text);">{{ item.new_listings_count }}</strong>
+                        <div style="font-size:10px; color:var(--muted);">&le; 30 jours</div>
+                    </td>
+                    <td style="text-align:right;">
+                        <span style="font-size:12px; font-weight:600;">{{ item.active_listings_count }}</span>
+                    </td>
+                    <td style="text-align:right;">
+                        {% if item.min_price_cents is not none and item.max_price_cents is not none %}
+                            {% if item.min_price_cents == item.max_price_cents %}
+                            <strong>{{ item.min_price_cents|money(item.currency) }}</strong>
+                            {% else %}
+                            <span>{{ item.min_price_cents|money(item.currency) }} – {{ item.max_price_cents|money(item.currency) }}</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="unknown">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <a class="button secondary" style="font-size:10px; padding:4px 8px;" href="/search?scope=listings&amp;q={{ item.card_name|urlencode }}&amp;set_name={{ item.set_name|urlencode }}">Voir annonces</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="table-note">Ces métriques reflètent la fréquence de mise en ligne d'annonces pour ces cartes, et ne doivent pas être assimilées à des volumes de transactions clôturées.</p>
+    {% else %}
+    <div class="empty-state compact">
+        <h3>Aucune annonce observée sur les 30 derniers jours</h3>
+        <p>Les annonces importées ou capturées dans les 30 derniers jours apparaîtront ici avec leur fréquence d'apparition.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- 3. Meilleures affaires -->
+<section class="panel" id="affaires">
+    <div class="panel-heading">
+        <div>
+            <span class="section-kicker">RENTABILITÉ ESTIMÉE</span>
+            <h2>Meilleures affaires actuellement disponibles</h2>
+            <p>Annonces actives d'achat-revente pour cartes unitaires identifiées, avec cote disponible, respectant la fraîcheur et avec calcul complet de tous les frais.</p>
+        </div>
+    </div>
+    {% if trends.best_opportunities %}
+    <div class="product-list" role="list" aria-label="Meilleures opportunités actuelles">
+        {% for opp in trends.best_opportunities %}
+        <article class="product-row" role="listitem">
+            <div class="product-identity">
+                <div class="card-thumb" aria-hidden="true">{{ opp.name[0]|upper }}</div>
+                <div class="product-name">
+                    <strong><a class="row-link" href="/catalog/{{ opp.listing_id }}">{{ opp.name }}</a></strong>
+                    <span>{{ opp.set_name }}{% if opp.card_number %} · N° {{ opp.card_number }}{% endif %}{% if opp.condition %} · {{ opp.condition }}{% endif %}{% if opp.language %} · {{ opp.language|upper }}{% endif %}</span>
+                    <span class="product-meta-row">
+                        Source : {{ opp.source_name|title }} · Réf. #{{ opp.external_id }}
+                        <span class="badge-ident ident-identified">✓ Identifiée</span>
+                    </span>
+                </div>
+            </div>
+            <div>
+                <span class="cell-label">ACHAT &amp; PORT</span>
+                <b class="cell-value">{{ opp.purchase_price_cents|money(opp.currency) }}</b>
+                <span class="cell-sub">+ {{ opp.buyer_shipping_cents|money(opp.currency) }} port</span>
+            </div>
+            <div>
+                <span class="cell-label">COÛT TOTAL</span>
+                <b class="cell-value">{{ opp.total_cost_cents|money(opp.currency) }}</b>
+                <span class="cell-sub">frais d'achat inclus</span>
+            </div>
+            <div>
+                <span class="cell-label">REVENTE ESTIMÉE</span>
+                <b class="cell-value">{{ opp.estimated_resale_cents|money(opp.currency) }}</b>
+                <span class="cell-sub">
+                    {% if opp.reference_source == 'reference' %}
+                    Réf. manuelle{% if opp.quote_age_days is not none %} ({{ opp.quote_age_days }}j){% endif %}
+                    {% elif opp.reference_source == 'cardmarket_trend' %}
+                    Guide Cardmarket{% if opp.quote_age_days is not none %} ({{ opp.quote_age_days }}j){% endif %}
+                    {% else %}
+                    Médiane catalogue{% if opp.quote_age_days is not none %} ({{ opp.quote_age_days }}j){% endif %}
+                    {% endif %}
+                </span>
+            </div>
+            <div>
+                <span class="cell-label">GAIN NET</span>
+                <b class="cell-value profit-figure positive">{{ opp.net_profit_cents|signed_money(opp.currency) }}</b>
+            </div>
+            <div>
+                <span class="cell-label">ROI</span>
+                <b class="cell-value roi-figure positive">{{ opp.roi_bps|bps_percent(True) }}</b>
+            </div>
+            <div class="decision-wrap">
+                <span class="verdict-badge verdict-opportunite">Opportunité</span>
+                <a class="button primary" style="font-size:11px; padding:5px 10px;" href="/catalog/{{ opp.listing_id }}">Voir fiche</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    <p class="table-note">Classement par gain net décroissant puis ROI décroissant. Exclut les annonces inactives, les lots, les données incomplètes, les cotes de plus de {{ trends.filters.max_quote_age_days }} jours et les références sans date d’observation.</p>
+    {% else %}
+    <div class="empty-state compact">
+        <h3>Aucune opportunité active ne satisfait actuellement les critères</h3>
+        <p>Les annonces doivent être actives, unitaires, identifiées, assorties d'une cote fraîche (&le; {{ trends.filters.max_quote_age_days }}j) et dégager un gain net positif avec l'ensemble des frais calculés.</p>
+        <a class="text-link" href="/catalog">Consulter l'ensemble du catalogue →</a>
+    </div>
+    {% endif %}
+</section>
+
+{% endif %}
+{% endblock %}

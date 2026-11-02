@@ -179,13 +179,14 @@
                 <input type="number" step="0.01" min="0" name="price_paid" required placeholder="Ex: 45.00">
             </label>
             <label>
-                <span class="filter-label">Frais de port (€)</span>
-                <input type="number" step="0.01" min="0" name="shipping_paid" value="0.00" placeholder="0.00">
+                <span class="filter-label">Frais de port payés (€) * · 0 si gratuit</span>
+                <input type="number" step="0.01" min="0" name="shipping_paid" required placeholder="0.00">
             </label>
             <label>
                 <span class="filter-label">Statut</span>
-                <select name="status">
-                    <option value="recu" selected>Reçu</option>
+                <select name="status" required>
+                    <option value="" selected>Choisir un statut</option>
+                    <option value="recu">Reçu</option>
                     <option value="commande">Commandé</option>
                     <option value="en_vente">En vente</option>
                     <option value="vendu">Revendu</option>

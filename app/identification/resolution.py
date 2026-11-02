@@ -8,7 +8,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.identification.matcher import CardMatcher
+from app.identification.detector import extract_features
 from app.identification.models import IdentificationResult
+from app.identification.evidence import IDENTITY_FIELDS, PIPELINE_VERSION, build_evidence
 from app.tcgdex.cache import TcgdexCache
 
 NORMALIZATION_VERSION = "identity-v2"
@@ -49,22 +51,14 @@ def capture_evidence(connection: sqlite3.Connection, item_id: int) -> dict[str, 
         raise LookupError("Annonce introuvable")
     raw = _raw_data(row)
     previous = connection.execute(
-        "SELECT e.title, e.description, e.attributes_json, e.image_evidence_ref, e.normalization_version "
+        "SELECT e.title, e.description, e.attributes_json, e.image_evidence_ref, e.normalization_version, e.observations_json, e.observations_explicit "
         "FROM listing_identity_evidence e "
         "JOIN catalog_items c ON c.id=e.listing_id "
         "LEFT JOIN listing_identification_snapshots s ON s.id=c.identification_snapshot_id "
         "WHERE e.listing_id = ? ORDER BY COALESCE(e.evidence_hash=s.input_hash, 0) DESC, e.id DESC LIMIT 1", (item_id,)
     ).fetchone()
     previous_attributes = json.loads(previous["attributes_json"]) if previous and previous["normalization_version"] == NORMALIZATION_VERSION else {}
-    observed = {
-        "name": raw.get("name"),
-        "card_number": raw.get("card_number"),
-        "set_name": raw.get("set_name"),
-        "language": raw.get("language"),
-        "variant": raw.get("variant"),
-        "condition": raw.get("condition"),
-        "edition": raw.get("edition"),
-    }
+    observed = {key: raw.get(key) for key in IDENTITY_FIELDS}
     attributes = dict(previous_attributes)
     for key, value in observed.items():
         if key in raw:
@@ -78,6 +72,8 @@ def capture_evidence(connection: sqlite3.Connection, item_id: int) -> dict[str, 
         description = previous["description"]
     image = row["image_url"] or (previous["image_evidence_ref"] if previous else None)
     title = raw.get("_observed_title") or row["original_title"] or (previous["title"] if previous else row["name"])
+    if raw.get("identity_evidence") is not None and not raw.get("_observed_title"):
+        title = row["original_title"] or ""
     canonical = {
         "version": NORMALIZATION_VERSION,
         "title": title,
@@ -85,21 +81,32 @@ def capture_evidence(connection: sqlite3.Connection, item_id: int) -> dict[str, 
         "attributes": {key: value for key, value in sorted(attributes.items()) if value is not None},
         "image": image or "",
     }
+    supplied = raw.get("identity_evidence")
+    if supplied is None and previous and previous["observations_explicit"]:
+        supplied = json.loads(previous["observations_json"])
+        # Une valeur explicitement modifiée remplace ses observations précédentes.
+        supplied = [item for item in supplied if item["field"] not in raw
+                    and not (item["field"] == "title" and title != previous["title"])]
+    bundle = build_evidence(title, description, attributes={**attributes, "identity_evidence": supplied})
+    if supplied is not None:
+        canonical["identity_evidence"] = bundle.transport()
     digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     evidence = {
         "hash": digest, "title": title, "description": description,
         "attributes": attributes, "image": image,
         "incomplete": int(not description or not image),
+        "observations": bundle.transport(), "pipeline_version": PIPELINE_VERSION,
+        "ocr_status": raw.get("ocr_status"),
     }
     connection.execute(
         """INSERT INTO listing_identity_evidence
         (listing_id, evidence_hash, normalization_version, title, description,
-         attributes_json, image_evidence_ref, incomplete, captured_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         attributes_json, image_evidence_ref, incomplete, captured_at, observations_json, pipeline_version, observations_explicit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(listing_id, evidence_hash) DO NOTHING""",
         (item_id, digest, NORMALIZATION_VERSION, title, description,
          json.dumps(attributes, ensure_ascii=False, sort_keys=True), image,
-         evidence["incomplete"], utc_now()),
+         evidence["incomplete"], utc_now(), json.dumps(bundle.transport(), ensure_ascii=False), PIPELINE_VERSION, int(supplied is not None)),
     )
     from app.identification.reviews import capture_snapshot
     capture_snapshot(connection, item_id, evidence)
@@ -120,8 +127,8 @@ def resolve_listing(connection: sqlite3.Connection, item_id: int) -> Resolution:
     revision = current_revision(connection, item_id)
     allow_unit = bool(decision and decision["action"] == "reclassify_unit" and decision["evidence_hash"] == evidence["hash"])
     result = CardMatcher(TcgdexCache(connection)).identify(
-        evidence["title"], evidence["description"], raw_data=evidence["attributes"], allow_lot_override=allow_unit
-    )
+        evidence["title"], evidence["description"],
+        raw_data={**evidence["attributes"], "identity_evidence": evidence["observations"], "ocr_status": evidence["ocr_status"]}, allow_lot_override=allow_unit)
     automatic_result = result
     source = "automatic"
     review = False
@@ -129,7 +136,7 @@ def resolve_listing(connection: sqlite3.Connection, item_id: int) -> Resolution:
         if decision["action"] == "confirm" and result.status != "lot":
             card = TcgdexCache(connection).get_card_by_id(decision["reference_card_id"])
             if card:
-                result = replace(result, status="identified", matched_card=card, confidence=None, reason="Confirmée manuellement. L'identité choisie ne certifie ni état, ni variante, ni authenticité, ni prix.")
+                result = replace(result, status="identified", matched_card=card, confidence=None, reason_code="human_confirmation", decision_source="human", reason="Confirmée manuellement. L'identité choisie ne certifie ni état, ni variante, ni authenticité, ni prix.")
                 source = "human"
         elif decision["action"] == "reclassify_unit":
             source = "human_reclassification"
@@ -144,7 +151,7 @@ def resolve_listing(connection: sqlite3.Connection, item_id: int) -> Resolution:
         if human_review["input_hash"] == evidence["hash"] and human_review["outcome"] != "withdrawn":
             result = reviewed_result(connection, human_review, result)
             source = "human"
-    return Resolution(result, evidence["hash"], revision, source, review)
+    return Resolution(replace(result, decision_source=source), evidence["hash"], revision, source, review)
 
 
 def apply_resolution(connection: sqlite3.Connection, item_id: int, resolution: Resolution) -> None:
@@ -154,6 +161,19 @@ def apply_resolution(connection: sqlite3.Connection, item_id: int, resolution: R
     name, set_name, number = current["name"], current["set_name"], current["card_number"]
     if result.matched_card:
         name, set_name, number = result.matched_card.name, result.matched_card.set_name, result.matched_card.local_id
+        # Les imports historiquement structurés gardent leurs libellés et leur
+        # fraction lorsqu'aucun numéro n'est présent dans le texte. La nouvelle
+        # identité effective ne doit pas changer leurs clés de cotes existantes.
+        text_has_number = any(item.field in {"title", "description"} and item.source not in {"ocr", "prefill"}
+                              and extract_features(item.value).local_id for item in result.observations)
+        if not text_has_number:
+            supplied = {item.field: item.value for item in reversed(result.observations)
+                        if item.source in {"structured", "manual"} and item.field in {"name", "set_name", "card_number"}}
+            name = supplied.get("name") or name
+            observed_set = supplied.get("set_name")
+            if observed_set and observed_set.casefold() not in {"non identifiée", "non identifiee", "inconnue", "inconnu"}:
+                set_name = observed_set
+            number = supplied.get("card_number") or number
     if result.status == "lot":
         name, set_name, number = current["name"], "Lot / Coffret", None
     connection.execute(

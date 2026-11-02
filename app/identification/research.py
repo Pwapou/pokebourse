@@ -32,11 +32,20 @@ def criteria_hash(criteria: dict[str, str], language: str = "fr") -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def enqueue_search(connection: sqlite3.Connection, item_id: int, criteria: dict[str, Any], *, force: bool = False) -> int:
-    clean = normalize_criteria(criteria)
-    evidence = resolve_listing(connection, item_id)
-    if evidence.result.status == "lot":
-        raise ValueError("Aucune recherche unitaire automatique pour un lot actif.")
+def enqueue_search(
+    connection: sqlite3.Connection,
+    item_id: int | None = None,
+    criteria: dict[str, Any] | None = None,
+    *,
+    force: bool = False,
+) -> int:
+    clean = normalize_criteria(criteria or {})
+    evidence_hash = None
+    if item_id is not None:
+        evidence = resolve_listing(connection, item_id)
+        if evidence.result.status == "lot":
+            raise ValueError("Aucune recherche unitaire automatique pour un lot actif.")
+        evidence_hash = evidence.evidence_hash
     digest = criteria_hash(clean)
     now = datetime.now(UTC)
     row = connection.execute("SELECT * FROM identification_searches WHERE criteria_hash=?", (digest,)).fetchone()
@@ -58,11 +67,16 @@ def enqueue_search(connection: sqlite3.Connection, item_id: int, criteria: dict[
             (digest, json.dumps(clean, sort_keys=True), STRATEGY_VERSION, now.isoformat(), utc_now(), utc_now()),
         )
         search_id = int(cursor.lastrowid)
-    connection.execute(
-        "INSERT OR IGNORE INTO identification_search_listings(search_id, listing_id, evidence_hash, created_at) VALUES (?, ?, ?, ?)",
-        (search_id, item_id, evidence.evidence_hash, utc_now()),
-    )
+    if item_id is not None and evidence_hash is not None:
+        connection.execute(
+            "INSERT OR IGNORE INTO identification_search_listings(search_id, listing_id, evidence_hash, created_at) VALUES (?, ?, ?, ?)",
+            (search_id, item_id, evidence_hash, utc_now()),
+        )
     return search_id
+
+
+def get_search_by_id(connection: sqlite3.Connection, search_id: int) -> sqlite3.Row | None:
+    return connection.execute("SELECT * FROM identification_searches WHERE id=?", (search_id,)).fetchone()
 
 
 def claim_search(connection: sqlite3.Connection, owner: str | None = None) -> sqlite3.Row | None:

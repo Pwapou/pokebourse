@@ -43,6 +43,9 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "0017_create_cardmarket_sync_state.sql",
             "0018_tcgdex_sync_jobs.sql",
             "0019_radar_observations.sql",
+            "0020_search_indexes.sql",
+            "0021_purchase_sale_price.sql",
+            "0022_identification_observations.sql",
         ]
         assert second_applied == []
         assert {
@@ -81,7 +84,7 @@ def test_migrations_create_registry_and_are_idempotent(tmp_path: Path) -> None:
             "tcgdex_sync_control",
             "schema_migrations",
         } <= tables
-        assert migration_count == 19
+        assert migration_count == 22
         check_database(connection)
 
 

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pokébourse — Cible simplifiée</title>
+  <link rel="stylesheet" href="/static/prototype-cible.css">
+  <script src="/static/prototype-cible.js" defer></script>
+</head>
+<body>
+  <div class="demo-banner">MAQUETTE DE NAVIGATION · Données fictives · Toutes les fonctions actuelles sont conservées</div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
+      <a class="brand" href="#accueil" data-view-link="accueil"><span class="brand-symbol">P</span><span>Pokébourse<small>ACHAT-REVENTE</small></span></a>
+      <nav class="nav">
+        <span class="nav-title">MON ACTIVITÉ</span>
+        <button class="nav-link active" data-view="accueil"><span>▦</span>Accueil</button>
+        <button class="nav-link" data-view="opportunites"><span>↗</span>Opportunités<b>12</b></button>
+        <button class="nav-link" data-view="achats"><span>▤</span>Mes achats<b>4</b></button>
+        <button class="nav-link" data-view="reglages"><span>⚙</span>Réglages</button>
+        <button class="nav-link advanced-toggle" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-nav"><span>⋯</span>Gestion avancée<i>⌄</i></button>
+        <div class="advanced-nav" id="advanced-nav" hidden>
+          <button data-demo="Annuaire vendeurs : filtres, favoris, notes, réputation et achats conservés.">Vendeurs</button>
+          <button data-demo="Veilles : création, contrôle, pause, reprise et suppression conservés.">Veilles</button>
+          <button data-demo="Imports : historique, lots, erreurs, rapports et suppression conservés.">Imports et erreurs</button>
+          <button data-demo="TCGdex : extensions, enrichissement, pause/reprise et diagnostics conservés.">Référentiel TCGdex</button>
+          <button data-demo="Annotations : file, doubles lectures, arbitrage et export conservés.">Annotations ML</button>
+          <button data-demo="Supervision : agents, collecteurs, IP, incidents et reprise conservés.">Agents et incidents</button>
+          <button data-demo="Sauvegardes : création, téléchargement et restauration conservés.">Sauvegardes</button>
+        </div>
+      </nav>
+      <div class="sidebar-foot"><span></span>Données locales · Base opérationnelle</div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="menu-button" id="menu-button" aria-label="Ouvrir le menu">☰</button>
+        <div class="breadcrumb">Pokébourse <b>/</b> <span id="current-view">Accueil</span></div>
+        <div class="add-menu-wrap">
+          <button class="button primary" id="add-button" aria-expanded="false" aria-controls="add-menu">＋ Ajouter des annonces</button>
+          <div class="add-menu" id="add-menu" hidden>
+            <button data-demo="Parcours principal : capturer l’annonce affichée avec l’extension Chrome.">Capturer avec l’extension <small>Parcours recommandé</small></button>
+            <button data-demo="Le formulaire JSONL existant reste disponible.">Importer un fichier JSONL</button>
+            <button data-demo="Le formulaire de veille existant reste disponible.">Créer une veille</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="view active" id="view-accueil">
+          <div class="page-head"><div><p class="overline">VUE D’ENSEMBLE</p><h1>Qu’avez-vous à examiner ?</h1><p>Les décisions d’abord, les données techniques quand vous en avez besoin.</p></div><button class="button secondary" data-go="opportunites">Toutes les annonces</button></div>
+          <div class="metrics three">
+            <button class="metric" data-go="opportunites"><span>OPPORTUNITÉS</span><strong>12</strong><small>Seuils de gain et de ROI atteints</small></button>
+            <button class="metric" data-go="opportunites"><span>À VÉRIFIER</span><strong>5</strong><small>Identité ou prix à confirmer</small></button>
+            <button class="metric" data-go="achats"><span>ACHATS EN COURS</span><strong>4</strong><small>2 reçus · 2 en vente</small></button>
+          </div>
+          <section class="panel">
+            <div class="panel-head"><div><h2>À examiner en priorité</h2><p>Classement par gain net estimé</p></div><button class="text-button" data-go="opportunites">Tout afficher →</button></div>
+            <div class="compact-list">
+              <button class="compact-row" data-detail="dracaufeu"><span class="product"><i>D</i><span><strong>Dracaufeu</strong><small>Set de Base · N° 4/102 · NM</small></span></span><span><small>ACHAT TOTAL</small><b>149,50 €</b></span><span><small>GAIN NET ESTIMÉ</small><b class="positive">+52,30 €</b></span><em class="status opportunity">Opportunité</em></button>
+              <button class="compact-row" data-detail="pikachu"><span class="product"><i>P</i><span><strong>Pikachu VMAX</strong><small>Voltage Éclatant · N° 188/185</small></span></span><span><small>ACHAT TOTAL</small><b>69,50 €</b></span><span><small>GAIN NET ESTIMÉ</small><b class="positive">+24,10 €</b></span><em class="status opportunity">Opportunité</em></button>
+              <button class="compact-row" data-detail="mewtwo"><span class="product"><i>M</i><span><strong>Mewtwo V</strong><small>Extension à confirmer</small></span></span><span><small>ACHAT TOTAL</small><b>31,00 €</b></span><span><small>GAIN NET ESTIMÉ</small><b>—</b></span><em class="status review">À vérifier</em></button>
+            </div>
+          </section>
+          <div class="two-panels">
+            <section class="panel padded"><div class="panel-title"><h2>Activité récente</h2><button class="text-button" data-demo="Historique complet des imports conservé.">Historique →</button></div><p class="activity"><b>Import terminé</b><span>24 annonces · aujourd’hui à 09:42</span></p><p class="activity"><b>1 échec à corriger</b><span>Rapport téléchargeable disponible</span></p></section>
+            <section class="panel padded"><div class="panel-title"><h2>État des données</h2><button class="text-button" data-go="reglages">Gérer →</button></div><p class="health"><span></span>Cardmarket synchronisé</p><p class="health"><span></span>Worker opérationnel</p><p class="health neutral"><span></span>1 sauvegarde disponible</p></section>
+          </div>
+        </section>
+
+        <section class="view" id="view-opportunites">
+          <div class="page-head"><div><p class="overline">AIDE À LA DÉCISION</p><h1>Opportunités</h1><p>Un seul catalogue pour parcourir les annonces et analyser leur rentabilité.</p></div><div class="actions"><button class="button secondary" data-demo="Export CSV conservé avec les filtres actifs.">Exporter CSV</button><button class="button primary" data-demo="Formulaire d’import JSONL conservé.">Importer</button></div></div>
+          <section class="panel">
+            <div class="toolbar"><div class="tabs"><button class="tab active">À acheter <b>12</b></button><button class="tab">À vérifier <b>5</b></button><button class="tab">Toutes <b>148</b></button><button class="tab">Écartées <b>76</b></button></div></div>
+            <form class="filters"><label class="search-input"><span>Recherche</span><input type="search" placeholder="Carte, vendeur, numéro…"></label><label><span>Extension</span><select><option>Toutes</option><option>Set de Base</option></select></label><label><span>Source</span><select><option>Toutes</option><option>Vinted</option><option>Leboncoin</option></select></label><label><span>Identification</span><select><option>Tous statuts</option><option>Identifiée</option><option>Lot</option></select></label><button type="button" class="button secondary">Filtrer</button></form>
+            <div class="list-meta"><span>12 annonces · montants nets de frais, hors vente confirmée</span><label>Trier <select><option>Gain net décroissant</option><option>ROI décroissant</option><option>Prix croissant</option></select></label></div>
+            <div class="listing-head"><span>CARTE</span><span>ACHAT TOTAL</span><span>REVENTE ESTIMÉE</span><span>GAIN NET</span><span>DÉCISION</span></div>
+            <button class="product-row" data-detail="dracaufeu"><span class="product"><i>D</i><span><strong>Dracaufeu</strong><small>Set de Base · N° 4/102 · FR · NM</small></span></span><b>149,50 €</b><b>240,00 €<small>Référence enregistrée</small></b><b class="positive">+52,30 €<small>ROI 35,0 %</small></b><em class="status opportunity">Opportunité</em></button>
+            <button class="product-row" data-detail="pikachu"><span class="product"><i>P</i><span><strong>Pikachu VMAX</strong><small>Voltage Éclatant · N° 188/185 · FR</small></span></span><b>69,50 €</b><b>115,00 €<small>Cardmarket</small></b><b class="positive">+24,10 €<small>ROI 34,7 %</small></b><em class="status opportunity">Opportunité</em></button>
+            <button class="product-row" data-detail="mewtwo"><span class="product"><i>M</i><span><strong>Mewtwo V</strong><small>Extension à confirmer · État inconnu</small></span></span><b>31,00 €</b><b>—<small>Données insuffisantes</small></b><b>—</b><em class="status review">À vérifier</em></button>
+          </section>
+          <button class="text-button advanced-action" data-demo="Réexamen global de l’identification conservé.">Réexaminer les identifications non résolues ⟳</button>
+        </section>
+
+        <section class="view" id="view-achats">
+          <div class="page-head"><div><p class="overline">PORTEFEUILLE RÉEL</p><h1>Mes achats</h1><p>Retrouvez tous les achats déjà enregistrés depuis une annonce ou une fiche vendeur.</p></div><button class="button secondary" data-demo="L’ajout depuis une annonce ou une fiche vendeur reste disponible.">Comment ajouter un achat ?</button></div>
+          <div class="purchase-summary"><div><span>ACHATS ENREGISTRÉS</span><strong>6</strong></div><div><span>COÛT TOTAL PAYÉ</span><strong>418,50 €</strong></div><div><span>EN COURS</span><strong>4</strong></div></div>
+          <section class="panel"><div class="toolbar"><div class="tabs"><button class="tab active">Tous <b>6</b></button><button class="tab">Commandés <b>1</b></button><button class="tab">Reçus <b>1</b></button><button class="tab">En vente <b>2</b></button><button class="tab">Vendus <b>2</b></button></div></div><div class="purchase-row"><span class="product"><i>D</i><span><strong>Dracaufeu</strong><small>PokeMaster92 · acheté le 28 oct.</small></span></span><b>149,50 €<small>port inclus</small></b><em class="status listed">En vente</em><button class="text-button" data-demo="La fiche vendeur et l’historique de l’achat restent accessibles.">Détail →</button></div><div class="purchase-row"><span class="product"><i>P</i><span><strong>Pikachu VMAX</strong><small>Julien_K · acheté le 24 oct.</small></span></span><b>69,50 €<small>port inclus</small></b><em class="status collection">Reçu</em><button class="text-button" data-demo="Les statuts et notes existants sont conservés.">Détail →</button></div></section>
+        </section>
+
+        <section class="view" id="view-reglages">
+          <div class="page-head"><div><p class="overline">CONFIGURATION</p><h1>Réglages</h1><p>Les réglages utiles d’abord ; toutes les options avancées restent disponibles.</p></div></div>
+          <div class="settings-grid">
+            <section class="panel padded"><span class="setting-icon">€</span><h2>Frais et seuils</h2><p>Port, commission, frais fixes, emballage, gain minimum, ROI et échantillon médiane.</p><button class="text-button" data-demo="Le formulaire complet des frais et seuils est conservé.">Modifier le profil →</button></section>
+            <section class="panel padded"><span class="setting-icon">◇</span><h2>Prix de référence</h2><p>Ajout, modification, suppression et import JSONL de cotes, avec toutes leurs dimensions.</p><button class="text-button" data-demo="Tous les champs de références et l’import JSONL sont conservés.">Gérer les références →</button></section>
+            <section class="panel padded"><span class="setting-icon">↻</span><h2>Données de marché</h2><p>Synchronisation Cardmarket, alias multilingues et historique de synchronisation.</p><button class="text-button" data-demo="Les trois actions de synchronisation actuelles sont conservées.">Gérer les sources →</button></section>
+            <section class="panel padded"><span class="setting-icon">⚙</span><h2>Préférences de simplification</h2><p>Valeurs proposées à confirmer, jamais appliquées silencieusement. Une donnée inconnue reste inconnue.</p><button class="text-button" data-demo="L’assistant proposera des préréglages explicites sans changer les règles métier.">Revoir la configuration →</button></section>
+          </div>
+          <section class="panel padded advanced-box"><div><h2>Besoin d’administrer l’application ?</h2><p>TCGdex, veilles, vendeurs, annotations, imports, agents et sauvegardes sont regroupés dans Gestion avancée.</p></div><button class="button secondary" id="open-advanced">Ouvrir la gestion avancée</button></section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title" hidden>
+    <div class="drawer-head"><div><p class="overline">DÉCISION D’ACHAT</p><h2 id="detail-title">Dracaufeu</h2><p id="detail-subtitle">Set de Base · N° 4/102 · FR · NM</p></div><button class="close-button" id="close-drawer" aria-label="Fermer">×</button></div>
+    <div class="drawer-body">
+      <div class="decision-banner"><em class="status opportunity" id="detail-status">Opportunité estimée</em><p>Cette estimation atteint vos seuils. Vérifiez l’état, l’authenticité et la demande avant l’achat.</p></div>
+      <div class="drawer-stats"><div><span>ACHAT TOTAL</span><strong id="detail-cost">149,50 €</strong></div><div><span>REVENTE ESTIMÉE</span><strong id="detail-resale">240,00 €</strong></div><div><span>GAIN NET ESTIMÉ</span><strong class="positive" id="detail-profit">+52,30 €</strong></div><div><span>ROI ESTIMÉ</span><strong id="detail-roi">35,0 %</strong></div></div>
+      <ul class="checks" id="detail-checks"><li>✓ Carte identifiée</li><li>✓ Prix de marché disponible</li><li class="warning">! État et authenticité à vérifier sur l’annonce</li></ul>
+      <div class="drawer-actions"><button class="button primary" data-demo="Ouverture de l’annonce d’origine conservée.">Voir l’annonce ↗</button><button class="button secondary" data-demo="Le formulaire complet d’enregistrement d’achat reste disponible.">Marquer comme achetée</button></div>
+      <details open><summary>Comprendre le calcul</summary><div class="calc-line"><span>Prix d’achat + port</span><b>149,50 €</b></div><div class="calc-line"><span>Prix de revente estimé</span><b>240,00 €</b></div><div class="calc-line"><span>Frais de vente</span><b>−38,20 €</b></div><div class="calc-line total"><span>Gain net estimé</span><b>+52,30 €</b></div><p class="note">Source, date, nature et limites de la référence restent affichées ici.</p></details>
+      <details><summary>Comparables et Cardmarket</summary><p>Ventes conclues, annonces actives, historique de revente, prix tendance et moyennes 1/7/30 jours restent disponibles avec leurs avertissements.</p></details>
+      <details><summary>Identification et validation humaine</summary><p>Candidats, score, recherche approfondie, confirmation, retrait, correction de lot, diagnostic et lecture indépendante restent accessibles.</p><button class="text-button" data-demo="Le parcours TCGdex et les validations humaines sont intégralement conservés.">Ouvrir les outils d’identification →</button></details>
+      <details><summary>Vendeur et données importées</summary><p>Réputation, favoris, notes, URL, source, identifiant externe, lot d’import et dates restent consultables.</p></details>
+    </div>
+  </aside>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

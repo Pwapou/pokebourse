@@ -2,7 +2,13 @@
 {% block title %}Annonces · Pokébourse{% endblock %}
 {% block breadcrumb %}Annonces{% endblock %}
 {% block content %}
-{% set sort_labels = {"import_desc": "Import récent", "import_asc": "Import ancien", "name_asc": "Nom (A → Z)", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "seller_reliability": "Fiabilité vendeur"} %}
+{% if notice %}
+<div class="alert success" role="status"><strong>Mise à jour effectuée.</strong> {{ notice }}</div>
+{% endif %}
+{% if error %}
+<div class="alert error" role="alert"><strong>Action impossible.</strong> {{ error }}</div>
+{% endif %}
+{% set sort_labels = {"import_desc": "Import récent", "import_asc": "Import ancien", "name_asc": "Nom (A → Z)", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "seller_reliability": "Fiabilité vendeur", "profit_desc": "Gain net décroissant", "roi_desc": "ROI décroissant"} %}
 {% set source_labels = {"all": "Toutes", "vinted": "Vinted", "leboncoin": "Leboncoin", "ebay": "eBay", "wallapop": "Wallapop", "manual": "Imports manuels"} %}
 {% set ident_status_labels = {"all": "Tous statuts", "identified": "Identifiée", "ambiguous": "À vérifier", "lot": "Lot / Coffret", "unidentified": "Non identifiée"} %}
 <section class="page-heading">
@@ -11,8 +17,7 @@
         <form action="/catalog/reidentify-all" method="post" style="display:inline">
             <button class="button secondary" type="submit" title="Réexamine les annonces non identifiées avec le référentiel TCGdex courant">Réexaminer l'identification ⟳</button>
         </form>
-        <a class="button secondary" href="/catalog/export.csv?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort}|urlencode }}">Exporter les résultats (CSV)</a>
-        <a class="button primary" href="/#import">Importer des annonces</a>
+        <a class="button secondary" href="/catalog/export.csv?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort}|urlencode }}">Exporter les résultats (CSV)</a>
     </div>
 </section>
 <section class="panel catalog-panel">
@@ -21,9 +26,10 @@
         <label for="catalog-set"><span class="filter-label">Extension</span><select id="catalog-set" name="set_name"><option value="">Toutes</option>{% for set in sets %}<option value="{{ set.set_name }}" {{ 'selected' if selected_set == set.set_name else '' }}>{{ set.set_name }}</option>{% endfor %}</select></label>
         <label for="catalog-source"><span class="filter-label">Source</span><select id="catalog-source" name="source">{% for key in source_options %}<option value="{{ key }}" {{ 'selected' if selected_source == key else '' }}>{{ source_labels.get(key, key) }}</option>{% endfor %}</select></label>
         <label for="catalog-ident"><span class="filter-label">Identification</span><select id="catalog-ident" name="ident">{% for key in ident_status_options %}<option value="{{ key }}" {{ 'selected' if selected_ident == key else '' }}>{{ ident_status_labels.get(key, key) }}</option>{% endfor %}</select></label>
+        <label for="catalog-verdict"><span class="filter-label">Verdict</span><select id="catalog-verdict" name="verdict">{% for key in verdict_options %}<option value="{{ key }}" {{ 'selected' if selected_verdict == key else '' }}>{{ verdict_labels.get(key, key) if key != 'all' else 'Tous verdicts' }}</option>{% endfor %}</select></label>
         <label for="catalog-sort"><span class="filter-label">Tri</span><select id="catalog-sort" name="sort">{% for key in sort_options %}<option value="{{ key }}" {{ 'selected' if selected_sort == key else '' }}>{{ sort_labels.get(key, key) }}</option>{% endfor %}</select></label>
         <button class="button secondary filter-submit" type="submit">Appliquer</button>
-        {% if query or selected_set or selected_source != 'all' or selected_ident != 'all' %}<a class="reset-link" href="/catalog">Effacer les filtres</a>{% endif %}
+        {% if query or selected_set or selected_source != 'all' or selected_ident != 'all' or selected_verdict != 'all' %}<a class="reset-link" href="/catalog">Effacer les filtres</a>{% endif %}
     </form>
     {% if items %}
     <div class="product-list" role="list" aria-label="Annonces importées et estimation de rentabilité">
@@ -56,7 +62,7 @@
             <div>
                 <span class="cell-label">ACHAT</span>
                 <b class="cell-value">{{ item.total_cost_cents|money(item.currency) }}</b>
-                {% if fee_profile.buyer_shipping_cents %}<span class="cell-sub">port inclus</span>{% elif fee_profile.buyer_shipping_cents is none %}<span class="cell-sub unknown">port inconnu</span>{% endif %}
+                {% if item.buyer_shipping_source == 'annonce' %}<span class="cell-sub">port de l’annonce inclus</span>{% elif item.buyer_shipping_source == 'profil' %}<span class="cell-sub">port estimé du profil inclus</span>{% else %}<span class="cell-sub unknown">port inconnu</span>{% endif %}
             </div>
             <div>
                 <span class="cell-label">REVENTE ESTIMÉE</span>
@@ -71,7 +77,7 @@
                 {% if item.roi_bps is not none %}<b class="cell-value roi-figure {{ 'positive' if item.roi_bps > 0 else 'negative' }}">{{ item.roi_bps|bps_percent(True) }}</b>{% else %}<span class="cell-value unknown">Inconnu</span>{% endif %}
             </div>
             <div class="decision-wrap">
-                {% if item.verdict == 'sans_cote' %}<a class="verdict-badge verdict-sans_cote" href="/profitability?prefill_name={{ item.name|urlencode }}&amp;prefill_set={{ item.set_name|urlencode }}&amp;prefill_number={{ (item.card_number or '')|urlencode }}&amp;prefill_lang={{ item.language|urlencode }}&amp;prefill_condition={{ (item.condition or '')|urlencode }}#cotes">Données insuffisantes</a>
+                {% if item.verdict == 'sans_cote' %}<a class="verdict-badge verdict-sans_cote" href="/reglages?prefill_name={{ item.name|urlencode }}&amp;prefill_set={{ item.set_name|urlencode }}&amp;prefill_number={{ (item.card_number or '')|urlencode }}&amp;prefill_lang={{ item.language|urlencode }}&amp;prefill_condition={{ (item.condition or '')|urlencode }}#cotes">Données insuffisantes</a>
                 {% else %}<a class="verdict-badge verdict-{{ item.verdict }}" href="/catalog/{{ item.id }}">{% if item.verdict == 'opportunite' %}Opportunité{% elif item.verdict == 'surveiller' %}À examiner{% else %}Non rentable{% endif %}</a>{% endif %}
                 {% if item.url %}<a class="external-link" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir l’annonce {{ item.name }}">↗</a>{% else %}<a class="row-action" href="/catalog/{{ item.id }}" aria-label="Voir le détail de {{ item.name }}">›</a>{% endif %}
             </div>
@@ -83,16 +89,17 @@
         {% if total_pages > 1 %}
         {% set window_start = [current_page - 2, 1]|max %}{% set window_end = [current_page + 2, total_pages]|min %}
         <nav class="pagination" aria-label="Pagination du catalogue">
-            {% if current_page > 1 %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort, 'page': current_page - 1}|urlencode }}">← Précédent</a>{% else %}<span class="page-link disabled" aria-disabled="true">← Précédent</span>{% endif %}
-            {% if window_start > 1 %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort, 'page': 1}|urlencode }}">1</a>{% if window_start > 2 %}<span class="page-ellipsis">…</span>{% endif %}{% endif %}
-            {% for p in range(window_start, window_end + 1) %}{% if p == current_page %}<span class="page-link current" aria-current="page">{{ p }}</span>{% else %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort, 'page': p}|urlencode }}">{{ p }}</a>{% endif %}{% endfor %}
-            {% if window_end < total_pages %}{% if window_end < total_pages - 1 %}<span class="page-ellipsis">…</span>{% endif %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort, 'page': total_pages}|urlencode }}">{{ total_pages }}</a>{% endif %}
-            {% if current_page < total_pages %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'sort': selected_sort, 'page': current_page + 1}|urlencode }}">Suivant →</a>{% else %}<span class="page-link disabled" aria-disabled="true">Suivant →</span>{% endif %}
+            {% if current_page > 1 %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort, 'page': current_page - 1}|urlencode }}">← Précédent</a>{% else %}<span class="page-link disabled" aria-disabled="true">← Précédent</span>{% endif %}
+            {% if window_start > 1 %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort, 'page': 1}|urlencode }}">1</a>{% if window_start > 2 %}<span class="page-ellipsis">…</span>{% endif %}{% endif %}
+            {% for p in range(window_start, window_end + 1) %}{% if p == current_page %}<span class="page-link current" aria-current="page">{{ p }}</span>{% else %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort, 'page': p}|urlencode }}">{{ p }}</a>{% endif %}{% endfor %}
+            {% if window_end < total_pages %}{% if window_end < total_pages - 1 %}<span class="page-ellipsis">…</span>{% endif %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort, 'page': total_pages}|urlencode }}">{{ total_pages }}</a>{% endif %}
+            {% if current_page < total_pages %}<a class="page-link" href="/catalog?{{ {'q': query, 'set_name': selected_set, 'source': selected_source, 'ident': selected_ident, 'verdict': selected_verdict, 'sort': selected_sort, 'page': current_page + 1}|urlencode }}">Suivant →</a>{% else %}<span class="page-link disabled" aria-disabled="true">Suivant →</span>{% endif %}
         </nav>
         {% endif %}
     </div>
     {% else %}
-    <div class="empty-state"><h2>{{ 'Aucun résultat' if query or selected_set or selected_source != 'all' else 'Aucune annonce importée' }}</h2><p>{{ 'Modifiez votre recherche ou effacez les filtres.' if query or selected_set or selected_source != 'all' else 'Importez un fichier JSONL ou créez une veille pour commencer à comparer les annonces.' }}</p>{% if query or selected_set or selected_source != 'all' %}<a class="button secondary" href="/catalog">Effacer les filtres</a>{% else %}<a class="button primary" href="/watches">Créer une veille</a>{% endif %}</div>
+    {% set filters_active = query or selected_set or selected_source != 'all' or selected_ident != 'all' or selected_verdict != 'all' %}
+    <div class="empty-state"><h2>{{ 'Aucun résultat' if filters_active else 'Aucune annonce importée' }}</h2><p>{{ 'Modifiez votre recherche ou effacez les filtres.' if filters_active else 'Importez un fichier JSONL, créez une veille ou capturez une annonce avec l’extension pour commencer à comparer.' }}</p>{% if filters_active %}<a class="button secondary" href="/catalog">Effacer les filtres</a>{% else %}<a class="button primary" href="/#capture">Capturer une annonce</a>{% endif %}</div>
     {% endif %}
 </section>
 {% endblock %}

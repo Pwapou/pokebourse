@@ -1,0 +1,14 @@
+{% if ident.observations %}
+<details><summary>Indices et provenance</summary>
+{% set source_labels = {"title": "Titre de l’annonce", "description": "Description de l’annonce", "structured": "Extrait de l’annonce", "manual": "Saisie ou correction", "prefill": "Préremplissage à vérifier", "ocr": "Lecture de l’image à vérifier"} %}
+{% set field_labels = {"title": "Titre", "description": "Description", "name": "Nom", "card_number": "Numéro", "set_name": "Extension", "language": "Langue", "variant": "Variante", "condition": "État déclaré", "edition": "Édition", "grading_company": "Certificateur", "grade": "Note"} %}
+<ul>{% for observation in ident.observations %}<li><strong>{{ field_labels.get(observation.field, observation.field) }}</strong> : {{ observation.value[:300] }} — {{ source_labels.get(observation.source, observation.source) }}</li>{% endfor %}</ul>
+<p class="cell-sub">Une valeur extraite, saisie ou proposée ne constitue pas une confirmation humaine de l’identité.</p>
+</details>
+{% endif %}
+{% if ident.diagnostic_candidates %}
+<details><summary>Références contradictoires — diagnostic uniquement</summary>
+<p>Ces références ne sont pas admissibles comme identité automatique.</p>
+<ul>{% for candidate in ident.diagnostic_candidates[:5] %}<li>{{ candidate.name }} · {{ candidate.set_name }} · {{ candidate.tcgdex_id }} — {{ candidate.match_reason }}</li>{% endfor %}</ul>
+</details>
+{% endif %}

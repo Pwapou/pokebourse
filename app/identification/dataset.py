@@ -21,7 +21,7 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
         reviews = connection.execute(
             """SELECT r.*, s.listing_id, s.input_hash, s.title, s.description,
             s.attributes_json, s.input_origin, s.source_kind, s.platform, s.group_key,
-            s.normalization_version,
+            s.normalization_version, s.observations_json, s.pipeline_version,
             (SELECT max(d.id) FROM listing_identification_decisions d
              WHERE d.listing_id=s.listing_id) AS latest_legacy_id,
             (SELECT c.identification_snapshot_id FROM catalog_items c
@@ -83,6 +83,8 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
                 "input_origin": row["input_origin"], "source_kind": row["source_kind"],
                 "platform": row["platform"],
                 "normalization_version": row["normalization_version"],
+                "observations": json.loads(row["observations_json"]),
+                "pipeline_version": row["pipeline_version"],
                 "outcome": row["outcome"], "review_kind": row["review_kind"],
                 "validated_tcgdex_id": row["validated_tcgdex_id"],
                 "validated_at": row["validated_at"], "catalog_version": row["catalog_version"],

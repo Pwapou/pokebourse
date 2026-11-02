@@ -93,8 +93,9 @@ def test_short_names_numbers_suffixes_and_foreign_language_stay_protected(connec
 def test_contradictory_numbers_or_sets_are_not_accepted(connection: sqlite3.Connection, title: str) -> None:
     result = CardMatcher(TcgdexCache(connection)).identify(title)
     assert result.status != "identified" and result.matched_card is None
-    assert result.candidates and result.candidates[0].contradictions
-    assert result.candidates[0].confidence <= 59
+    assert result.candidates == []
+    assert result.diagnostic_candidates and result.diagnostic_candidates[0].contradictions
+    assert result.diagnostic_candidates[0].confidence <= 59
 
 
 def test_global_candidate_scoring_does_not_drop_reference_after_200_rows(connection: sqlite3.Connection) -> None:
@@ -153,6 +154,17 @@ def test_empty_catalog_diagnostic_does_not_seed_or_repair(tmp_path: Path) -> Non
         assert report["catalog"]["card_count"] == 0
         assert connection.total_changes == before
         assert connection.execute("SELECT count(*) FROM pokemon_reference_cards").fetchone()[0] == 0
+
+
+def test_diagnostic_reports_language_conflict_instead_of_missing_reference(connection: sqlite3.Connection) -> None:
+    """Une contradiction de langues ne prouve pas une lacune du catalogue local."""
+    add_listing(connection, "Dracaufeu 4/102 VF", description="English")
+    before = connection.total_changes
+    report = identification_diagnostics(connection, status="all")
+    assert report["counts"] == {"language_conflict": 1}
+    assert report["items"][0]["proposed_status"] == "ambiguous"
+    assert report["items"][0]["observed_languages"] == ["en", "fr"]
+    assert connection.total_changes == before
 
 
 def test_new_pilot_freezes_lexical_version_and_50_candidate_scope(connection: sqlite3.Connection) -> None:

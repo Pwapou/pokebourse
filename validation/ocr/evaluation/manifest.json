@@ -1,0 +1,112 @@
+{
+  "schema_version": "identification-baseline-v1",
+  "created_at": "2026-11-02T23:08:26Z",
+  "inventory_checked_at": "2026-11-02T23:11:24Z",
+  "campaign_id": "2026-11-02-30-liens",
+  "code": {
+    "git_commit": "b7b1a2070c10ea4e06d05f8b4469a76b129548ed",
+    "working_tree_dirty": true,
+    "modified_tracked_files": 56,
+    "untracked_files_not_ignored": 99,
+    "source_migrations_present": 22,
+    "note": "Point de départ reconstitué avec des changements déjà présents ; aucune restauration Git n'a été effectuée."
+  },
+  "runtime": {
+    "python": "3.12.16",
+    "tesseract": "5.5.0",
+    "tesseract_languages": ["eng", "fra", "osd"],
+    "sqlite_schema": "0021_purchase_sale_price.sql",
+    "migrations_applied": 21
+  },
+  "dataset": {
+    "path": "validation/ocr/marketplaces/jeu-30-liens.json",
+    "sha256": "04bb1fc937d356a547542a4c87d12cbe5068df02cb5d883045743a38440a684e",
+    "listing_count": 30,
+    "unique_url_count": 30,
+    "titles_present": 30,
+    "descriptions_present": 0,
+    "photos_present": 15,
+    "photos_missing": 15,
+    "provenance": {
+      "vinted": 15,
+      "ebay": 15
+    }
+  },
+  "predictions": {
+    "path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/resultats.json",
+    "sha256": "1eb8744bc2dafecfd1cf39465cc0b1b1bc47d3cb6b017ddbb6eaca1ff4ec588a",
+    "created_at": "2026-11-02T21:54:06.787837+00:00",
+    "decision_origin": "unknown",
+    "pipeline_version": null,
+    "normalization_version": null,
+    "variants": {
+      "title_only": {"available": 30, "missing": 0},
+      "ocr_only": {"available": 15, "missing": 15},
+      "combined": {"available": 30, "missing": 0}
+    }
+  },
+  "catalog": {
+    "backup_path_in_docker_volume": "/data/backups/pokebourse-20261102-230603-171195.sqlite",
+    "backup_sha256": "f0b4c17828451be37a2a03cdb3d87c269bf3c5673cfcd30d35d15cd670bfe015",
+    "inventory_path": "validation/ocr/evaluation/catalogue-inventory.json",
+    "inventory_sha256": "696ed28c86eb4fd84743629d7ba72cc71a9496e23c1381298d9e7225984bfb92",
+    "journal_mode": "delete",
+    "sets_count": 202,
+    "cards_count": 22201,
+    "cards_with_image_url": 18345,
+    "cards_without_image_url": 3856,
+    "reference_languages_recorded": {"fr": 22201},
+    "note": "La sauvegarde complète reste dans le volume Docker et n'est pas copiée dans les artefacts publics. Une langue enregistrée n'est pas une langue d'exemplaire vérifiée."
+  },
+  "images": [
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/01.webp", "sha256": "bae8c8df7951e5deeaa76aff07f03ed29228cb33856be1011da68d61410ab69a"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/02.webp", "sha256": "fb4b3ed3d5bc9abb1a16a112f19d4a8243500b37832c65c4f0dde02696e44cf9"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/03.webp", "sha256": "b64720be66ee13f950478d39c2a7d4ea8cf71f951e2595716503f6bd65ee6cc2"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/04.webp", "sha256": "e4a036fb6182b4493b3fb681f8943bf7bd22834b6337dce10abcd19231377992"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/05.webp", "sha256": "7e5995b8bbb9edc990182bbaae364218a5ec198894ca44dc567708ba45e3fc98"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/06.webp", "sha256": "44d9ac3ce775ab3277d798f2430e80659a370d7498afde67a0cbc1604a98242b"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/07.webp", "sha256": "0b8fbe30275d26b5f8ccdc61829c95b271e57ee00b7c9d7b4dc679d1229ff830"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/08.webp", "sha256": "166f2847a0f7521aac4c40894d4e666d1fcd600178cd9654f5585ae5480641b7"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/09.webp", "sha256": "9ff5d6dd4ac7c761f1efb370759b0e6f8e89b4c031c99606ab4d1591e2a2a442"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/10.webp", "sha256": "e68e4e9163ec2ebcab762ef1f5ef333846aea91b6b5cb94729fdb31e999ab01e"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/11.webp", "sha256": "d2b4994a11805026d0231d2b541e17fabb2e38377f61cc37ba478aa12dd4dc86"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/12.webp", "sha256": "3fddea756a63aa83bf09d774b50c98a4069659066d94ad46871fc25e996a25a8"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/13.webp", "sha256": "4a9a419d62df6da4d4123266754834ddafd9af5a66dab1b2de91de73e2f04adc"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/14.webp", "sha256": "1071b1dd590450470967f1aea6fb8d58a79b0c6e8d627f0e9d66b42d6a1c91cc"},
+    {"path": "validation/ocr/marketplaces/runs/2026-11-02-30-liens/images/15.webp", "sha256": "6b7797eeda77384d30c1c577ebc62667b7806c19e9190735c6002e476926bff1"}
+  ],
+  "labels": {
+    "path": "validation/ocr/evaluation/labels.json",
+    "sha256": "a2c2c52e5b97addadb6292d1b22957c179eb746b8005dc523a0691db62d4f79e",
+    "schema_version": "identification-labels-v1",
+    "annotated": 0,
+    "unannotated": 30,
+    "needs_arbitration": 0,
+    "note": "Squelette constitué depuis les URL seules ; aucune vérité terrain n'a été déduite des prédictions."
+  },
+  "initial_evaluation": {
+    "path": "validation/ocr/evaluation/evaluation-initiale.json",
+    "sha256": "4d23996dfbe15e4291f4734c8d5ff1e9dcf1c5253a585620832cab83347d7ba8",
+    "quality_metrics_available": false,
+    "reason": "Aucune annotation humaine renseignée ; les dénominateurs de justesse sont nuls."
+  },
+  "partitions": {
+    "development_regression": 30,
+    "independent_qualification": 0,
+    "random_flow_audit": 0,
+    "note": "Les 30 cas initiaux ne constituent pas un test indépendant T10."
+  },
+  "duplicate_groups": {
+    "exact_url_duplicates": 0,
+    "quasi_duplicates_resolved": false,
+    "note": "Republications, quasi-doublons et images identiques doivent être revus avant toute partition finale."
+  },
+  "limitations": [
+    "Les descriptions des 30 annonces sont absentes et n'ont pas été inventées.",
+    "Les 15 photos eBay ne sont pas conservées et leur variante OCR seule est indisponible.",
+    "Le rapport historique ne porte ni origine de décision ni version de pipeline ou de normalisation.",
+    "L'état Git initial antérieur aux changements déjà présents ne peut pas être reconstitué sans restauration interdite.",
+    "Les annotations humaines indépendantes et les doubles lectures ne sont pas réalisées.",
+    "Aucune qualification statistique T10 n'est établie par ce manifeste."
+  ]
+}

@@ -11,10 +11,15 @@
         <h1>Lot #{{ '%04d'|format(batch.id) }}</h1>
         <p>{{ items|length }} annonce{{ 's' if items|length != 1 else '' }} importée{{ 's' if items|length != 1 else '' }} via la source « {{ batch.source_name }} ».</p>
     </div>
-    <form method="post" action="/imports/{{ batch.id }}/delete" class="delete-form">
-        <input type="hidden" name="confirm" value="yes">
-        <button class="button danger" type="submit" data-confirm="Supprimer définitivement ce lot et toutes ses annonces ? Cette action est irréversible.">Supprimer ce lot…</button>
-    </form>
+    <div class="heading-actions">
+        <a class="button secondary" href="/gestion">Vue d’ensemble</a>
+        <a class="button secondary" href="/">Activité récente</a>
+        <a class="button secondary" href="/imports/failures/report">Rapport d’erreurs</a>
+        <form method="post" action="/imports/{{ batch.id }}/delete" class="delete-form">
+            <input type="hidden" name="confirm" value="yes">
+            <button class="button danger" type="submit" data-confirm="Supprimer définitivement ce lot et toutes ses annonces ? Cette action est irréversible.">Supprimer ce lot…</button>
+        </form>
+    </div>
 </section>
 <div class="stack">
     <section class="panel">

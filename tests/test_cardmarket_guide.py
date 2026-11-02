@@ -191,7 +191,7 @@ def test_sync_route_success_redirects_with_notice(
     response = web_client.post("/cardmarket/sync", follow_redirects=False)
     assert response.status_code == 303
     location = response.headers["location"]
-    assert location.startswith("/profitability?notice=")
+    assert location.startswith("/reglages?notice=")
     assert "1%20produits%20sans%20nom" in location
 
     page = web_client.get(location)

@@ -14,6 +14,14 @@ La maquette est une référence visuelle et interactive, **pas une source de don
 
 ### Maquette de référence
 
+> **Maquette cible actuelle (simplification) :**
+> - URL locale : `http://localhost:8000/static/prototype-cible.html#accueil`
+> - Structure HTML : `app/static/prototype-cible.html`
+> - Direction visuelle et responsive : `app/static/prototype-cible.css`
+> - Interactions de démonstration : `app/static/prototype-cible.js`
+> - Tasking associé : `TASKING_SIMPLIFICATION_CIBLE.md`
+
+Maquette historique (itération précédente) :
 - URL locale : `http://localhost:8000/static/prototype.html?v=2#dashboard`
 - Structure HTML : `app/static/prototype.html`
 - Direction visuelle et responsive : `app/static/prototype.css`
@@ -24,8 +32,10 @@ La maquette est une référence visuelle et interactive, **pas une source de don
 - Layout commun : `app/templates/base.html`
 - Tableau de bord : `app/templates/dashboard.html`
 - Catalogue et fiche produit : `app/templates/catalog.html`, `app/templates/catalog_detail.html`
-- Analyse de rentabilité : `app/templates/profitability.html`
+- Réglages (frais, références, marché) : `app/templates/reglages.html` (route de compatibilité `/profitability`)
 - Veilles : `app/templates/watches.html`
+- Achats : `app/templates/achats.html`
+- Gestion avancée : `app/templates/gestion.html`
 - Sauvegardes et imports : `app/templates/backups.html`, `app/templates/import_detail.html`
 - Page d’erreur : `app/templates/404.html`
 - Styles et scripts existants : `app/static/style.css`, `app/static/forms.js`

@@ -60,6 +60,33 @@ docker compose down
 
 ---
 
+### 0. La navigation cible : capturer → décider → acheter
+
+L'interface est organisée autour d'un parcours quotidien en six entrées directes, plus un hub d'administration avancée :
+
+| Entrée | Contenu | Route |
+|---|---|---|
+| **Accueil** | Opportunités prioritaires, éléments à vérifier, achats en cours, activité récente | `/` |
+| **Opportunités** | Catalogue et analyse de rentabilité unifiés (verdicts, tris gain/ROI, export CSV) | `/catalog` |
+| **Recherche** | Moteur unifié cartes officielles, annonces locales et recherche externe contrôlée | `/search` |
+| **Tendances** | Variations de prix Cardmarket (7j/30j), activité des annonces et meilleures affaires | `/trends` |
+| **Mes achats** | Suivi du portefeuille, cycle de vie, prix de vente réel facultatif et coûts par devise | `/achats` |
+| **Réglages** | Frais, seuils, cotes de marché manuelles, synchronisations Cardmarket et configuration | `/reglages` |
+| **Gestion avancée** | Vendeurs, veilles, imports, TCGdex, annotations ML, agents, sauvegardes | `/gestion` et pages spécialisées |
+
+Le bouton global **« Ajouter des annonces »** propose :
+1. **Saisie assistée par URL** (`/ajouter-annonce`) : reconnaissance syntaxique locale de la plateforme et de l'identifiant pour eBay, Vinted, Leboncoin et Wallapop, sans téléchargement intrusif de la page distante. Pré-analyse indicative en lecture seule avant enregistrement.
+2. **Capture via l'extension Chrome** : prévisualisation unitaire d'une annonce dans Pokébourse avec vérification et correction des champs (`POST /previsualiser-capture`), ou envoi direct par lot vers `/imports`.
+3. **Importation d'un fichier JSONL** : téléversement direct de fichiers volumineux d'annonces ou de cotes.
+4. **Création d'une veille automatique** : programmation d'une surveillance continue sur vos critères de prix et de mots-clés.
+
+> [!NOTE]
+> Les fonctions avancées ont été **regroupées, jamais supprimées** : toutes les routes, formulaires, exports et téléchargements existants restent disponibles (les anciennes URL `/profitability` redirigent de manière transparente vers `/catalog` ou `/reglages` selon leurs paramètres et ancres).
+
+Le parcours recommandé : **capturer** une annonce (extension Chrome, saisie d'URL ou import) → **décider** depuis la fiche annonce (verdict, gain net, ROI, comparables, cote Cardmarket et OCR) → **suivre l'achat** dans « Mes achats ».
+
+---
+
 ### 1. Le Tableau de Bord (Dashboard)
 
 Le tableau de bord centralise en un coup d'œil la météo du marché et la santé de votre système local :
@@ -78,8 +105,11 @@ Pour surmonter les protections anti-bot (Cloudflare, DataDome) sans risque de ba
 
 - **Capture automatique pendant votre navigation réelle** : dès que vous visitez une annonce Pokémon sur Vinted, Leboncoin ou une boutique TCG, l'extension extrait proprement les données (titre, prix, vendeur, image, état).
 - **Notification Toast discrète** : confirmation visuelle en haut à droite sans perturber votre consultation.
-- **Envoi direct en 1 clic** : transmettez votre panier de cartes directement à Pokébourse locale (`POST http://localhost:8000/imports`).
+- **Prévisualisation avant enregistrement (recommandé)** : sélectionnez **exactement une** annonce et cliquez sur **« 🔍 Prévisualiser »**. Pokébourse s'ouvre dans un nouvel onglet et présente, sans rien écrire : l'extrait de l'annonce avec la provenance de chaque champ (extrait de la page, saisi ou corrigé par vous, manquant), une identification proposée (statut, candidats, score — jamais une confirmation humaine), et une rentabilité indicative fondée sur les seules références locales (cotes enregistrées, médiane des comparables, Cardmarket relié de façon fiable). Après vérification et correction éventuelle, **« Confirmer et ajouter l'annonce »** enregistre via le flux transactionnel existant (déduplication, `first_seen_at` préservé). Si plusieurs annonces sont cochées, le popup l'indique explicitement : une prévisualisation à la fois, jamais de lot validé silencieusement. Si Pokébourse est indisponible, les captures restent dans l'extension.
+- **Envoi direct en 1 clic** : transmettez votre panier de cartes directement à Pokébourse locale (`POST http://localhost:8000/imports`) avec estimation financière immédiate.
 - **Export & Sauvegarde** : exportez également vos captures en fichier standard `.jsonl` horodaté ou dans le presse-papier.
+
+**Limites réelles du parcours de prévisualisation** : l'extension ne transmet que ce qu'elle a lu sur la page ouverte — une information absente est présentée comme manquante, jamais inventée ; la langue n'est jamais déduite et doit être choisie avant confirmation ; l'image principale est affichée depuis son URL d'origine (le serveur local ne télécharge aucune image) et n'est pas conservée par le flux d'import ; les numéros/extensions extraits par l'extension sont des indices heuristiques, pas des preuves. L'estimation Cardmarket n'est ni un prix temps réel garanti, ni une vente conclue, ni une preuve d'état ou d'authenticité.
 
 ![Extension Chrome Pokébourse Capture](docs/images/02-chrome-extension.svg)
 
@@ -91,26 +121,46 @@ Pour surmonter les protections anti-bot (Cloudflare, DataDome) sans risque de ba
 
 ---
 
-### 3. Le Catalogue & L'Identification TCGdex
+### 3. L'Ajout d'Annonces : Saisie Assistée par URL (`/ajouter-annonce`) & Imports JSONL
 
-Toutes les annonces (veilles, imports JSONL ou extension Chrome) convergent dans le catalogue unifié (`/catalog`) :
-- **Recherche plein texte** et filtres par extension officielle.
-- **Tri multi-critères** : date de découverte, prix croissant/décroissant, rentabilité estimée et fiabilité vendeur.
-- **Tri et pagination rapide** : 25 annonces par page avec export CSV compatible Excel (encodage UTF-8 avec BOM, séparateur point-virgule et protection anti-injection).
+Le bouton global **« Ajouter des annonces »** de la barre supérieure centralise l'entrée des données :
+
+- **Ajout par URL d'annonce (`/ajouter-annonce`)** :
+  - Collez l'URL d'une annonce provenant d'**eBay**, **Vinted**, **Leboncoin** ou **Wallapop**.
+  - **Analyse syntaxique 100 % locale** : Pokébourse identifie la plateforme et extrait l'identifiant externe sans rien présupposer. Les liens raccourcis ne sont pas acceptés.
+  - **Préremplissage borné, uniquement sur autorisation explicite** : si le domaine de l'annonce figure dans l'allowlist locale (`POKEMON_PAGE_FETCH_ALLOWED_HOSTS` ; avec Compose, `vinted.fr,vinted.net` sont configurés pour ce parcours), le serveur télécharge la page de façon strictement bornée (HTTPS seul, anti-SSRF avec vérification des adresses IP publiques à chaque redirection, 3 redirections maximum, 10 s de timeout, HTML limité à 2 Mo) puis tente une extraction JSON-LD → OpenGraph → balises HTML. Sinon, un message propose la capture par extension ou la saisie manuelle. Chaque champ prérempli est présenté avec son statut (trouvé / proposé / manquant) et sa provenance (extraite, saisie, corrigée) ; aucune valeur n'est inventée.
+  - **OCR local indicatif** : l'image principale extraite (≤ 8 Mo, HTTPS publique) est lue par Tesseract 100 % localement et en mémoire ; les indices reconnus (noms, numéros) alimentent l'analyse sans jamais bloquer l'enregistrement.
+  - **Détection des doublons** : vérifie immédiatement si l'annonce existe déjà dans votre catalogue (`(source, external_id)`).
+  - **Saisie et vérification humaine** : complétez le titre, le prix, l'état, la langue, les frais de port et le vendeur. Un champ laissé vide reste inconnu (aucune valeur favorable n'est supposée).
+  - **Pré-analyse indicative en lecture seule** : le bouton **« Analyser les informations saisies »** lance une détection des preuves, propose une identification TCGdex et calcule la rentabilité indicative sans modifier la base de données.
+  - **Enregistrement transactionnel** : le bouton **« Enregistrer l'annonce »** injecte la fiche via le pipeline sécurisé `app.catalog.import_jsonl` avec déduplication et préservation stricte de la date de première observation (`first_seen_at`).
+- **Importation en masse JSONL** : déposez un fichier `.jsonl` depuis le tableau de bord pour alimenter votre catalogue en masse.
+- **Gestion des erreurs d'import** : journal détaillé des lots rejetés ou corrompus avec rapport CSV téléchargeable (`/imports/failures/report`).
+
+**Limites réelles du parcours par URL** : la récupération serveur n'a lieu que pour un domaine explicitement autorisé (allowlist vide par défaut : aucune plateforme marketplace n'y figure, conformément aux CGU recensées dans `SOURCES.md`) ; l'extraction est limitée aux métadonnées déclaratives (JSON-LD, OpenGraph, balises HTML) — aucun JavaScript n'est exécuté, une page rendue uniquement côté client fournira donc peu ou pas de données ; l'OCR est indicatif (qualité variable selon la photo) et ne confirme jamais une identité ; la devise n'est jamais supposée et doit être choisie explicitement avant l'enregistrement ; l'enregistrement final passe toujours par le flux transactionnel `app.catalog.import_jsonl` avec déduplication et préservation de `first_seen_at`.
+
+---
+
+### 4. Le Catalogue & L'Identification TCGdex (`/catalog`)
+
+Toutes les annonces (veilles, imports JSONL, saisie par URL ou extension Chrome) convergent dans le catalogue unifié (`/catalog`) :
+- **Recherche plein texte** : par nom de carte, numéro ou mot-clé dans le titre original.
+- **Filtres de décision & Rentabilité** : filtrage par verdict d'arbitrage (*Opportunité*, *À surveiller*, *Non rentable*, *Sans cote*), par statut d'identification, par extension officielle et par plateforme source.
+- **Tris multi-critères** : gain net estimé, ROI en points de base, prix d'achat, date de découverte ou fiabilité vendeur.
+- **Pagination et Export CSV** : 25 annonces par page avec export CSV compatible Excel (encodage UTF-8 avec BOM, séparateur point-virgule et protection anti-injection).
 
 ![Catalogue et Identification](docs/images/03-catalog.svg)
 
 #### Les 4 Statuts d'Identification TCGdex :
 Le moteur d'identification (`app/identification/`) compare chaque annonce au référentiel officiel Pokémon :
 1. 🟢 **Identifiée (`identified`)** : Le nom et le numéro concordent avec une carte officielle TCGdex (ex: *Dracaufeu #4/102*). Les métadonnées sont normalisées et le moteur de rentabilité s'active immédiatement.
-2. 🟡 **À vérifier (`ambiguous`)** : Plusieurs cartes concordent sans critère discriminant fort (ex: réédition sans précision du numéro de série). Le système s'abstient pour éviter toute fausse conclusion.
+2. 🟡 **À vérifier (`ambiguous`)** : Plusieurs cartes concordent sans critère discriminant fort (ex: réédition sans précision du numéro de série, ou numéro isolé sans dénominateur). Le système s'abstient pour éviter toute fausse conclusion.
 3. 🔵 **Lot / Coffret (`lot`)** : Détection explicite de termes de vrac, boosters scellés, coffrets ou displays. **Règle absolue : aucun lot n'est jamais rattaché arbitrairement à une seule carte**.
 4. ⚪ **Non identifiée (`unidentified`)** : Annonce au libellé trop vague. Elle reste consultable et réexaminable à la demande via le bouton **Réexaminer l’identification**.
 
-> **Mise à jour du référentiel** : le bouton **« Réexaminer l’identification »** de la page Catalogue relance le moteur sur toutes les annonces non identifiées avec le référentiel courant — à utiliser après une synchronisation complète du catalogue TCGdex pour rattacher les annonces importées alors que le référentiel était encore incomplet. Les confirmations humaines restent prioritaires.
+> **Mise à jour du référentiel** : le bouton **« Réexaminer l’identification »** de la page Catalogue relance le moteur sur toutes les annonces non identifiées avec le référentiel courant — à utiliser après une synchronisation du catalogue TCGdex pour rattacher les annonces importées alors que le référentiel était encore incomplet. Les confirmations humaines restent prioritaires.
 
-#### Recherche approfondie et confirmation humaine
-
+#### Recherche approfondie et confirmation humaine :
 La fiche annonce permet de rechercher dans le cache local, de mettre en file une recherche TCGdex ciblée, de comparer les candidats, puis de confirmer ou retirer une carte. Les preuves, décisions et recherches sont persistées dans SQLite et incluses dans les sauvegardes. Une modification de prix ne retire pas une confirmation ; une modification des preuves d’identité la signale « à revoir ». Un faux classement en lot doit être corrigé avec un motif avant toute confirmation unitaire.
 
 L’enrichissement automatique des annonces non résolues est **désactivé par défaut**. Pour l’activer, définir `TCGDEX_AUTO_ENRICH=true` sur les services `app` et `worker`. La recherche manuelle reste disponible sans ce réglage. `TCGDEX_SEARCHES_PER_TICK` borne le nombre de recherches par passage du worker (1 par défaut, maximum 10). Sans worker, une demande reste « En attente du worker ».
@@ -119,111 +169,127 @@ Seuls le nom, le numéro, l’extension ou l’identifiant de carte sont envoyé
 
 ---
 
-### Validation humaine — premier lot de préparation ML
+### 5. La Recherche Avancée Multi-Critères & Externe (`/search`)
 
-Depuis **Annotations → Diagnostic des annonces**, examinez les annonces non
-identifiées ou ambiguës : candidats locaux, faute de nom possible, contradictions
-et inventaire du catalogue. Le diagnostic est en lecture seule et téléchargeable
-en JSON. Une faute comme « dracofeu 4/102 » peut proposer **Dracaufeu** ; cette
-suggestion reste à confirmer par une personne. La recherche manuelle du formulaire
-de validation accepte aussi les noms approchés, en les signalant explicitement.
+Un espace unifié de recherche locale sans appel réseau :
+- **Recherche plein texte & indexée** : nom de carte, numéro local, identifiant TCGdex (ex. `base1-58`) ou titre d'annonce, optimisée par les index SQLite dédiés (`0020_search_indexes.sql`).
+- **Portée ajustable** : Tout (cartes du référentiel et annonces), Cartes officielles uniquement ou Annonces observées uniquement.
+- **Filtres officiels (référentiel)** : extension, rareté officielle (`pokemon_reference_cards.rarity`), année ou intervalle d’années de sortie (`pokemon_reference_sets.release_date`).
+- **Filtres de marché (annonces)** : prix minimum et maximum en euros, état, langue, variante, édition, société de gradation (PSA, PCA, BGS, CGC, CollectAura) et note, source (Vinted, Leboncoin, eBay, Wallapop, manuel), statut d'identification et inclusion/exclusion des lots.
+- **Règles d'intégrité strictes** : les filtres de rareté et d'année passent impérativement par `reference_card_id` (une annonce non identifiée n'est jamais polluée par une rareté supposée ; aucun lot n'est jamais rattaché à une carte unitaire).
+- **Distinction exacte vs suggestions approchées** : lorsqu'aucun résultat exact n'est trouvé, des suggestions orthographiques issues du lexique officiel sont clairement identifiées.
+- **Export CSV cohérent** (`/search/export.csv`) : télécharge l'intégralité des annonces correspondant aux critères (avec attributs d'identification et respect strict du RGPD vendeur).
 
-Le même diagnostic est disponible en CLI :
+#### Recherche externe contrôlée :
+Accessible via le bouton explicite **« Rechercher aussi à l'extérieur »** (`/search?q=...&external=1`), cette passerelle permet d'élargir la recherche sans compromettre la résilience locale :
+- **Déclenchement uniquement explicite** : aucun appel réseau lors d'une recherche ordinaire.
+- **Résilience absolue** : si toutes les sources distantes sont hors service, les résultats locaux restent immédiatement affichés et utilisables.
+- **Sources autorisées** :
+  - **TCGdex (référentiel officiel)** : les demandes de complétion sont enfilées dans la table persistante `identification_searches` avec déduplication stricte des critères. Seuls les champs utiles (nom, numéro, extension) sont transmis — aucun titre brut, description ou donnée vendeur. Le worker d'arrière-plan résout la file et enrichit le cache SQLite local.
+  - **eBay** : interrogation bornée avec connecteur officiel, backoff exponentiel et gestion de quotas.
+- **Sources indisponibles documentées** : Vinted et Leboncoin sont signalées avec statut explicite « Non disponible » et motif (respect des CGU et protections anti-bot documentées dans `SOURCES.md`), avec invitation à utiliser l'extension Chrome ou l'import JSONL.
+- **Import contrôlé en un clic** (`POST /search/external/import`) : déduplication stricte sur `(source_id, external_id)`, préservation inviolable de `first_seen_at` lors des ré-ingestions, mise à jour de `last_seen_at` et du prix, historique conservé dans `listing_observations`, respect strict de la liste blanche RGPD pour les profils vendeurs.
 
-```bash
-docker compose run --rm app pokemon-arbitrage diagnose-identification --status all --limit 100 --json
-```
+---
 
-Voir [la recherche lexicale et ses limites](docs/IDENTIFICATION_LEXICALE.md).
+### 6. Les Tendances de Marché & Opportunités d'Arbitrage (`/trends`)
 
-Le menu **Annotations** ouvre `/annotations`, le tableau de suivi du pilote.
-Cliquez **Constituer la file** pour sélectionner jusqu’à **300 annonces**, puis
-**Continuer les lectures**. La file propose des cas variés, conserve les
-probabilités de sélection et prévoit **60 doubles lectures** lorsque les 300
-annonces sont disponibles. **Compléter la file** ajoute les nouveaux cas après
-de nouveaux imports. Filtres et pagination permettent de retrouver les lectures
-disponibles, celles qui attendent un autre opérateur et les décisions à valider.
+L'espace **Tendances** (`/trends`) permet d'observer la dynamique des prix et le niveau d'activité sur le marché :
 
-Les lectures du pilote ne changent pas immédiatement l’annonce. Une fois la ou
-les lectures terminées, **Valider / arbitrer** enregistre la décision finale.
-La seconde lecture exige un opérateur distinct, configuré côté serveur par
-`POKEMON_REVIEW_OPERATOR` ; premier avis, suggestions et historique restent
-masqués dans ce parcours. Le suivi distingue avancement, accord entre lecteurs
-avant arbitrage et diagnostic des décisions finales. Ces résultats décrivent
-le pilote et ne certifient pas la précision en production.
+- **Variations de prix Cardmarket officielles** :
+  - Évolution des moyennes de vente : comparaison `avg7` vs `avg30` (dynamique moyen terme) et `avg1` vs `avg7` (dynamique court terme).
+  - Variations chiffrées en centimes d'euros et en points de base (`bps`), calculées avec précision monétaire stricte (arrondi demi-supérieur `ROUND_HALF_UP`).
+  - Produits sans prix ou sans antériorité suffisante exclus pour éviter les pourcentages aberrants.
+- **Activité des annonces récentes** :
+  - Nombre d'annonces observées par carte dans le catalogue local sur une fenêtre glissante de 7 ou 30 jours.
+  - **Honnêteté des données** : cet indicateur reflète fidèlement la présence de la carte dans les offres collectées, sans jamais prétendre faussement être un volume de ventes conclues.
+- **Radar des meilleures opportunités** :
+  - Sélection des annonces générant le meilleur gain net estimé et le retour sur investissement le plus élevé.
+  - Vérification de la fraîcheur des données et affichage clair de la source de cotation.
+- **Filtres de marché** : sélection de la période (7 jours ou 30 jours), de l'extension officielle, de la rareté et d'un seuil minimum d'observations.
 
-Depuis une fiche annonce, **Valider ou corriger l’identité** ouvre le formulaire
-`/catalog/{id}/review?blind=false`. Recherchez une carte par nom ou identifiant
-TCGdex dans tout le catalogue local, puis enregistrez une **décision** pour
-actualiser l’annonce. Vous pouvez aussi marquer un lot, un objet hors périmètre,
-une carte absente, des preuves insuffisantes ou retirer une validation.
+---
 
-Le lien **Lecture indépendante sans suggestion** masque suggestions et historique.
-Une **annotation indépendante** conserve une lecture sans modifier l’identification ;
-un **arbitrage** relie les annotations concernées à une décision. La langue, la
-variante, l’édition et l’état se vérifient séparément et restent inconnus si les
-champs sont laissés vides. Ce pilote porte uniquement sur le texte.
+### 7. L'Assistance Visuelle & OCR Local (`/ocr/suggestions`)
 
-Les décisions et les observations sont historisées. Une nouvelle collecte
-identique ou un changement de prix conserve la validation ; une modification des
-preuves demande un réexamen. Le formulaire refuse les corrections concurrentes
-obsolètes. Les anciens boutons de confirmation restent compatibles, mais leurs
-confirmations ne deviennent pas automatiquement des labels d’apprentissage.
+Le [tasking d'identification fiable de bout en bout](TASKING_IDENTIFICATION_FIABLE.md) décrit les travaux à réaliser et leurs critères de validation : détection des lots, preuves, couverture du référentiel, OCR, vérification humaine et évaluation. Il distingue le fonctionnement actuel des améliorations planifiées.
 
-Téléchargez le jeu pilote depuis **Exporter les validations JSONL**, ou utilisez :
+Pokébourse intègre un moteur de reconnaissance optique de caractères (OCR) **100 % local et conteneurisé** pour faciliter l'identification d'une carte à partir d'une photo :
 
-```bash
-docker compose run --rm app pokemon-arbitrage export-labels --output /opt/pokemon-arbitrage/labels-pilote.jsonl
-```
+- **Accessibilité immédiate** : disponible directement sur la fiche détaillée (`/catalog/{id}`) et dans les formulaires de réconciliation d'annonces.
+- **Formats supportés** : téléversement de fichiers JPEG, PNG et WebP jusqu'à 8 Mo et 12 millions de pixels.
+- **Moteur Tesseract embarqué** : reconnaissance exécutée en local (`tesseract stdin stdout -l fra+eng --psm 11`) sans aucun abonnement payant ni dépendance cloud.
+- **Extraction des preuves clés** : analyse du texte pour repérer le nom de la carte Pokémon, le numéro imprimé (`X/Y` ou numéro isolé), l'extension et les points de vie (PV).
+- **Suggestions en 1 clic** : mise en correspondance instantanée des indices relevés avec le référentiel TCGdex local. L'utilisateur peut préremplir la recherche ou valider le candidat en un clic.
+- **Respect absolu de la vie privée & Zéro persistance** :
+  - L'image est décodée en mémoire vive via Pillow, nettoyée de ses métadonnées EXIF, et détruite après analyse.
+  - Aucun fichier photo n'est enregistré sur le disque de l'application ni stocké en base de données.
+  - Aucun appel réseau distant : vos photos restent confinées à votre machine locale.
 
-Le fichier doit être nouveau. Il inclut un manifeste, les catalogues TCGdex figés
-et les lectures, avec leurs motifs d’exclusion du futur apprentissage. Aucun
-modèle n’est entraîné ni activé. Voir [l’état de la phase 0](docs/ML_PHASE0.md)
-pour le périmètre livré et les étapes restantes avant les 300 annotations pilotes.
+---
 
-### 4. La Fiche Détaillée & Simulation d'Arbitrage
+### 8. La Fiche Détaillée, Preuves de Prix & Comparables (`/catalog/{id}`)
 
-En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'analyse détaillée :
+En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'analyse décisionnelle complète :
 
 ![Fiche Détaillée](docs/images/04-catalog-detail.svg)
 
-- **Liaison Catalogue TCGdex** : carte officielle rattachée, illustrateur, rareté, points de vie et score de confiance.
+- **Liaison Catalogue TCGdex** : carte officielle rattachée, visuel haute définition, illustrateur, rareté, points de vie et score de confiance.
 - **Décomposition financière transparente** :
   $$\text{Gain Net} = \text{Prix de revente estimé} - \text{Commission plateforme} - \text{Frais fixes} - \text{Port/Emballage} - (\text{Prix d'achat} + \text{Port aller})$$
   $$\text{ROI} = \frac{\text{Gain Net}}{\text{Prix d'achat} + \text{Port aller}}$$
-- **Profil Vendeur** : évaluation de la réputation du vendeur, bouton d'ajout aux favoris et consultation des avis.
-- **Valeur de marché Cardmarket (fichiers officiels)** : deuxième source de prix affichée à côté du prix de l'annonce (tendance + moyennes de vente 1/7/30 jours), avec repli automatique : si Cardmarket ne connaît pas la carte, seul le prix de l'annonce reste affiché. C'est aussi le **dernier repli du moteur de rentabilité** (prix tendance le plus bas des produits assortis, en l'absence de cote dédiée et de médiane du catalogue). **Synchronisation automatique quotidienne** par le worker vers 03:20 (heure de Paris), après la régénération du price guide (~02:45), plus bouton **« Tout synchroniser maintenant »** (cotes + noms) sur la page Rentabilité. Source : fichiers publics publiés chaque jour par Cardmarket (public, gratuit, sans compte — ~80 000 cartes Pokémon).
+- **Valeur de marché Cardmarket (fichiers officiels)** : tendance et moyennes de vente 1/7/30 jours d'un produit lié explicitement et sans ambiguïté à la carte identifiée. Un simple nom commun à plusieurs cartes ne suffit pas à établir une cote : elle reste inconnue tant que le produit exact n'est pas lié. Le prix est agrégé et ne garantit ni état ni langue. Le worker synchronise quotidiennement le guide ; un bouton manuel est disponible dans Réglages.
 - **Preuves de prix & cartes comparables** : La section *Preuves de prix · Annonces & ventes réelles* regroupe les éléments tangibles étayant l'estimation de revente :
   1. *Ventes conclues & cotes enregistrées* : issues de `market_references` (ex: ventes eBay réussies, Cardmarket) avec lien direct vers la source et date d'observation.
   2. *En vente actuellement* : annonces similaires actives dans le catalogue local.
   3. *Déjà revendus par vos soins* : achats passés de votre portefeuille passés au statut `vendu`.
   Chaque ligne indique l'écart de prix net en centimes et euros ($\pm X,XX\text{ €}$ vs estimation) pour valider immédiatement la crédibilité du prix retenu.
-- **Bouton d'enregistrement d'achat** : un clic permet de convertir l'annonce observée en achat officiel dans votre carnet de suivi.
+- **Assistance OCR intégrée** : bouton pour analyser une photo de la carte et suggérer les candidats du référentiel.
+- **Bouton d'enregistrement d'achat** : un clic convertit l'annonce observée en achat officiel dans votre carnet de suivi.
 
 ---
 
-### 5. Le Moteur de Rentabilité & Cotes de Référence
+### 9. Le Moteur de Rentabilité & Réglages Financiers (`/reglages`)
 
-Accessible via la page **Rentabilité** (`/profitability`), le moteur permet de piloter précisément vos hypothèses d'investissement :
+Accessible via la page **Réglages** (`/reglages`, avec redirection automatique des anciennes URL `/profitability`), le moteur permet de piloter précisément vos hypothèses d'investissement :
 
 ![Moteur de Rentabilité](docs/images/05-profitability.svg)
 
-1. **Modèle de prix hybride** :
-   - **Cote de marché dédiée prioritaire** : issue de `market_references` (ventes conclues Cardmarket, eBay réelles ou estimations manuelles avec source et date d'observation).
-   - **Repli sur la médiane du catalogue** : calculée sur les autres annonces identiques (même nom, numéro, langue, état, variante et devise).
-   - **Dernier repli : prix tendance Cardmarket** : si aucune référence ni médiane n'existe, le moteur utilise le plus bas des prix tendances des produits Cardmarket assortis (correspondance par nom de base, pont multilingue FR · EN · KO · JA · ZH via les alias TCGdex) — volontairement prudent, car les fichiers publics Cardmarket ne précisent pas l'extension. Limité aux annonces en EUR.
+1. **Modèle de prix hybride à 3 niveaux** :
+   - **Niveau 1 — Cote de marché dédiée prioritaire** : issue de `market_references` (ventes conclues Cardmarket, eBay réelles ou estimations manuelles avec source et date d'observation).
+   - **Niveau 2 — Repli sur la médiane du catalogue** : calculée sur les autres annonces identiques (même nom, numéro, langue, état, variante et devise).
+   - **Niveau 3 — Dernier repli : prix tendance Cardmarket** : si aucune référence ni médiane n'existe, seul un produit Cardmarket relié explicitement et de façon unique à la carte TCGdex identifiée, avec un prix positif, peut fournir une estimation en EUR. Une correspondance par nom seule ne suffit pas.
 2. **Profil de frais personnalisable** :
    - Commission de revente en points de base (ex: 500 bps = 5,00 %).
    - Frais fixes vendeur (€) et coût d'emballage/expédition (€).
    - Frais de port acheteur par défaut.
    - Seuils de qualification : gain net minimum (ex: 10,00 €) et ROI minimum (ex: 15,00 %).
-3. **Zéro approximation financière** : Tous les montants sont calculés en centimes entiers et les pourcentages en points de base (`bps`), éliminant les erreurs d'arrondis des nombres à virgule flottante.
+3. **Synchronisation Cardmarket quotidienne** : Price guide public (~80 000 cartes en EUR, gratuit, sans compte) synchronisé automatiquement chaque nuit par le worker vers 03:20 (heure de Paris), plus bouton **« Tout synchroniser maintenant »** pour un rafraîchissement immédiat.
+4. **Zéro approximation financière** : Tous les montants sont calculés en centimes entiers et les pourcentages en points de base (`bps`), éliminant les erreurs d'arrondis des nombres à virgule flottante.
 
 ---
 
-### 6. Annuaire des Vendeurs & Suivi des Achats
+### 10. Mes Achats & Suivi du Portefeuille (`/achats`)
 
-Pokébourse enrichit les annonces avec les profils publics des vendeurs (`/sellers`) et gère votre portefeuille d'arbitrage :
+La page **Mes achats** (`/achats`) centralise le pilotage de vos investissements :
+
+- **Cycle de vie complet** :
+  - `📦 Commandé` : annonce achetée sur la marketplace, en attente d'expédition.
+  - `📬 Reçu` : carte livrée et inspectée.
+  - `🏷️ En vente` : carte remise en vente sur votre propre canal.
+  - `💰 Vendu` : transaction finale conclue.
+- **Prix de vente réel facultatif (`sale_price_cents`)** :
+  - Ajouté par la migration SQLite `0021_purchase_sale_price.sql`.
+  - Permet d'enregistrer le montant réel perçu lors de la revente finale.
+  - **Rigueur financière** : les frais de revente réels n'étant pas collectés sur chaque plateforme de sortie, aucune rentabilité réalisée théorique n'est inventée sans données complètes.
+- **Synthèse des investissements par devise** : totaux d'achats distincts en EUR, USD et GBP sans conversion arbitraire.
+- **Accès direct aux annonces et aux profils vendeurs** : lien vers l'annonce d'origine et la fiche du vendeur partenaire.
+
+---
+
+### 11. Annuaire des Vendeurs, Pépites & CRM (`/sellers`)
+
+Pokébourse enrichit les annonces avec les profils publics des vendeurs (`/sellers`) et gère vos relations commerciales :
 
 ![Annuaire Vendeurs et Carnet d'Achats](docs/images/06-sellers-purchases.svg)
 
@@ -232,14 +298,39 @@ Pokébourse enrichit les annonces avec les profils publics des vendeurs (`/selle
   - Plafonné à 3 étoiles si le vendeur compte moins de 5 avis.
   - Plafonné à 2 étoiles si le taux d'avis négatifs dépasse 10 %.
   - 0 étoile pour un compte banni.
-- **Protection de la vie privée (RGPD)** : les informations personnelles sensibles (emails, noms réels, coordonnées) sont filtrées par liste blanche stricte et jamais stockées.
-- **Carnet des achats & Reventes (`purchases`)** :
-  - Statuts du cycle de vie : `📦 Commandé` $\rightarrow$ `📬 Reçu` $\rightarrow$ `🏷️ En vente` $\rightarrow$ `💰 Vendu`.
-  - Calcul automatique de la rentabilité réelle constatée après revente.
+- **Classement Multi-axes** :
+  - ⭐ **Les plus fiables** : vendeurs les mieux notés avec historique d'avis vérifié.
+  - 🏆 **Meilleures pépites** : vendeurs mettant en ligne le plus de cartes sous-évaluées détectées comme *Opportunité*.
+  - 💳 **Fournisseurs clés** : partenaires chez qui vous avez le plus acheté.
+  - ❤️ **Favoris & Notes privées** : marquez vos vendeurs de confiance et enregistrez des notes sur leurs habitudes de négociation.
+- **Fiche Vendeur Détaillée (`/sellers/{id}`)** : inventaire en direct des cartes en vente du vendeur et historique complet des achats passés.
+- **Protection stricte de la vie privée (RGPD)** : les informations personnelles sensibles (emails, téléphones, coordonnées postales) sont filtrées par liste blanche stricte et jamais stockées.
 
 ---
 
-### 7. Veilles Automatiques & Supervision des Collecteurs
+### 12. Validation Humaine & Pilote d'Annotation ML Phase 0 (`/annotations`, `/identification/diagnostics`)
+
+Pour préparer les futurs modèles de Machine Learning sans biaiser l'apprentissage, Pokébourse intègre un banc de validation humaine rigoureux :
+
+- **Diagnostic lexical (`/identification/diagnostics`)** : examen des annonces non identifiées ou ambiguës, détection des fautes d'orthographe probables via index trigrammes et distance de Levenshtein (ex: « dracofeu 4/102 » suggérant Dracaufeu). Également disponible en ligne de commande :
+  ```bash
+  docker compose run --rm app pokemon-arbitrage diagnose-identification --status all --limit 100 --json
+  ```
+  Voir [le diagnostic lexical et ses règles](docs/IDENTIFICATION_LEXICALE.md).
+- **Pilote d'annotation Phase 0 (`/annotations`)** :
+  - Constitution d'une file stratifiée de 300 annonces avec 60 doubles lectures aveugles.
+  - Isolation stricte des annotateurs garantie par la variable `POKEMON_REVIEW_OPERATOR`.
+  - Parcours de double lecture aveugle masquant suggestions et historiques.
+  - Écran d'attente opérateur (`annotation_blocked.html`) si une seconde lecture requiert un autre annotateur.
+  - Arbitrage des divergences et export reproductible du dataset de référence :
+  ```bash
+  docker compose run --rm app pokemon-arbitrage export-labels --output /data/labels-pilote.jsonl
+  ```
+- **Validation manuelle sur fiche annonce (`/catalog/{id}/review`)** : formulaire de confirmation ou de correction manuelle, avec motifs explicites (carte confirmée, lot, hors périmètre, carte absente, preuves insuffisantes).
+
+---
+
+### 13. Veilles Automatiques & Supervision des Collecteurs (`/watches`, `/agents`)
 
 Le worker d'arrière-plan (`python -m app.worker`) exécute les veilles périodiques programmées (`/watches`) :
 
@@ -254,7 +345,7 @@ Le worker d'arrière-plan (`python -m app.worker`) exécute les veilles périodi
 
 ---
 
-### 8. Sauvegardes & Restauration SQLite
+### 14. Sauvegardes & Restauration SQLite (`/backups`)
 
 La sécurité de vos données est assurée sur la page **Sauvegardes** (`/backups`) :
 - **Copies à chaud non bloquantes** : utilisation de l'API de sauvegarde en ligne de SQLite (`sqlite3_backup`), garantissant une copie cohérente même en pleine écriture.
@@ -263,21 +354,12 @@ La sécurité de vos données est assurée sur la page **Sauvegardes** (`/backup
 
 ---
 
-### 9. Référencement des Vendeurs, Pépites & CRM d'Achats (`/sellers`)
+### 15. Hub de Gestion Avancée (`/gestion`)
 
-Pokébourse inclut un annuaire intelligent pour identifier vos meilleurs partenaires d'achat et suivre votre historique réel :
-- **Classement Multi-axes** :
-  - ⭐ **Les plus fiables** : évaluation en étoiles (0 à 5 ★) calculée sur les avis vérifiés de la plateforme, le taux d'avis positifs et l'absence de ban.
-  - 🏆 **Meilleures pépites** : vendeurs qui mettent en ligne le plus de cartes sous-évaluées détectées comme *Opportunité* par le moteur d'arbitrage.
-  - 💳 **Fournisseurs clés** : vendeurs chez qui vous avez le plus acheté et dépensé.
-  - ❤️ **Favoris & Notes** : marquez vos vendeurs de confiance et notez leurs habitudes de négociation ou la qualité de leur emballage.
-- **Fiche Vendeur Détaillée (`/sellers/{id}`)** :
-  - Indicateurs de fiabilité et réputation publique détaillée.
-  - Carnet de notes personnelles sur le vendeur.
-  - Historique des achats conclus avec date, prix payé, port et statut de livraison.
-  - Inventaire en direct des cartes en vente du vendeur consolidées dans le catalogue local.
-- **Enregistrement d'Achat Intégré** :
-  - Formulaire **« Marquer cette annonce comme achetée »** sur chaque fiche annonce (`/catalog/{id}`) pour alimenter automatiquement vos statistiques et l'historique vendeur.
+Pour conserver une interface claire et épurée au quotidien, la vue **Gestion avancée** (`/gestion`) réunit l'ensemble des modules d'administration :
+- **Indicateurs réels d'état du système** : nombre de vendeurs suivis, veilles actives, état du référentiel TCGdex, avancement du pilote d'annotation ML, état de santé des agents de supervision et volume des sauvegardes disponibles.
+- **Navigation directe et raccourcis** : accès en un clic vers chaque espace spécialisé (Vendeurs, Veilles, Imports, Référentiel TCGdex, Annotations ML, Diagnostic lexical, Agents et Sauvegardes).
+- **Zéro donnée fictive** : chaque indicateur reflète exactement l'état de la base SQLite locale.
 
 ---
 
@@ -367,20 +449,35 @@ docker compose run --rm app python -m scripts.comparables_report
 
 ## 🧪 Tests & Assurance Qualité
 
-La suite de 30 fichiers de tests automatisés comprend **313 tests rigoureusement hermétiques** (0 échec) : **aucun appel réseau vers Vinted, Leboncoin, eBay, Wallapop, Cardmarket ou TCGdex n'est réalisé pendant les tests**.
+La suite de 43 fichiers de tests automatisés comprend **452 tests rigoureusement hermétiques** (0 échec) : **aucun appel réseau vers Vinted, Leboncoin, eBay, Wallapop, Cardmarket ou TCGdex n'est réalisé pendant les tests**.
 
 ```bash
-# Exécuter l'intégralité des 313 tests unitaires et d'intégration
+# Exécuter l'intégralité des 452 tests unitaires et d'intégration
 docker compose run --rm app pytest
 
 # Lancer les tests avec détails et verbosité
 docker compose run --rm app pytest -v
 
-# Tester spécifiquement l'extension Chrome et l'import JSONL
-docker compose run --rm app pytest tests/test_chrome_extension.py -v
+# Tester spécifiquement l'extension Chrome et la prévisualisation de capture
+docker compose run --rm app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v
 
-# Tester le moteur d'identification et la réconciliation
-docker compose run --rm app pytest tests/test_identification.py tests/test_tcgdex_cache.py -v
+# Tester le moteur d'identification, numéros isolés et réconciliation
+docker compose run --rm app pytest tests/test_identification.py tests/test_candidate_number_warning.py tests/test_tcgdex_cache.py -v
+
+# Tester la recherche avancée multi-critères et externe
+docker compose run --rm app pytest tests/test_search.py -v
+
+# Tester les tendances de marché et opportunités
+docker compose run --rm app pytest tests/test_trends.py -v
+
+# Tester la saisie d'annonce manuelle par URL et la prévisualisation indicative
+docker compose run --rm app pytest tests/test_manual_listing.py tests/test_listing_preview.py tests/test_page_extract.py -v
+
+# Tester l'OCR local éphémère (Tesseract)
+docker compose run --rm app pytest tests/test_ocr_local.py tests/test_ocr_web.py -v
+
+# Tester la simplification de l'interface et les nouvelles pages (/achats, /reglages, /gestion)
+docker compose run --rm app pytest tests/test_simplification_navigation.py tests/test_simplification_avancee.py -v
 
 # Tester Cardmarket (guide public, alias de noms, repli et sync quotidienne)
 docker compose run --rm app pytest tests/test_cardmarket.py tests/test_cardmarket_guide.py tests/test_cardmarket_daily.py -v
@@ -390,6 +487,12 @@ docker compose run --rm app pytest tests/test_annotation_pilot.py tests/test_lex
 
 # Tester le moteur de rentabilité et les comparables de prix
 docker compose run --rm app pytest tests/test_profitability.py -v
+
+# Tester le carnet d'achats et les prix de vente réels
+docker compose run --rm app pytest tests/test_sellers_directory_and_purchases.py tests/test_sellers.py -v
+
+# Tester l'idempotence des migrations SQLite (0001 à 0021)
+docker compose run --rm app pytest tests/test_migrations.py -v
 ```
 
 ---
@@ -401,7 +504,7 @@ Le projet Pokébourse adhère aux principes suivants, détaillés dans le fichie
 2. **Respect du RGPD** : Seules les métadonnées publiques nécessaires à la qualification de l'offre sont exploitées. Les données personnelles sensibles des vendeurs sont systématiquement ignorées.
 3. **Alternative de navigation légitime** : L'extension Chrome officielle permet à l'utilisateur de capturer les annonces pendant ses propres sessions de navigation manuelles, dans le strict respect de la politique des sites consultés.
 
-Les preuves de prix de la fiche distinguent les références enregistrées des annonces collectées. Un achat marqué « vendu » ne constitue pas une preuve de prix de revente tant que ce montant n'a pas été enregistré. Le repli Cardmarket repose sur un rapprochement approximatif par nom et un prix agrégé dont la langue et l'état ne sont pas confirmés ; sa date de marché peut être inconnue.
+Les preuves de prix de la fiche distinguent les références enregistrées des annonces collectées. Un achat marqué « vendu » ne constitue pas une preuve de prix de revente tant que ce montant n'a pas été enregistré. La cote Cardmarket exige un lien produit explicite ; elle reste agrégée et ne confirme ni langue ni état. Sa date de marché peut être inconnue.
 
 ---
 

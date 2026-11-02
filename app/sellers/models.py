@@ -7,10 +7,32 @@ conservée, même si la plateforme la renvoie dans sa réponse brute.
 
 from dataclasses import dataclass, field
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 SellerPlatform = Literal["vinted", "leboncoin", "ebay", "wallapop"]
+
+
+def seller_platform_from_source(source: str | None, url: str | None) -> SellerPlatform | None:
+    """Détermine la plateforme connue sans inventer de provenance pour un import."""
+    known: dict[str, SellerPlatform] = {
+        "vinted": "vinted", "leboncoin": "leboncoin", "ebay": "ebay", "wallapop": "wallapop",
+    }
+    if source and source.lower() in known:
+        return known[source.lower()]
+    try:
+        host = (urlsplit(url or "").hostname or "").lower().rstrip(".")
+    except ValueError:
+        return None
+    domains: dict[str, SellerPlatform] = {
+        "ebay.fr": "ebay", "ebay.com": "ebay", "ebay.co.uk": "ebay",
+        "vinted.fr": "vinted", "leboncoin.fr": "leboncoin", "wallapop.com": "wallapop",
+    }
+    for domain, platform in domains.items():
+        if host == domain or host.endswith("." + domain):
+            return platform
+    return None
 
 MAX_REPUTATION_BPS = 10_000
 
@@ -115,6 +137,7 @@ class Purchase(BaseModel):
     condition: str | None = Field(default=None, max_length=50)
     price_paid_cents: int = Field(ge=0)
     shipping_paid_cents: int = Field(default=0, ge=0)
+    sale_price_cents: int | None = Field(default=None, ge=0)
     currency: str = "EUR"
     platform: str | None = None
     status: Literal["commande", "recu", "en_vente", "vendu"] = "recu"

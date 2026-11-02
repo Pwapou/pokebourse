@@ -9,6 +9,8 @@ services:
       PYTHONPATH: /opt/pokemon-arbitrage
       POKEMON_DATABASE_PATH: /data/pokemon-arbitrage.db
       POKEMON_LOG_LEVEL: INFO
+      # Activation demandée pour les annonces Vinted et leurs images publiques.
+      POKEMON_PAGE_FETCH_ALLOWED_HOSTS: ${POKEMON_PAGE_FETCH_ALLOWED_HOSTS:-vinted.fr,vinted.net}
       POKEMON_MIN_WATCH_INTERVAL_SECONDS: 120
       POKEMON_WATCH_POLL_SECONDS: 5
       POKEMON_REVIEW_OPERATOR: ${POKEMON_REVIEW_OPERATOR:-local}

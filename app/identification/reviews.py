@@ -114,13 +114,15 @@ def capture_snapshot(connection: sqlite3.Connection, item_id: int, evidence: dic
     connection.execute(
         """INSERT INTO listing_identification_snapshots
         (listing_id, input_hash, title, description, attributes_json, input_origin,
-         source_kind, platform, group_key, normalization_version, captured_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         source_kind, platform, group_key, normalization_version, captured_at, observations_json, pipeline_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(listing_id, input_hash) DO NOTHING""",
         (item_id, evidence["hash"], redact_contacts(evidence["title"]),
          redact_contacts(evidence["description"]), canonical_json({key: redact_contacts(value) for key, value in evidence["attributes"].items()}),
          origin, item["kind"], platform, fingerprint([item["source_id"], item["external_id"]]),
-         NORMALIZATION_VERSION, utc_now()),
+         NORMALIZATION_VERSION, utc_now(), canonical_json([
+             {key: redact_contacts(value) if isinstance(value, str) else value for key, value in observation.items()}
+             for observation in evidence.get("observations", [])]), evidence.get("pipeline_version", "lexical-v1")),
     )
     snapshot = connection.execute(
         "SELECT * FROM listing_identification_snapshots WHERE listing_id=? AND input_hash=?",
@@ -252,6 +254,7 @@ def reviewed_result(connection: sqlite3.Connection, review: sqlite3.Row, result:
         return replace(result, status="lot", matched_card=None, confidence=0,
                        reason="Lot détecté : validation unitaire à réexaminer.")
     return replace(result, status=status, matched_card=card, confidence=None,
+                   reason_code="human_confirmation" if card else "lot" if status == "lot" else "human_abstention", decision_source="human",
                    reason=f"Validation humaine : {OUTCOMES[review['outcome']]}. État, variante, authenticité et prix restent distincts.")
 
 

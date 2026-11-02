@@ -17,6 +17,10 @@ DIAGNOSTIC_LABELS = {
     "original_unavailable": "Original indisponible ou non fiable",
     "lot": "Lot ou produit scellé",
     "foreign_language": "Langue hors du référentiel français",
+    "language_conflict": "Langues multiples ou contradictoires",
+    "object_uncertain": "Objet vendu à préciser",
+    "indicative_evidence": "Indices visuels ou préremplis à confirmer",
+    "service_unavailable": "Analyse indisponible",
     "no_evidence": "Indices textuels insuffisants",
     "no_candidate": "Aucun candidat local",
     "contradiction": "Numéro ou extension contradictoire",
@@ -47,6 +51,12 @@ def _diagnosis(result: IdentificationResult) -> str:
     """Décrit ce que le moteur constate, sans inventer une absence dans TCGdex."""
     if result.status == "lot":
         return "lot"
+    if len(result.features.languages) > 1:
+        return "language_conflict"
+    if result.reason_code == "contradiction":
+        return "contradiction"
+    if result.reason_code in {"object_uncertain", "indicative_evidence", "service_unavailable"}:
+        return result.reason_code
     if result.features.language and result.features.language != "fr":
         return "foreign_language"
     if result.status == "identified":
@@ -102,7 +112,7 @@ def identification_diagnostics(connection: sqlite3.Connection, *, limit: int = 1
         for row in rows:
             title, description, raw = _observations(row)
             start = perf_counter_ns()
-            result = matcher.identify(title, description, raw_data={}) if title else None
+            result = matcher.identify(title, description, raw_data=raw) if title else None
             elapsed_us = (perf_counter_ns() - start + 500) // 1000
             durations.append(elapsed_us)
             code = _diagnosis(result) if result else "original_unavailable"
@@ -112,6 +122,11 @@ def identification_diagnostics(connection: sqlite3.Connection, *, limit: int = 1
                 payload = asdict(candidate)
                 payload["match_reason"] = redact_contacts(candidate.match_reason)
                 candidates.append(payload)
+            diagnostic_candidates = []
+            for candidate in result.diagnostic_candidates[:5] if result else []:
+                payload = asdict(candidate)
+                payload["match_reason"] = redact_contacts(candidate.match_reason)
+                diagnostic_candidates.append(payload)
             items.append({
                 "id": row["id"], "title": redact_contacts(title) or "Original non fiable",
                 "stored_status": row["identification_status"], "diagnostic": code,
@@ -119,8 +134,13 @@ def identification_diagnostics(connection: sqlite3.Connection, *, limit: int = 1
                 "reason": redact_contacts(result.reason) if result else "Récupérer un original fiable avant l'analyse textuelle.",
                 "has_description": bool(description), "has_image_url": bool(row["image_url"]),
                 "observed_language": result.features.language if result else None,
+                "observed_languages": list(result.features.languages) if result else [],
                 "input_origin": row["input_origin"] or ("original_text" if title else "legacy_unknown"),
                 "candidates": candidates, "candidate_count": len(result.candidates) if result else 0,
+                "diagnostic_candidates": diagnostic_candidates,
+                "reason_code": result.reason_code if result else "original_unavailable",
+                "pipeline_version": result.pipeline_version if result else None,
+                "normalization_version": result.normalization_version if result else None,
                 "elapsed_us": elapsed_us,
                 "structured_hints_present": [key for key in ("card_number", "set_name") if raw.get(key)],
             })

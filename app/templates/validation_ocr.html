@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Validations OCR · Pokébourse{% endblock %}
+{% block breadcrumb %}Gestion / Validations OCR{% endblock %}
+{% macro identity(result) %}
+    {% if result %}
+    <span class="state-badge {{ 'green' if result.status == 'identified' else ('blue' if result.status == 'lot' else 'amber') }}">{{ {'identified': 'Identifiée', 'ambiguous': 'À vérifier', 'lot': 'Lot', 'unidentified': 'Non identifiée'}.get(result.status, result.status) }}</span>
+    {% if result.tcgdex_id %}<div><strong>{{ result.card_name }}</strong></div><span class="cell-sub">{{ result.tcgdex_id }} · {{ result.set_name }} · N° {{ result.local_id }}</span>{% endif %}
+    {% if result.detected_name or result.detected_number %}<span class="cell-sub">Lu : {{ result.detected_name or '—' }} · {{ result.detected_number or '—' }}</span>{% endif %}
+    {% if result.confidence is not none %}<span class="cell-sub">Confiance : {{ result.confidence }} %</span>{% endif %}
+    {% else %}<span class="cell-sub">Non testé</span>{% endif %}
+{% endmacro %}
+{% block content %}
+<section class="page-heading">
+    <div><span class="eyebrow">VALIDATION SUR ANNONCES RÉELLES</span><h1>Comparaison titre et OCR</h1><p>Chaque campagne reste conservée pour comparer les évolutions du moteur. Aucun résultat ne vaut validation humaine de la carte.</p></div>
+    <div class="heading-actions"><a class="button secondary" href="/gestion">← Gestion avancée</a></div>
+</section>
+<section class="panel">
+    <div class="panel-heading"><h2>Campagnes conservées</h2></div>
+    <div class="table-wrap"><table><thead><tr><th>DATE</th><th>CAMPAGNE</th><th>LIENS</th><th>IDENTIFIÉES</th><th>À VÉRIFIER</th><th>LOTS</th><th></th></tr></thead><tbody>
+    {% for run in runs %}<tr>
+        <td>{{ run.created_at|date }}</td><td><strong>{{ run.label }}</strong><span class="cell-sub">{{ run.vinted }} Vinted · {{ run.ebay }} eBay · {{ run.images }} photos</span></td>
+        <td>{{ run.total }}</td><td>{{ run.identified }}</td><td>{{ run.ambiguous }}</td><td>{{ run.lot }}</td>
+        <td><a class="button secondary small" href="/validations/ocr/{{ run.id }}">Comparer</a></td>
+    </tr>{% else %}<tr><td colspan="7">Aucune campagne enregistrée.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+{% if report %}
+<section class="page-heading">
+    <div><span class="eyebrow">CAMPAGNE DU {{ report.created_at|date }}</span><h2>{{ report.label }}</h2><p>{{ report.source }}</p></div>
+</section>
+<div class="alert">{{ report.note }}</div>
+<section class="stats-grid" aria-label="Résultats combinés">
+    <article class="stat-card"><div class="stat-top"><span>LIENS TESTÉS</span></div><strong>{{ report.summary.total }}</strong><small>{{ report.summary.images }} photos analysées</small></article>
+    <article class="stat-card"><div class="stat-top"><span>IDENTIFIÉES</span></div><strong>{{ report.summary.identified }}</strong><small>Texte et OCR combinés</small></article>
+    <article class="stat-card"><div class="stat-top"><span>À VÉRIFIER</span></div><strong>{{ report.summary.ambiguous }}</strong><small>Aucune identité arbitraire</small></article>
+    <article class="stat-card"><div class="stat-top"><span>LOTS</span></div><strong>{{ report.summary.lot }}</strong><small>Pas de carte unitaire attribuée</small></article>
+</section>
+<section class="panel">
+    <div class="panel-heading"><h2>Détail des 3 lectures</h2><span class="cell-sub">Titre seul · OCR seul · résultat combiné</span></div>
+    <div class="table-wrap"><table><thead><tr><th>ANNONCE</th><th>TITRE SEUL</th><th>OCR SEUL</th><th>RÉSULTAT COMBINÉ</th></tr></thead><tbody>
+    {% for item in report['items'] %}<tr>
+        <td>
+            {% if item.image %}<a href="/validations/ocr/{{ report.id }}/images/{{ item.image.split('/')[-1] }}" target="_blank"><img class="validation-thumb" src="/validations/ocr/{{ report.id }}/images/{{ item.image.split('/')[-1] }}" alt="Photo de l’annonce {{ item.index }}"></a>{% endif %}
+            <strong>{{ item.index }}. {{ item.title }}</strong><span class="cell-sub">{{ item.platform|upper }} · {{ item.image_status }}</span>
+            <a class="step-link" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce originale ↗</a>
+        </td>
+        <td>{{ identity(item.title_only) }}</td>
+        <td>{% if item.ocr %}<span class="cell-sub">Noms : {{ item.ocr.recognized.names|join(', ') or '—' }}<br>Numéros : {{ item.ocr.recognized.numbers|join(', ') or '—' }}</span>{{ identity(item.ocr_only) }}{% else %}<span class="cell-sub">Photo non testée</span>{% endif %}</td>
+        <td>{{ identity(item.combined) }}{% if item.combined.reason %}<details><summary class="step-link">Motif et candidats</summary><p class="cell-sub">{{ item.combined.reason }}</p>{% for candidate in item.combined.candidates %}<span class="cell-sub">{{ candidate.tcgdex_id }} · {{ candidate.name }} · {{ candidate.set_name }} · N° {{ candidate.local_id }}</span>{% endfor %}</details>{% endif %}</td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}

@@ -137,15 +137,26 @@ def test_profitability_page_settings_and_cotes_flow(client: TestClient) -> None:
     assert import_ref.status_code == 200
     assert "1 cote(s) importée(s) ou mise(s) à jour." in import_ref.text
 
-    # Filter opportunities only
-    opp_page = client.get("/profitability", params={"verdict": "opportunite"})
+    # Filter opportunities only : l'ancienne URL d'analyse redirige vers le
+    # catalogue unifié, avec les mêmes montants.
+    redirect = client.get(
+        "/profitability", params={"verdict": "opportunite"}, follow_redirects=False
+    )
+    assert redirect.status_code == 303
+    assert redirect.headers["location"].startswith("/catalog?")
+    assert "verdict=opportunite" in redirect.headers["location"]
+    opp_page = client.get("/catalog", params={"verdict": "opportunite"})
     assert opp_page.status_code == 200
     assert "built-in method" not in opp_page.text
     assert "Pikachu" in opp_page.text
     assert "+11,75 €" in opp_page.text
-    assert "Ventes conclues" in opp_page.text
-    assert "Cardmarket" in opp_page.text
-    assert "2026-10-31" in opp_page.text
+    assert "Dracaufeu" not in opp_page.text
+    # Les métadonnées de la cote restent visibles dans les Réglages.
+    reglages = client.get("/reglages")
+    assert reglages.status_code == 200
+    assert "Ventes conclues" in reglages.text
+    assert "Cardmarket" in reglages.text
+    assert "2026-10-31" in reglages.text
 
     # Dashboard and catalog reflect the opportunity
     dashboard = client.get("/")
@@ -175,7 +186,10 @@ def test_profitability_page_settings_and_cotes_flow(client: TestClient) -> None:
     assert settings_resp.status_code == 200
     assert "Paramètres de rentabilité enregistrés." in settings_resp.text
     # New profit for Pikachu: 2500 - 250 - 50 - 250 - (1000 + 200) = +750 (+7,50 €)
-    assert "+7,50 €" in settings_resp.text
+    # Le recalcul est visible dans le catalogue unifié et le tableau de bord.
+    recalc = client.get("/catalog", params={"q": "Pikachu"})
+    assert "+7,50 €" in recalc.text
+    assert "+7,50 €" in client.get("/").text
 
     # Delete first reference
     delete_resp = client.post("/profitability/references/1/delete")
@@ -363,3 +377,11 @@ def test_identification_search_and_confirmation_flow(client: TestClient) -> None
     queued = client.post("/catalog/1/identification/search", data={"name": "Dracaufeu"}, follow_redirects=False)
     assert queued.status_code == 303
     assert "attente" in queued.headers["location"]
+    page = client.get(queued.headers["location"])
+    assert "En attente du worker" in page.text
+    assert "Actualiser l’état" in page.text
+    with connect(Settings.from_env().database_path) as connection:
+        connection.execute("UPDATE identification_searches SET status='failed' WHERE id=1")
+        connection.commit()
+    failed = client.get("/catalog/1")
+    assert "Recherche indisponible après plusieurs tentatives" in failed.text

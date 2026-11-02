@@ -57,7 +57,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const updatedListings = [...listings];
 
         for (const item of newListings) {
-          if (!item || !item.name || !item.url) continue;
+          // Une capture partielle peut être complétée dans la prévisualisation.
+          const hasValidPrice =
+            item && (item.price_cents == null || (Number.isInteger(item.price_cents) && item.price_cents >= 0));
+          if (
+            !item ||
+            typeof item.name !== "string" ||
+            !item.name.trim() ||
+            !item.set_name ||
+            !hasValidPrice ||
+            !item.url
+          )
+            continue;
 
           const key = `${item.source || "web"}::${item.external_id || item.url}`;
           if (!existingKeys.has(key)) {

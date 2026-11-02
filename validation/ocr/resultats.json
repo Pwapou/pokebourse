@@ -1,0 +1,53 @@
+[
+  {
+    "image": "dracaufeu-ex-199-165.webp",
+    "status": "no_match",
+    "recognized": {
+      "names": [
+        "René"
+      ],
+      "numbers": [
+        "60"
+      ]
+    },
+    "candidates": []
+  },
+  {
+    "image": "pikachu-58-102.webp",
+    "status": "candidates",
+    "recognized": {
+      "names": [
+        "Pikachu"
+      ],
+      "numbers": [
+        "58/102"
+      ]
+    },
+    "candidates": [
+      {
+        "tcgdex_id": "base1-58",
+        "confidence": 85,
+        "match_reason": "nom exact ; numéro 58 exact"
+      }
+    ]
+  },
+  {
+    "image": "vipelierre-bw01.webp",
+    "status": "candidates",
+    "recognized": {
+      "names": [
+        "Vipélierre"
+      ],
+      "numbers": [
+        "BW01"
+      ]
+    },
+    "candidates": [
+      {
+        "tcgdex_id": "bwp-BW01",
+        "confidence": 85,
+        "match_reason": "nom exact ; numéro BW01 exact"
+      }
+    ]
+  }
+]

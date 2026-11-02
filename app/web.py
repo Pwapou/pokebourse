@@ -3,9 +3,12 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 import json
+import logging
 import sqlite3
-from typing import Any, Literal, cast
-from urllib.parse import quote
+from typing import Annotated, Any, Literal
+from urllib.parse import quote, urlencode
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import (
@@ -18,7 +21,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import ValidationError
+from pydantic import BeforeValidator, ValidationError
 
 from app.backups import (
     backup_file,
@@ -31,6 +34,8 @@ from app.catalog import (
     CATALOG_IDENT_STATUSES,
     CATALOG_SORTS,
     CATALOG_SOURCES,
+    CATALOG_VERDICTS,
+    PROFITABILITY_SORT_KEYS,
     CatalogImportError,
     catalog_data,
     catalog_export_rows,
@@ -45,6 +50,7 @@ from app.catalog import (
     record_import_failure,
     reidentify_catalog,
     reidentify_catalog_item,
+    validate_public_image_url,
 )
 from app.catalog_export import CSV_FILENAME, build_catalog_csv
 from app.cardmarket import aliases as cardmarket_aliases
@@ -59,6 +65,8 @@ from app.cardmarket.client import (
 from app.collectors.models import CollectorError
 from app.config import Settings
 from app.identification.models import IDENTIFICATION_STATUS_LABELS
+from app.identification.ocr import router as ocr_router
+from app.identification.normalization import canonical_local_id
 from app.identification.annotation_pilot import (
     AnnotationAccessError, assignment, assignment_stage, pilot_dashboard, sample_pilot,
 )
@@ -68,8 +76,13 @@ from app.identification.resolution import (
     IdentificationConflictError, confirm_card, reclassify_unit, resolve_listing,
     revoke_confirmation,
 )
+from app.gestion import gestion_page_data
+from app.validation_history import get_validation_run, list_validation_runs, validation_image_path
 from app.monitoring.models import WatchInput, WatchNotFoundError, WatchValidationError
+from app.purchases import purchases_page_data
 from app.monitoring.service import WatchService
+from app.manual_listing import router as manual_listing_router
+from app.capture_preview import router as capture_preview_router
 from app.profitability import (
     REFERENCE_KIND_LABELS,
     VERDICT_LABELS,
@@ -84,13 +97,38 @@ from app.profitability import (
     find_price_comparables,
     get_active_fee_profile,
     import_references_jsonl,
+    list_references,
     parse_euros_to_cents,
     parse_percent_to_bps,
     profitability_dashboard_summary,
-    profitability_page_data,
     update_active_fee_profile,
     upsert_reference,
 )
+from app.search.external import (
+    ExternalSearchItem,
+    ExternalSearchSummary,
+    execute_external_search,
+    import_external_listing,
+)
+from app.search.models import (
+    CARD_SORTS,
+    DEFAULT_CARD_SORT,
+    DEFAULT_LISTING_SORT,
+    LISTING_SORTS,
+    LOT_FILTERS,
+    SEARCH_IDENT_STATUSES,
+    SEARCH_SCOPES,
+    SEARCH_SOURCES,
+    SearchFilters,
+)
+from app.search.service import (
+    SEARCH_CSV_FILENAME,
+    build_search_csv,
+    get_search_filter_options,
+    search_all,
+    search_listings_export_rows,
+)
+from app.trends import TrendsFilters, get_trends_page_data
 from app.storage.database import connect
 from app.storage.migration_runner import apply_migrations, check_database
 from app.sellers import repository as seller_repository
@@ -99,6 +137,7 @@ from app.sellers.models import (
     SellerProfile,
     profile_from_row,
     reliability_rating,
+    seller_platform_from_source,
 )
 from app.sellers.service import SellerService
 from app.supervision.models import (
@@ -114,6 +153,12 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 VALID_SORTS: set[str] = {"profit_desc", "roi_desc", "price_asc"}
 VALID_VERDICTS: set[str] = {"all", *VERDICT_LABELS.keys()}
+
+# Tris unifiés du catalogue : tris SQL existants + tris de rentabilité.
+CATALOG_SORT_OPTIONS: dict[str, str] = {
+    **CATALOG_SORTS,
+    **{key: "" for key in PROFITABILITY_SORT_KEYS},
+}
 
 
 def format_money(cents: int | None, currency: str = "EUR") -> str:
@@ -170,6 +215,14 @@ def format_filesize(size_bytes: int) -> str:
     return f"{value:.1f} Tio".replace(".", ",")
 
 
+def candidate_number_conflicts(listing_number: str | None, candidate_number: str | None) -> bool:
+    """Signale deux numéros locaux différents sans déduire un numéro manquant."""
+    listing = canonical_local_id((listing_number or "").split("/", 1)[0])
+    candidate = canonical_local_id(candidate_number)
+    return bool(listing and candidate and listing != candidate)
+
+
+templates.env.globals["candidate_number_conflicts"] = candidate_number_conflicts
 templates.env.filters["money"] = format_money
 templates.env.filters["signed_money"] = format_signed_money
 templates.env.filters["bps_percent"] = format_bps_percent
@@ -189,6 +242,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Pokébourse", lifespan=lifespan)
+app.include_router(manual_listing_router)
+app.include_router(capture_preview_router)
+app.include_router(ocr_router)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
@@ -319,6 +375,7 @@ def catalog(
     set_name: str = Query(default="", max_length=200),
     source: str = Query(default="all", max_length=20),
     ident: str = Query(default="all", max_length=20),
+    verdict: str = Query(default="all", max_length=30),
     sort: str = Query(default="", max_length=30),
     page: int = Query(default=1),
 ) -> HTMLResponse:
@@ -329,10 +386,19 @@ def catalog(
             set_name=set_name,
             source=source,
             ident_status=ident,
+            verdict=verdict,
             sort=sort,
             page=page,
         )
-        enriched_items, fee_profile = enrich_catalog_items(connection, data["items"])
+        if data["evaluated"]:
+            # Le service a déjà évalué toutes les lignes filtrées : la page
+            # courante porte gain net, ROI et verdict exacts.
+            from app.profitability import get_active_fee_profile
+
+            enriched_items = data["items"]
+            fee_profile = get_active_fee_profile(connection)
+        else:
+            enriched_items, fee_profile = enrich_catalog_items(connection, data["items"])
         seller_service = seller_service_from(request)
         seller_ratings = {
             int(item["id"]): _seller_rating_for_item(connection, seller_service, item)
@@ -350,7 +416,10 @@ def catalog(
             "ident_status_options": CATALOG_IDENT_STATUSES,
             "selected_ident": data["ident_status"],
             "ident_labels": IDENTIFICATION_STATUS_LABELS,
-            "sort_options": CATALOG_SORTS,
+            "verdict_options": CATALOG_VERDICTS,
+            "selected_verdict": data["verdict"],
+            "verdict_labels": VERDICT_LABELS,
+            "sort_options": CATALOG_SORT_OPTIONS,
             "selected_sort": data["sort"],
             "total": data["total"],
             "sets": data["sets"],
@@ -372,6 +441,7 @@ def catalog_export(
     set_name: str = Query(default="", max_length=200),
     source: str = Query(default="all", max_length=20),
     ident: str = Query(default="all", max_length=20),
+    verdict: str = Query(default="all", max_length=30),
 ) -> Response:
     with connect(settings_from(request).database_path) as connection:
         rows = catalog_export_rows(
@@ -380,12 +450,282 @@ def catalog_export(
             set_name=set_name,
             source=source,
             ident_status=ident,
+            verdict=verdict,
         )
     return Response(
         content=build_catalog_csv(rows),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{CSV_FILENAME}"'},
     )
+
+
+def _empty_query_to_none(value: Any) -> Any:
+    """Traite les champs numériques optionnels vides envoyés par les formulaires."""
+    return None if isinstance(value, str) and not value.strip() else value
+
+
+OptionalQueryInt = Annotated[int | None, Query(), BeforeValidator(_empty_query_to_none)]
+
+
+@app.get("/search", response_class=HTMLResponse)
+def search_page(
+    request: Request,
+    q: str = Query(default="", max_length=200),
+    scope: str = Query(default="all", max_length=20),
+    set_name: str = Query(default="", max_length=200),
+    year_min: OptionalQueryInt = None,
+    year_max: OptionalQueryInt = None,
+    rarity: str = Query(default="", max_length=100),
+    condition: str = Query(default="", max_length=100),
+    language: str = Query(default="", max_length=20),
+    variant: str = Query(default="", max_length=100),
+    edition: str = Query(default="", max_length=100),
+    grading_company: str = Query(default="", max_length=50),
+    grade: str = Query(default="", max_length=30),
+    source: str = Query(default="all", max_length=20),
+    price_min: str = Query(default="", max_length=20),
+    price_max: str = Query(default="", max_length=20),
+    ident_status: str = Query(default="all", max_length=20),
+    lot_filter: str = Query(default="all", max_length=20),
+    sort: str = Query(default="", max_length=30),
+    page: int = Query(default=1, ge=1),
+    external: bool = Query(default=False),
+    error: str = Query(default="", max_length=500),
+) -> HTMLResponse:
+    price_min_cents: int | None = None
+    price_max_cents: int | None = None
+    validation_error: str | None = None
+
+    if price_min.strip():
+        try:
+            price_min_cents = parse_euros_to_cents(price_min, "Prix minimum")
+        except ValueError as exc:
+            validation_error = str(exc)
+    if price_max.strip():
+        try:
+            price_max_cents = parse_euros_to_cents(price_max, "Prix maximum")
+        except ValueError as exc:
+            validation_error = str(exc)
+
+    try:
+        filters = SearchFilters(
+            q=q,
+            scope=scope,
+            set_name=set_name,
+            year_min=year_min,
+            year_max=year_max,
+            rarity=rarity,
+            condition=condition,
+            language=language,
+            variant=variant,
+            edition=edition,
+            grading_company=grading_company,
+            grade=grade,
+            source=source,
+            price_min_cents=price_min_cents,
+            price_max_cents=price_max_cents,
+            ident_status=ident_status,
+            lot_filter=lot_filter,
+            sort=sort,
+            page=page,
+        )
+    except ValueError as exc:
+        validation_error = str(exc)
+        filters = SearchFilters(q=q, scope=scope)
+
+    has_active_filters = bool(
+        q.strip() or set_name.strip() or year_min is not None or year_max is not None
+        or rarity.strip() or condition.strip() or language.strip() or variant.strip()
+        or edition.strip() or grading_company.strip() or grade.strip()
+        or source != "all" or price_min.strip() or price_max.strip()
+        or ident_status != "all" or lot_filter != "all" or sort
+    )
+    has_advanced_filters = bool(
+        set_name.strip() or year_min is not None or year_max is not None
+        or rarity.strip() or condition.strip() or language.strip() or variant.strip()
+        or edition.strip() or grading_company.strip() or grade.strip()
+        or source != "all" or price_min.strip() or price_max.strip()
+        or ident_status != "all" or lot_filter != "all"
+    )
+
+    external_summary: ExternalSearchSummary | None = None
+    with connect(settings_from(request).database_path) as connection:
+        filter_options = get_search_filter_options(connection)
+        results = None
+        if validation_error is None and has_active_filters:
+            results = search_all(connection, filters)
+            if external:
+                external_summary = execute_external_search(connection, filters)
+
+    export_query_params = filters.to_query_params()
+    export_query_params.pop("page", None)
+    export_query_string = urlencode(export_query_params)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="search.html",
+        context={
+            "page": "search",
+            "filters": filters,
+            "filter_options": filter_options,
+            "results": results,
+            "external_summary": external_summary,
+            "external_active": external,
+            "validation_error": validation_error,
+            "import_error": error,
+            "has_active_filters": has_active_filters,
+            "has_advanced_filters": has_advanced_filters,
+            "price_min_input": price_min,
+            "price_max_input": price_max,
+            "export_query_string": export_query_string,
+        },
+    )
+
+
+@app.post("/search/external/import")
+def search_external_import(
+    request: Request,
+    source: str = Form(...),
+    external_id: str = Form(...),
+    title: str = Form(...),
+    price_cents: int = Form(...),
+    currency: str = Form(default="EUR"),
+    shipping_cents: int | None = Form(default=None),
+    seller: str | None = Form(default=None),
+    seller_external_id: str | None = Form(default=None),
+    url: str | None = Form(default=None),
+    image_url: str | None = Form(default=None),
+    raw_data_json: str | None = Form(default=None),
+) -> RedirectResponse:
+    raw_data: dict[str, Any] = {}
+    if raw_data_json:
+        try:
+            raw_data = json.loads(raw_data_json)
+        except Exception:
+            raw_data = {}
+
+    item = ExternalSearchItem(
+        source=source,
+        external_id=external_id,
+        title=title,
+        price_cents=price_cents,
+        currency=currency,
+        shipping_cents=shipping_cents,
+        seller=seller,
+        seller_external_id=seller_external_id,
+        url=url,
+        image_url=image_url,
+        raw_data=raw_data,
+    )
+    try:
+        with connect(settings_from(request).database_path) as connection:
+            listing_id = import_external_listing(connection, item)
+        return RedirectResponse(
+            f"/catalog/{listing_id}",
+            status_code=303,
+        )
+    except Exception as exc:
+        logger.warning("Échec de l'import externe : %s", exc)
+        return RedirectResponse(
+            f"/search?error={quote(str(exc))}",
+            status_code=303,
+        )
+
+
+@app.get("/search/export.csv")
+def search_export(
+    request: Request,
+    q: str = Query(default="", max_length=200),
+    set_name: str = Query(default="", max_length=200),
+    year_min: OptionalQueryInt = None,
+    year_max: OptionalQueryInt = None,
+    rarity: str = Query(default="", max_length=100),
+    condition: str = Query(default="", max_length=100),
+    language: str = Query(default="", max_length=20),
+    variant: str = Query(default="", max_length=100),
+    edition: str = Query(default="", max_length=100),
+    grading_company: str = Query(default="", max_length=50),
+    grade: str = Query(default="", max_length=30),
+    source: str = Query(default="all", max_length=20),
+    price_min: str = Query(default="", max_length=20),
+    price_max: str = Query(default="", max_length=20),
+    ident_status: str = Query(default="all", max_length=20),
+    lot_filter: str = Query(default="all", max_length=20),
+    sort: str = Query(default="", max_length=30),
+) -> Response:
+    price_min_cents: int | None = None
+    price_max_cents: int | None = None
+
+    try:
+        if price_min.strip():
+            price_min_cents = parse_euros_to_cents(price_min, "Prix minimum")
+        if price_max.strip():
+            price_max_cents = parse_euros_to_cents(price_max, "Prix maximum")
+        filters = SearchFilters(
+            q=q,
+            scope="listings",
+            set_name=set_name,
+            year_min=year_min,
+            year_max=year_max,
+            rarity=rarity,
+            condition=condition,
+            language=language,
+            variant=variant,
+            edition=edition,
+            grading_company=grading_company,
+            grade=grade,
+            source=source,
+            price_min_cents=price_min_cents,
+            price_max_cents=price_max_cents,
+            ident_status=ident_status,
+            lot_filter=lot_filter,
+            sort=sort,
+        )
+    except ValueError as exc:
+        return PlainTextResponse(f"Critères d’export invalides : {exc}", status_code=400)
+
+    with connect(settings_from(request).database_path) as connection:
+        rows = search_listings_export_rows(connection, filters)
+
+    return Response(
+        content=build_search_csv(rows),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{SEARCH_CSV_FILENAME}"'},
+    )
+
+
+@app.get("/trends", response_class=HTMLResponse)
+def trends_page(
+    request: Request,
+    period: str = Query(default="7_30", max_length=10),
+    set_name: str = Query(default="", max_length=200),
+    rarity: str = Query(default="", max_length=100),
+    language: str = Query(default="", max_length=20),
+    min_observations: int = Query(default=1, ge=1, le=1000),
+    max_quote_age_days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> HTMLResponse:
+    filters = TrendsFilters(
+        period=period,
+        set_name=set_name,
+        rarity=rarity,
+        language=language,
+        min_observations=min_observations,
+        max_quote_age_days=max_quote_age_days,
+        limit=limit,
+    )
+    with connect(settings_from(request).database_path) as connection:
+        trends_data = get_trends_page_data(connection, filters)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="trends.html",
+        context={
+            "page": "trends",
+            "trends": trends_data,
+        },
+    )
+
 
 
 @app.get("/catalog/labels.jsonl")
@@ -672,6 +1012,9 @@ def catalog_item(
             identification_search = latest_search_for_item(connection, item_id)
             cardmarket_rows = cardmarket_service.prices_for_item(connection, item)
             cardmarket_view = _cardmarket_view(cardmarket_rows)
+            cardmarket_guide_count = connection.execute(
+                "SELECT COUNT(*) FROM cardmarket_prices"
+            ).fetchone()[0]
             seller_profile_row = seller_service_from(request).profile_for_item(
                 connection,
                 platform=item["source_name"],
@@ -686,12 +1029,17 @@ def catalog_item(
             status_code=404,
         )
     seller_profile = profile_from_row(seller_profile_row)
+    try:
+        listing_image_url = validate_public_image_url(str(item["image_url"])) if item["image_url"] else None
+    except ValueError:
+        listing_image_url = None
     return templates.TemplateResponse(
         request=request,
         name="catalog_detail.html",
         context={
             "page": "catalog",
             "item": item,
+            "listing_image_url": listing_image_url,
             "evaluation": evaluation,
             "fee_profile": fee_profile,
             "seller_profile": seller_profile,
@@ -700,6 +1048,7 @@ def catalog_item(
             "ident_labels": IDENTIFICATION_STATUS_LABELS,
             "cardmarket": cardmarket_view,
             "cardmarket_ready": cardmarket_ready,
+            "cardmarket_guide_count": cardmarket_guide_count,
             "comparables": comparables,
             "identification": identification,
             "identification_candidates": identification_candidates,
@@ -864,7 +1213,7 @@ def cardmarket_sync(request: Request) -> RedirectResponse:
             result = cardmarket_guide.sync_price_guide(connection)
         except Exception as error:  # Réseau, JSON invalide, fichier indisponible…
             return RedirectResponse(
-                url=f"/profitability?error={quote(f'Synchronisation Cardmarket impossible : {error}')}",
+                url=f"/reglages?error={quote(f'Synchronisation Cardmarket impossible : {error}')}",
                 status_code=303,
             )
     guide_date = (result["created_at"] or "")[:10]
@@ -874,7 +1223,7 @@ def cardmarket_sync(request: Request) -> RedirectResponse:
         + (f", {result['skipped']} produits sans nom ignorés" if result["skipped"] else "")
         + ")."
     )
-    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
+    return RedirectResponse(url=f"/reglages?notice={quote(msg)}", status_code=303)
 
 
 @app.post("/cardmarket/aliases/sync")
@@ -885,7 +1234,7 @@ def cardmarket_aliases_sync(request: Request) -> RedirectResponse:
             result = cardmarket_aliases.sync_name_aliases(connection)
         except Exception as error:
             return RedirectResponse(
-                url=f"/profitability?error={quote(f'Synchronisation des noms impossible : {error}')}",
+                url=f"/reglages?error={quote(f'Synchronisation des noms impossible : {error}')}",
                 status_code=303,
             )
     total = sum(result["per_locale"].values())
@@ -895,7 +1244,7 @@ def cardmarket_aliases_sync(request: Request) -> RedirectResponse:
     msg = f"Noms multilingues synchronisés : {total} alias ({locales})."
     if result["skipped"]:
         msg += f" Locales ignorées (API indisponible) : {', '.join(result['skipped'])}."
-    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
+    return RedirectResponse(url=f"/reglages?notice={quote(msg)}", status_code=303)
 
 
 @app.post("/cardmarket/sync-all")
@@ -910,7 +1259,7 @@ def cardmarket_sync_all(request: Request) -> RedirectResponse:
         except Exception as error:
             cardmarket_daily.mark_attempt(connection, f"manuel en échec : {error}")
             return RedirectResponse(
-                url=f"/profitability?error={quote(f'Synchronisation impossible : {error}')}",
+                url=f"/reglages?error={quote(f'Synchronisation impossible : {error}')}",
                 status_code=303,
             )
     guide_date = (result["guide"]["created_at"] or "")[:10]
@@ -921,18 +1270,25 @@ def cardmarket_sync_all(request: Request) -> RedirectResponse:
     )
     if result["aliases"]["skipped"]:
         msg += f" Locales ignorées (API indisponible) : {', '.join(result['aliases']['skipped'])}."
-    return RedirectResponse(url=f"/profitability?notice={quote(msg)}", status_code=303)
+    return RedirectResponse(url=f"/reglages?notice={quote(msg)}", status_code=303)
 
 
 @app.post("/catalog/{item_id}/purchase")
 def catalog_item_purchase(
     request: Request,
     item_id: int,
-    price_paid: float = Form(..., ge=0),
-    shipping_paid: float = Form(default=0.0, ge=0),
-    status: str = Form(default="recu"),
+    price_paid: str = Form(...),
+    shipping_paid: str = Form(...),
+    status: str = Form(...),
     notes: str | None = Form(default=None),
 ) -> RedirectResponse:
+    try:
+        price_cents = parse_euros_to_cents(price_paid, "Prix payé")
+        shipping_cents = parse_euros_to_cents(shipping_paid, "Frais de port")
+        if status not in ("commande", "recu", "en_vente", "vendu"):
+            raise ProfitabilityError("Choisissez un statut d'achat valide.")
+    except ProfitabilityError as error:
+        return RedirectResponse(f"/catalog/{item_id}?error={quote(str(error))}#purchase", status_code=303)
     with connect(settings_from(request).database_path) as connection:
         item = catalog_item_detail(connection, item_id)
         if item is None:
@@ -944,8 +1300,8 @@ def catalog_item_purchase(
             )
 
         seller_profile_id = item["seller_profile_id"]
-        if seller_profile_id is None and item["seller"]:
-            platform = item["source_name"] if item["source_name"] in ("vinted", "leboncoin", "ebay", "wallapop") else "vinted"
+        platform = seller_platform_from_source(item["source_name"], item["url"])
+        if seller_profile_id is None and item["seller"] and platform is not None:
             ext_id = item["seller_external_id"] or f"seller-{item['seller']}"
             existing_pid = seller_repository.find_profile_id(
                 connection, platform=platform, seller_external_id=ext_id
@@ -973,11 +1329,11 @@ def catalog_item_purchase(
             set_name=item["set_name"],
             card_number=item["card_number"],
             condition=item["condition"],
-            price_paid_cents=round(price_paid * 100),
-            shipping_paid_cents=round(shipping_paid * 100),
+            price_paid_cents=price_cents,
+            shipping_paid_cents=shipping_cents,
             currency=item["currency"] or "EUR",
-            platform=item["source_name"],
-            status=status if status in ("commande", "recu", "en_vente", "vendu") else "recu",
+            platform=platform,
+            status=status,
             notes=notes.strip() if notes and notes.strip() else None,
         )
 
@@ -1087,11 +1443,18 @@ def seller_add_purchase(
     set_name: str | None = Form(default=None, max_length=200),
     card_number: str | None = Form(default=None, max_length=50),
     condition: str | None = Form(default=None, max_length=50),
-    price_paid: float = Form(..., ge=0),
-    shipping_paid: float = Form(default=0.0, ge=0),
-    status: str = Form(default="recu"),
+    price_paid: str = Form(...),
+    shipping_paid: str = Form(...),
+    status: str = Form(...),
     notes: str | None = Form(default=None),
 ) -> RedirectResponse:
+    try:
+        price_cents = parse_euros_to_cents(price_paid, "Prix payé")
+        shipping_cents = parse_euros_to_cents(shipping_paid, "Frais de port")
+        if status not in ("commande", "recu", "en_vente", "vendu"):
+            raise ProfitabilityError("Choisissez un statut d'achat valide.")
+    except ProfitabilityError as error:
+        return RedirectResponse(f"/sellers/{seller_id}?error={quote(str(error))}#purchase", status_code=303)
     with connect(settings_from(request).database_path) as connection:
         raw_seller = seller_repository.get_profile(connection, seller_id)
         if raw_seller is None:
@@ -1112,10 +1475,10 @@ def seller_add_purchase(
             set_name=set_name.strip() if set_name else None,
             card_number=card_number.strip() if card_number else None,
             condition=condition.strip() if condition else None,
-            price_paid_cents=round(price_paid * 100),
-            shipping_paid_cents=round(shipping_paid * 100),
+            price_paid_cents=price_cents,
+            shipping_paid_cents=shipping_cents,
             platform=platform,
-            status=status if status in ("commande", "recu", "en_vente", "vendu") else "recu",
+            status=status,
             notes=notes.strip() if notes and notes.strip() else None,
         )
     msg = quote("Achat enregistré avec succès auprès de ce vendeur !")
@@ -1123,6 +1486,216 @@ def seller_add_purchase(
         url=f"/sellers/{seller_id}?notice={msg}",
         status_code=303,
     )
+
+
+# Paramètres de préremplissage de la section « Références de prix ».
+REGAGES_PREFILL_QUERY = [
+    ("prefill_name", "name", 200),
+    ("prefill_set", "set_name", 200),
+    ("prefill_number", "card_number", 50),
+    ("prefill_lang", "language", 20),
+    ("prefill_condition", "condition", 100),
+    ("prefill_variant", "variant", 100),
+    ("prefill_edition", "edition", 100),
+    ("prefill_grading_company", "grading_company", 30),
+    ("prefill_grade", "grade", 30),
+    ("prefill_certification_number", "certification_number", 100),
+    ("prefill_price", "price", 30),
+    ("prefill_source_name", "source_name", 100),
+    ("prefill_reference_kind", "reference_kind", 30),
+    ("prefill_observed_at", "observed_at", 10),
+    ("prefill_source_url", "source_url", 2048),
+    ("prefill_sample_size", "sample_size", 10),
+    ("prefill_note", "note", 300),
+]
+
+
+def _reglages_context(
+    connection: sqlite3.Connection,
+    *,
+    prefill: dict[str, str],
+    notice: str | None,
+    error: str | None,
+    compat_banner: bool = False,
+) -> dict[str, Any]:
+    from app.cardmarket import daily as cardmarket_daily
+
+    profile = get_active_fee_profile(connection)
+    reference_count = connection.execute(
+        "SELECT COUNT(*) FROM market_references"
+    ).fetchone()[0]
+    cardmarket_count = connection.execute(
+        "SELECT COUNT(*) AS n FROM cardmarket_prices"
+    ).fetchone()["n"]
+    cardmarket_guide_at = connection.execute(
+        "SELECT MAX(fetched_at) AS fetched_at FROM cardmarket_prices"
+    ).fetchone()["fetched_at"]
+    catalog_count = connection.execute(
+        "SELECT COUNT(*) AS n FROM catalog_items"
+    ).fetchone()["n"]
+    fee_fields = (
+        ("buyer_shipping_cents", "Port aller à l’achat"),
+        ("platform_fee_bps", "Commission plateforme"),
+        ("seller_fixed_fee_cents", "Frais fixes par vente"),
+        ("shipping_packaging_cents", "Expédition & emballage"),
+    )
+    missing_fee_labels = [
+        label for field, label in fee_fields if getattr(profile, field) is None
+    ]
+    return {
+        "page": "reglages",
+        "profile": profile,
+        "prefill": prefill,
+        "notice": notice,
+        "error": error,
+        "compat_banner": compat_banner,
+        "reference_kind_labels": REFERENCE_KIND_LABELS,
+        "reference_count": reference_count,
+        "cardmarket_count": cardmarket_count,
+        "cardmarket_guide_at": cardmarket_guide_at,
+        "catalog_count": catalog_count,
+        "missing_fee_labels": missing_fee_labels,
+        "saved_references": list_references(connection, limit=50),
+        "cardmarket_sync": cardmarket_daily.load_state(connection),
+    }
+
+
+def _prefill_params(**values: str) -> dict[str, str]:
+    """Normalise les préremplissages : langue « fr » par défaut, jamais None."""
+    prefill = {key: value for key, value in values.items()}
+    prefill["language"] = prefill.get("language") or "fr"
+    return prefill
+
+
+@app.get("/reglages", response_class=HTMLResponse)
+def reglages_page(
+    request: Request,
+    notice: str | None = Query(default=None, max_length=300),
+    error: str | None = Query(default=None, max_length=600),
+    prefill_name: str = Query(default="", max_length=200),
+    prefill_set: str = Query(default="", max_length=200),
+    prefill_number: str = Query(default="", max_length=50),
+    prefill_lang: str = Query(default="fr", max_length=20),
+    prefill_condition: str = Query(default="", max_length=100),
+    prefill_variant: str = Query(default="", max_length=100),
+    prefill_edition: str = Query(default="", max_length=100),
+    prefill_grading_company: str = Query(default="", max_length=30),
+    prefill_grade: str = Query(default="", max_length=30),
+    prefill_certification_number: str = Query(default="", max_length=100),
+    prefill_price: str = Query(default="", max_length=30),
+    prefill_source_name: str = Query(default="", max_length=100),
+    prefill_reference_kind: str = Query(default="", max_length=30),
+    prefill_observed_at: str = Query(default="", max_length=10),
+    prefill_source_url: str = Query(default="", max_length=2048),
+    prefill_sample_size: str = Query(default="", max_length=10),
+    prefill_note: str = Query(default="", max_length=300),
+) -> HTMLResponse:
+    """Frais, seuils, références de prix et synchronisations de marché."""
+    prefill = _prefill_params(
+        name=prefill_name,
+        set_name=prefill_set,
+        card_number=prefill_number,
+        language=prefill_lang,
+        condition=prefill_condition,
+        variant=prefill_variant,
+        edition=prefill_edition,
+        grading_company=prefill_grading_company,
+        grade=prefill_grade,
+        certification_number=prefill_certification_number,
+        price=prefill_price,
+        source_name=prefill_source_name,
+        reference_kind=prefill_reference_kind,
+        observed_at=prefill_observed_at,
+        source_url=prefill_source_url,
+        sample_size=prefill_sample_size,
+        note=prefill_note,
+    )
+    with connect(settings_from(request).database_path) as connection:
+        check_database(connection)
+        context = _reglages_context(
+            connection, prefill=prefill, notice=notice, error=error
+        )
+    return templates.TemplateResponse(
+        request=request, name="reglages.html", context=context
+    )
+
+
+@app.get("/achats", response_class=HTMLResponse)
+def achats_page(
+    request: Request, status: str = Query(default="all", max_length=20),
+    notice: str | None = Query(default=None), error: str | None = Query(default=None),
+) -> HTMLResponse:
+    """Affiche le portefeuille et les messages de mise à jour."""
+    with connect(settings_from(request).database_path) as connection:
+        check_database(connection)
+        data = purchases_page_data(connection, status=status)
+    return templates.TemplateResponse(
+        request=request, name="achats.html", context={"page": "achats", "notice": notice, "error": error, **data}
+    )
+
+
+@app.post("/achats/{purchase_id}/update")
+def update_purchase(
+    request: Request, purchase_id: int, status: str = Form(...),
+    sale_price: str = Form(default=""),
+) -> Response:
+    """Enregistre le statut et le prix de vente réel facultatif d'un achat."""
+    try:
+        if status not in ("commande", "recu", "en_vente", "vendu"):
+            raise ProfitabilityError("Choisissez un statut d'achat valide.")
+        sale_cents = parse_euros_to_cents(sale_price, "Prix de vente réel") if sale_price.strip() else None
+    except ProfitabilityError as error:
+        return RedirectResponse(f"/achats?error={quote(str(error))}", status_code=303)
+    with connect(settings_from(request).database_path) as connection:
+        updated = seller_repository.update_purchase_status(
+            connection, purchase_id, status=status, sale_price_cents=sale_cents,
+        )
+    if not updated:
+        return HTMLResponse("Achat introuvable.", status_code=404)
+    return RedirectResponse(f"/achats?notice={quote('Achat mis à jour.')}", status_code=303)
+
+
+@app.get("/gestion", response_class=HTMLResponse)
+def gestion_page(request: Request) -> HTMLResponse:
+    """Index de gestion avancée : états réels des modules secondaires."""
+    database_path = settings_from(request).database_path
+    with connect(database_path) as connection:
+        check_database(connection)
+        data = gestion_page_data(connection, database_path)
+    return templates.TemplateResponse(
+        request=request, name="gestion.html", context={"page": "gestion", **data}
+    )
+
+
+@app.get("/validations/ocr", response_class=HTMLResponse)
+def validation_ocr_page(request: Request) -> HTMLResponse:
+    """Affiche la campagne réelle la plus récente et l'historique conservé."""
+    runs = list_validation_runs()
+    report = get_validation_run(runs[0]["id"]) if runs else None
+    return templates.TemplateResponse(
+        request=request, name="validation_ocr.html", context={"page": "gestion", "runs": runs, "report": report}
+    )
+
+
+@app.get("/validations/ocr/{run_id}", response_class=HTMLResponse)
+def validation_ocr_detail(request: Request, run_id: str) -> HTMLResponse:
+    """Compare les trois lectures d'une campagne sans toucher au catalogue."""
+    report = get_validation_run(run_id)
+    if report is None:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404)
+    return templates.TemplateResponse(
+        request=request, name="validation_ocr.html",
+        context={"page": "gestion", "runs": list_validation_runs(), "report": report},
+    )
+
+
+@app.get("/validations/ocr/{run_id}/images/{filename}")
+def validation_ocr_image(run_id: str, filename: str) -> Response:
+    """Sert uniquement une photo référencée par le rapport local."""
+    path = validation_image_path(run_id, filename)
+    if path is None:
+        return Response(status_code=404)
+    return FileResponse(path, media_type="image/webp")
 
 
 @app.get("/profitability", response_class=HTMLResponse)
@@ -1152,54 +1725,76 @@ def profitability(
     prefill_sample_size: str = Query(default="", max_length=10),
     prefill_note: str = Query(default="", max_length=300),
 ) -> HTMLResponse:
-    active_verdict = verdict if verdict in VALID_VERDICTS else "all"
-    active_sort = cast(SortOrder, sort if sort in VALID_SORTS else "profit_desc")
+    """Compatibilité des anciens liens vers la page d'analyse.
+
+    - les préremplissages de références sont redirigés vers /reglages#cotes ;
+    - les filtres d'analyse (verdict, q, set_name, sort) sont redirigés vers
+      le catalogue unifié /catalog ;
+    - les liens sans paramètres (y compris les anciennes ancres #parametres et
+      #cotes) affichent la page de compatibilité : mêmes formulaires que
+      /reglages, avec un bandeau d'orientation vers le catalogue.
+    """
+    raw_params = request.query_params
+    prefill = _prefill_params(
+        name=prefill_name,
+        set_name=prefill_set,
+        card_number=prefill_number,
+        language=prefill_lang,
+        condition=prefill_condition,
+        variant=prefill_variant,
+        edition=prefill_edition,
+        grading_company=prefill_grading_company,
+        grade=prefill_grade,
+        certification_number=prefill_certification_number,
+        price=prefill_price,
+        source_name=prefill_source_name,
+        reference_kind=prefill_reference_kind,
+        observed_at=prefill_observed_at,
+        source_url=prefill_source_url,
+        sample_size=prefill_sample_size,
+        note=prefill_note,
+    )
+    if any(value for key, value in prefill.items() if key != "language"):
+        forward = {
+            f"prefill_{key}": value
+            for key, value in prefill.items()
+            if value and not (key == "language" and value == "fr")
+        }
+        return RedirectResponse(
+            f"/reglages?{urlencode(forward)}#cotes", status_code=303
+        )
+    wants_analysis = (
+        ("q" in raw_params and q.strip() != "")
+        or ("set_name" in raw_params and set_name != "")
+        or ("verdict" in raw_params and verdict in VERDICT_LABELS)
+        or ("sort" in raw_params and sort in VALID_SORTS)
+    )
+    if wants_analysis:
+        target: dict[str, str] = {}
+        if q.strip():
+            target["q"] = q.strip()
+        if set_name:
+            target["set_name"] = set_name
+        if verdict in VERDICT_LABELS:
+            target["verdict"] = verdict
+        if sort in VALID_SORTS:
+            target["sort"] = sort
+        if notice:
+            target["notice"] = notice
+        if error:
+            target["error"] = error
+        return RedirectResponse(f"/catalog?{urlencode(target)}", status_code=303)
     with connect(settings_from(request).database_path) as connection:
         check_database(connection)
-        data = profitability_page_data(
+        context = _reglages_context(
             connection,
-            query=q.strip(),
-            set_name=set_name,
-            verdict=active_verdict,
-            sort=active_sort,
+            prefill=prefill,
+            notice=notice,
+            error=error,
+            compat_banner=True,
         )
-        cardmarket_count = connection.execute(
-            "SELECT COUNT(*) AS n FROM cardmarket_prices"
-        ).fetchone()["n"]
     return templates.TemplateResponse(
-        request=request,
-        name="profitability.html",
-        context={
-            "page": "profitability",
-            "query": q,
-            "selected_set": set_name,
-            "selected_verdict": active_verdict,
-            "selected_sort": active_sort,
-            "notice": notice,
-            "error": error,
-            "cardmarket_count": cardmarket_count,
-            "reference_kind_labels": REFERENCE_KIND_LABELS,
-            "prefill": {
-                "name": prefill_name,
-                "set_name": prefill_set,
-                "card_number": prefill_number,
-                "language": prefill_lang or "fr",
-                "condition": prefill_condition,
-                "variant": prefill_variant,
-                "edition": prefill_edition,
-                "grading_company": prefill_grading_company,
-                "grade": prefill_grade,
-                "certification_number": prefill_certification_number,
-                "price": prefill_price,
-                "source_name": prefill_source_name,
-                "reference_kind": prefill_reference_kind,
-                "observed_at": prefill_observed_at,
-                "source_url": prefill_source_url,
-                "sample_size": prefill_sample_size,
-                "note": prefill_note,
-            },
-            **data,
-        },
+        request=request, name="reglages.html", context=context
     )
 
 
@@ -1267,10 +1862,10 @@ def save_profitability_settings(
             else str(error)
         )
         return RedirectResponse(
-            f"/profitability?error={quote(message)}#parametres", status_code=303
+            f"/reglages?error={quote(message)}#parametres", status_code=303
         )
     return RedirectResponse(
-        f"/profitability?notice={quote('Paramètres de rentabilité enregistrés.')}#parametres",
+        f"/reglages?notice={quote('Paramètres de rentabilité enregistrés.')}#parametres",
         status_code=303,
     )
 
@@ -1336,10 +1931,10 @@ def save_reference_cote(
         else:
             details = str(error)
         return RedirectResponse(
-            f"/profitability?error={quote(details)}#cotes", status_code=303
+            f"/reglages?error={quote(details)}#cotes", status_code=303
         )
     return RedirectResponse(
-        f"/profitability?notice={quote(f'Cote enregistrée pour {reference.name}.')}#cotes",
+        f"/reglages?notice={quote(f'Cote enregistrée pour {reference.name}.')}#cotes",
         status_code=303,
     )
 
@@ -1354,12 +1949,12 @@ async def import_reference_cotes(
             count = import_references_jsonl(connection, content)
     except ProfitabilityError as error:
         return RedirectResponse(
-            f"/profitability?error={quote(str(error))}#cotes", status_code=303
+            f"/reglages?error={quote(str(error))}#cotes", status_code=303
         )
     finally:
         await file.close()
     return RedirectResponse(
-        f"/profitability?notice={quote(f'{count} cote(s) importée(s) ou mise(s) à jour.')}#cotes",
+        f"/reglages?notice={quote(f'{count} cote(s) importée(s) ou mise(s) à jour.')}#cotes",
         status_code=303,
     )
 
@@ -1370,10 +1965,10 @@ def remove_reference_cote(request: Request, reference_id: int) -> RedirectRespon
         deleted = delete_reference(connection, reference_id)
     if not deleted:
         return RedirectResponse(
-            f"/profitability?error={quote('Cote introuvable.')}#cotes", status_code=303
+            f"/reglages?error={quote('Cote introuvable.')}#cotes", status_code=303
         )
     return RedirectResponse(
-        f"/profitability?notice={quote('Cote supprimée.')}#cotes", status_code=303
+        f"/reglages?notice={quote('Cote supprimée.')}#cotes", status_code=303
     )
 
 

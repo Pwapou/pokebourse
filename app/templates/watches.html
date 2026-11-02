@@ -6,7 +6,7 @@
 {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
 <section class="page-heading">
     <div><span class="eyebrow">VEILLE MARKETPLACE</span><h1>Veilles</h1><p>Surveillez localement Vinted, Leboncoin, eBay et Wallapop, puis consolidez les annonces dans le catalogue. Aucun compte, achat automatique ou contournement anti-bot n’est utilisé.</p></div>
-    <div class="heading-actions"><a class="button secondary" href="/catalog">Voir le catalogue</a></div>
+    <div class="heading-actions"><a class="button secondary" href="/gestion">Vue d’ensemble</a><a class="button secondary" href="/agents">Agents et incidents</a><a class="button secondary" href="/catalog">Voir le catalogue</a></div>
 </section>
 <div class="config-grid">
     <section class="panel config-panel" id="create-watch">
@@ -72,7 +72,7 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact"><h3>Aucune veille configurée</h3><p>Créez une recherche locale pour commencer à consolider les annonces automatiquement.</p></div>
+    <div class="empty-state compact"><h3>Aucune veille configurée</h3><p>Créez une recherche locale pour commencer à consolider les annonces automatiquement.</p><a class="button primary" href="/watches#create-watch">Créer une veille</a></div>
     {% endif %}
 </section>
 {% endblock %}

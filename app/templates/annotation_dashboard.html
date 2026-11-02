@@ -8,11 +8,19 @@
     <div><span class="eyebrow">PRÉPARATION DU MACHINE LEARNING</span><h1>Pilote d’annotation</h1>
         <p>{{ pilot.target_size if pilot else 300 }} annonces à lire, dont {{ double_target if pilot else 60 }} en double lecture. Opérateur : <strong>{{ operator }}</strong>.</p></div>
     <div class="heading-actions">
+        <a class="button secondary" href="/gestion">Vue d’ensemble</a>
+        <a class="button secondary" href="/catalog">Retour au catalogue</a>
         <a class="button secondary" href="/identification/diagnostics">Diagnostic des annonces</a>
         {% if next_item %}<a class="button primary" href="/annotations/items/{{ next_item.id }}">Continuer les lectures</a>{% endif %}
         <form method="post" action="/annotations/sample"><button class="button secondary" type="submit">{{ 'Compléter la file' if pilot else 'Constituer la file' }}</button></form>
     </div>
 </section>
+<div class="alert note" role="note">
+    <strong>Espace de préparation ML.</strong> Ce pilote sert à constituer un jeu de validation pour le futur modèle d’identification.
+    Il est distinct de la validation quotidienne des annonces : une annotation n’applique une décision au catalogue
+    qu’après le flux final existant (décision finale et confirmation). Tirage stratifié, doubles lectures aveugles,
+    opérateurs distincts et exports reproductibles sont conservés intégralement.
+</div>
 {% if not pilot %}
 <section class="panel empty-state"><h2>Le pilote n’a pas encore commencé</h2>
     <p>Constituez une file à partir des annonces locales. Le tirage conserve les observations et répartit les cas entre statuts, plateformes, langues observées et présence de description.</p>

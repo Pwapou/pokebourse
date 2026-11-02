@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from app.tcgdex.models import ReferenceCardRecord
+from app.identification.evidence import OBSERVATION_VERSION, PIPELINE_VERSION, Observation
 
 IdentificationStatus = Literal["identified", "ambiguous", "unidentified", "lot"]
 
@@ -27,6 +28,9 @@ class ExtractedFeatures:
     grade: str | None = None
     is_lot: bool = False
     lot_reason: str | None = None
+    selection_reason: str | None = None
+    languages: tuple[str, ...] = ()
+    condition_raw: str | None = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +44,8 @@ class CandidateMatch:
     match_reason: str
     name_match_kind: Literal["exact", "partial", "fuzzy", "absent"] = "absent"
     contradictions: tuple[str, ...] = ()
+    score_criteria: tuple[str, ...] = ()
+    confidence_level: Literal["élevé", "moyen", "faible"] = "faible"
 
 
 @dataclass(frozen=True)
@@ -52,3 +58,10 @@ class IdentificationResult:
     candidates: list[CandidateMatch] = field(default_factory=list)
     missing_fields: list[str] = field(default_factory=list)
     uncertain_fields: list[str] = field(default_factory=list)
+    diagnostic_candidates: list[CandidateMatch] = field(default_factory=list)
+    observations: tuple[Observation, ...] = ()
+    evidence_conflicts: tuple[str, ...] = ()
+    reason_code: str = "insufficient_evidence"
+    decision_source: str = "automatic"
+    pipeline_version: str = PIPELINE_VERSION
+    normalization_version: str = OBSERVATION_VERSION

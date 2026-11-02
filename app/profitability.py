@@ -18,7 +18,6 @@ from pydantic import (
 
 from app.catalog import MAX_IMPORT_BYTES
 from app.cardmarket import daily as cardmarket_daily
-from app.cardmarket.aliases import base_card_name
 
 Verdict = Literal["opportunite", "surveiller", "non_rentable", "sans_cote"]
 SortOrder = Literal["profit_desc", "roi_desc", "price_asc"]
@@ -483,16 +482,12 @@ class MarketIndex:
         references_by_key: Mapping[str, Mapping[str, Any]],
         strict_catalog_prices: Mapping[str, list[tuple[int, int]]],
         min_catalog_samples: int,
-        cardmarket_trends_by_base: Mapping[str, list[int]] | None = None,
-        alias_card_ids_by_name: Mapping[str, list[int]] | None = None,
-        english_name_by_card_id: Mapping[int, str] | None = None,
+        cardmarket_products_by_card: Mapping[int, list[int | None]] | None = None,
     ) -> None:
         self._references = references_by_key
         self._strict_prices = strict_catalog_prices
         self._min_samples = min_catalog_samples
-        self._cardmarket_by_base = cardmarket_trends_by_base or {}
-        self._alias_card_ids = alias_card_ids_by_name or {}
-        self._english_names = english_name_by_card_id or {}
+        self._cardmarket_products_by_card = cardmarket_products_by_card or {}
 
     def resolve(
         self, item: Mapping[str, Any], target_currency: str
@@ -575,38 +570,25 @@ class MarketIndex:
     def _cardmarket_trend(
         self, item: Mapping[str, Any], target_currency: str
     ) -> tuple[int | None, int]:
-        """Repli : prix tendance Cardmarket (le plus bas des produits assortis).
+        """Repli uniquement pour une identité confirmée et un produit lié unique.
 
-        Même stratégie que prices_for_item : nom de base direct, puis pont
-        multilingue via la carte référencée ou les alias (fr, en, ko, ja, zh-tw).
-        Réservé aux évaluations en EUR, les cotes Cardmarket étant en euros.
+        Le nom et ses alias ne prouvent ni l'extension ni le numéro. Le guide
+        public ne fournit généralement pas cette liaison ; en son absence la
+        cote reste inconnue. Les prix agrégés ne certifient pas l'état ni la langue.
         """
-        if target_currency.upper() != "EUR":
+        if target_currency.upper() != "EUR" or item.get("identification_status") != "identified":
             return None, 0
-        name = str(item.get("name") or "").strip()
-
-        trends = list(self._cardmarket_by_base.get(base_card_name(name), []))
-        if not trends:
-            card_ids: list[int] = []
-            ref_card_id = item.get("reference_card_id")
-            if ref_card_id is not None:
-                card_ids.append(int(ref_card_id))
-            for card_id in self._alias_card_ids.get(name.casefold(), []):
-                if card_id not in card_ids:
-                    card_ids.append(card_id)
-            for card_id in card_ids:
-                english = self._english_names.get(card_id)
-                if not english:
-                    continue
-                trends = list(
-                    self._cardmarket_by_base.get(base_card_name(english), [])
-                )
-                if trends:
-                    break
-
-        if not trends:
+        # Une liaison à la carte ne prouve pas l'édition, la variante ou la
+        # certification de l'exemplaire proposé.
+        if any(item.get(field) for field in ("variant", "edition", "grading_company", "grade")):
             return None, 0
-        return min(trends), len(trends)
+        ref_card_id = item.get("reference_card_id")
+        if ref_card_id is None:
+            return None, 0
+        trends = self._cardmarket_products_by_card.get(int(ref_card_id), [])
+        if len(trends) != 1 or trends[0] is None or trends[0] <= 0:
+            return None, 0
+        return int(trends[0]), 1
 
 
 def build_market_index(
@@ -647,37 +629,23 @@ def build_market_index(
         )
         strict_prices[strict_key].append((int(row["id"]), int(row["price_cents"])))
 
-    cardmarket_by_base: dict[str, list[int]] = defaultdict(list)
+    cardmarket_by_card: dict[int, list[int | None]] = defaultdict(list)
     for row in connection.execute(
         """
-        SELECT name_base, trend_price_cents
-        FROM cardmarket_prices
-        WHERE name_base IS NOT NULL AND name_base != ''
-          AND trend_price_cents IS NOT NULL
-          AND currency = 'EUR'
+        SELECT r.id AS card_id, cm.trend_price_cents
+        FROM cardmarket_prices cm
+        JOIN pokemon_reference_cards r ON r.tcgdex_id = cm.tcg_dex_id
+        WHERE cm.currency = 'EUR'
         """
     ).fetchall():
-        cardmarket_by_base[str(row["name_base"])].append(int(row["trend_price_cents"]))
-
-    alias_card_ids: dict[str, list[int]] = defaultdict(list)
-    english_names: dict[int, str] = {}
-    for row in connection.execute(
-        "SELECT card_id, locale, name FROM card_name_aliases"
-    ).fetchall():
-        name_key = str(row["name"]).strip().casefold()
-        card_id = int(row["card_id"])
-        if name_key and card_id not in alias_card_ids[name_key]:
-            alias_card_ids[name_key].append(card_id)
-        if row["locale"] == "en":
-            english_names[card_id] = str(row["name"])
+        trend = row["trend_price_cents"]
+        cardmarket_by_card[int(row["card_id"])].append(int(trend) if trend is not None else None)
 
     return MarketIndex(
         references_by_key=references_by_key,
         strict_catalog_prices=strict_prices,
         min_catalog_samples=min_catalog_samples,
-        cardmarket_trends_by_base=cardmarket_by_base,
-        alias_card_ids_by_name=alias_card_ids,
-        english_name_by_card_id=english_names,
+        cardmarket_products_by_card=cardmarket_by_card,
     )
 
 
@@ -686,6 +654,8 @@ def evaluate_listing(
 ) -> dict[str, Any]:
     row = dict(item)
     purchase_price_cents = int(row["price_cents"])
+    listing_shipping = row.get("shipping_cents")
+    buyer_shipping_cents = int(listing_shipping) if listing_shipping is not None else profile.buyer_shipping_cents
     missing_fee_fields = [
         field
         for field in (
@@ -694,11 +664,11 @@ def evaluate_listing(
             "seller_fixed_fee_cents",
             "shipping_packaging_cents",
         )
-        if getattr(profile, field) is None
+        if (buyer_shipping_cents if field == "buyer_shipping_cents" else getattr(profile, field)) is None
     ]
     total_cost_cents = (
-        purchase_price_cents + profile.buyer_shipping_cents
-        if profile.buyer_shipping_cents is not None
+        purchase_price_cents + buyer_shipping_cents
+        if buyer_shipping_cents is not None
         else None
     )
     reference_price_cents, reference_source, sample_count, reference_metadata = (
@@ -715,11 +685,13 @@ def evaluate_listing(
         "sample_unit": ("produits" if reference_source == "cardmarket_trend" else
                         "annonces" if reference_source == "catalog_median" else
                         "observations" if sample_count else None),
-        "missing_dimensions": (["extension", "variante", "langue du prix", "état du prix"]
+        "missing_dimensions": (["variante", "langue du prix", "état du prix"]
                                if reference_source == "cardmarket_trend" else []),
     }
     result = {
         **row,
+        "buyer_shipping_cents": buyer_shipping_cents,
+        "buyer_shipping_source": "annonce" if listing_shipping is not None else ("profil" if buyer_shipping_cents is not None else "inconnu"),
         "reference_quality": quality,
         "total_cost_cents": total_cost_cents,
         "reference_price_cents": reference_price_cents,
@@ -798,7 +770,7 @@ def evaluate_listing(
     }
 
 
-def _sort_evaluations(
+def sort_evaluations(
     evaluations: list[dict[str, Any]], sort: SortOrder
 ) -> list[dict[str, Any]]:
     verdict_rank = {
@@ -834,6 +806,9 @@ def _sort_evaluations(
             -(item["roi_bps"] if item["roi_bps"] is not None else -10_000_000),
         ),
     )
+
+
+_sort_evaluations = sort_evaluations
 
 
 def summarize_evaluations(evaluations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -883,7 +858,7 @@ def evaluate_catalog(
         """
         SELECT id, external_id, name, set_name, card_number, language, condition,
                variant, edition, grading_company, grade, certification_number,
-               price_cents, currency, seller, url, imported_at, reference_card_id
+               price_cents, shipping_cents, currency, seller, url, imported_at, reference_card_id, identification_status
         FROM catalog_items
         ORDER BY imported_at DESC, id DESC
         """

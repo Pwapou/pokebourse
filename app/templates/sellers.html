@@ -9,6 +9,8 @@
         <p>{{ total }} vendeur{{ 's' if total != 1 else '' }} répertorié{{ 's' if total != 1 else '' }} · identifiez les profils fiables, dénichez les meilleures opportunités et suivez vos achats.</p>
     </div>
     <div class="heading-actions">
+        <a class="button secondary" href="/gestion">Vue d’ensemble</a>
+        <a class="button secondary" href="/achats">Mes achats</a>
         <a class="button secondary" href="/catalog">Explorer le catalogue</a>
     </div>
 </section>
@@ -116,6 +118,7 @@
         <p><strong>Aucun vendeur ne correspond aux critères sélectionnés.</strong></p>
         <p>Les vendeurs sont automatiquement indexés et enrichis lors des collectes de veilles ou des imports d'annonces.</p>
         <a class="button secondary" href="/sellers">Réinitialiser les filtres</a>
+        <a class="button primary" href="/#import">Importer des annonces</a>
     </div>
     {% endif %}
 </section>

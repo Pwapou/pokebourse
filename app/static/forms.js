@@ -96,6 +96,32 @@
     });
   }
 
+  // Menus dépliables (ajout d'annonces) : Échap, clic à l'extérieur et aria-expanded.
+  const popupMenus = document.querySelectorAll("details.add-menu-wrap");
+  popupMenus.forEach((details) => {
+    const summary = details.querySelector("summary");
+    if (!summary) return;
+    details.addEventListener("toggle", () => {
+      summary.setAttribute("aria-expanded", details.open ? "true" : "false");
+    });
+  });
+  document.addEventListener("click", (event) => {
+    popupMenus.forEach((details) => {
+      if (details.open && !details.contains(event.target)) {
+        details.removeAttribute("open");
+      }
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    popupMenus.forEach((details) => {
+      if (!details.open) return;
+      details.removeAttribute("open");
+      const summary = details.querySelector("summary");
+      if (summary) summary.focus();
+    });
+  });
+
   document.addEventListener("submit", (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;

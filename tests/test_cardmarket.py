@@ -353,6 +353,22 @@ def test_detail_page_shows_cardmarket_empty_state(web_client: TestClient) -> Non
     assert "Aucune cote Cardmarket en base" in response.text
 
 
+def test_detail_page_empty_state_when_guide_synced_but_no_match(
+    web_client: TestClient, tmp_path: Path
+) -> None:
+    with connect(tmp_path / "web.db") as connection:
+        connection.execute(
+            """
+            INSERT INTO cardmarket_prices (product_id, card_name, trend_price_cents)
+            VALUES (9001, 'Charizard ex', 12345)
+            """
+        )
+        connection.commit()
+    response = web_client.get("/catalog/1")
+    assert response.status_code == 200
+    assert "Aucun produit Cardmarket ne correspond" in response.text
+
+
 def test_refresh_without_credentials_redirects_with_error(web_client: TestClient) -> None:
     response = web_client.post(
         "/catalog/1/cardmarket/refresh", follow_redirects=False
@@ -364,7 +380,7 @@ def test_refresh_without_credentials_redirects_with_error(web_client: TestClient
     assert "API Cardmarket non configurée" in followed.text
 
 
-def test_refresh_with_mocked_client_stores_and_displays_price(
+def test_refresh_with_unproven_product_stores_but_does_not_display_price(
     web_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
@@ -377,9 +393,8 @@ def test_refresh_with_mocked_client_stores_and_displays_price(
     assert "notice=" in response.headers["location"]
 
     detail = web_client.get("/catalog/1")
-    assert "PRIX TENDANCE CARDMARKET" in detail.text
-    assert "0,45 €" in detail.text
-    assert "PRIX DE L’ANNONCE" in detail.text
+    assert "Cote exacte Cardmarket non disponible" in detail.text
+    assert "0,45 €" not in detail.text
 
 
 def test_refresh_not_found_redirects_with_error(
@@ -562,7 +577,7 @@ def test_cardmarket_view_helper_builds_range() -> None:
     assert web_module._cardmarket_view([]) is None
 
 
-def test_detail_page_shows_cardmarket_price_range(
+def test_detail_page_rejects_unproven_cardmarket_price_range(
     web_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     original = service.prices_for_item
@@ -580,9 +595,28 @@ def test_detail_page_shows_cardmarket_price_range(
 
     monkeypatch.setattr("app.cardmarket.service.prices_for_item", fake_prices)
     detail = web_client.get("/catalog/1")
-    assert "2 PRODUITS" in detail.text
-    assert "3,00 €" in detail.text
-    assert "9,00 €" in detail.text
+    assert "Cote exacte Cardmarket non disponible" in detail.text
+    assert "2 produits trouvés" in detail.text
+    assert "9,00 €" not in detail.text
+
+
+def test_detail_page_displays_only_explicitly_linked_product(web_client: TestClient, tmp_path: Path) -> None:
+    with connect(tmp_path / "web.db") as connection:
+        with connection:
+            connection.execute("INSERT INTO pokemon_reference_sets (id, name) VALUES ('test-set', 'Test')")
+            connection.execute("INSERT INTO pokemon_reference_cards (tcgdex_id, local_id, name, set_id, set_name) VALUES ('test-173', '173', 'Pikachu', 'test-set', 'Test')")
+            card_id = connection.execute("SELECT id FROM pokemon_reference_cards WHERE tcgdex_id = 'test-173'").fetchone()[0]
+            connection.execute("UPDATE catalog_items SET identification_status = 'identified', reference_card_id = ? WHERE id = 1", (card_id,))
+        service.upsert_price(connection, CardmarketPrice(product_id=601, card_name="Pikachu [A]", tcg_dex_id="test-173", trend_price_cents=3500))
+    detail = web_client.get("/catalog/1")
+    assert "PRIX TENDANCE CARDMARKET" in detail.text
+    assert "35,00 €" in detail.text
+    assert "prix agrégé sans langue ni état confirmés" in detail.text
+    with connect(tmp_path / "web.db") as connection:
+        with connection:
+            connection.execute("UPDATE cardmarket_prices SET trend_price_cents = 0 WHERE product_id = 601")
+    detail = web_client.get("/catalog/1")
+    assert "Cote exacte Cardmarket non disponible" in detail.text
 
 
 def test_aliases_sync_route_success(

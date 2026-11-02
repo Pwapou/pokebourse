@@ -137,11 +137,11 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 
 ### Données réellement accessibles
 - Prix de marché par produit : tendance et moyennes de vente à 1, 7 et 30 jours, convertis en centimes entiers.
-- Identité du produit : nom anglais, identifiant produit Cardmarket, identifiant d'extension — **sans nom d'extension** (aucun fichier public d'extensions) : quand plusieurs extensions partagent le nom d'une carte, la fiche annonce affiche une fourchette et le moteur de rentabilité retient le **plus bas** des prix tendances (hypothèse prudente).
+- Identité du produit : nom anglais, identifiant produit Cardmarket, identifiant d'extension — **sans nom d'extension** (aucun fichier public d'extensions). Un nom partagé ne démontre pas l'identité exacte de la carte : la fiche indique alors que la cote exacte est indisponible.
 
 ### Conséquences et solution de repli
 - Sans synchronisation, la fiche annonce affiche « Aucune cote Cardmarket en base » et le fonctionnement existant (références manuelles, médiane du catalogue) est inchangé.
-- En l'absence de référence et de médiane, le moteur de rentabilité utilise le prix tendance Cardmarket comme **dernier repli** (`reference_source = cardmarket_trend`), uniquement pour les annonces en EUR ; les références manuelles et la médiane du catalogue restent prioritaires.
+- En l'absence de référence et de médiane, le moteur de rentabilité utilise uniquement un prix tendance positif d'un produit lié explicitement et sans ambiguïté à la carte TCGdex identifiée, comme **dernier repli** (`reference_source = cardmarket_trend`), pour les annonces en EUR. Le prix reste agrégé, sans garantie de langue ni d'état.
 
 ---
 
@@ -149,13 +149,15 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 
 | Source | Rôle dans le projet | Accès officiel / autorisé | Méthode d'accès | Solution de repli recommandée |
 |---|---|---|---|---|
-| **Vinted** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `vinted_scraper` (API privée) | Import manuel JSONL |
-| **Leboncoin** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `lbc` (endpoints non officiels) | Import manuel JSONL |
-| **eBay** | Annonces de marché | **Oui / API officielle** | Endpoint de recherche / API eBay | Import manuel JSONL |
-| **Wallapop** | Annonces de marché | **Non établi** (accès public C2C) | API de recherche Wallapop | Import manuel JSONL |
+| **Vinted** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `vinted_scraper` (API privée) | Import manuel JSONL ou extension Chrome |
+| **Leboncoin** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `lbc` (endpoints non officiels) | Import manuel JSONL ou extension Chrome |
+| **eBay** | Annonces de marché | **Oui / API officielle** | Endpoint de recherche / API eBay | Import manuel JSONL ou saisie assistée par URL |
+| **Wallapop** | Annonces de marché | **Non établi** (accès public C2C) | API de recherche Wallapop | Import manuel JSONL ou extension Chrome |
 | **TCGdex** | Référentiel cartes et sets Pokémon | **Oui** (API publique ouverte, Fair Use) | Client REST `api.tcgdex.net` + cache local | Cache SQLite local autonome pré-embarqué |
 | **Cardmarket** | Cotes de marché (prix tendance réels) | **Oui** (fichiers publics quotidiens officiels ; API fermée aux nouvelles demandes) | Synchronisation des fichiers officiels + stockage local `cardmarket_prices` | Cotes manuelles et médiane du catalogue inchangées |
-| **Extension Chrome (Pokébourse Capture)** | Import assisté côté utilisateur | **Oui** (Navigation humaine légitime sur navigateur personnel) | Content script DOM / Schema.org / JSON-LD | Export JSONL & envoi API locale (`POST /imports`) |
+| **Extension Chrome (Pokébourse Capture)** | Import assisté côté utilisateur | **Oui** (Navigation humaine légitime sur navigateur personnel) | Content script DOM / Schema.org / JSON-LD | Export JSONL & prévisualisation locale (`POST /previsualiser-capture`) |
+| **Saisie manuelle par URL (`/ajouter-annonce`)** | Ajout ciblé d'annonce | **Oui** (Analyse syntaxique locale d'URL ; récupération serveur bornée uniquement sur domaine explicitement autorisé) | Décomposition locale de l'URL (eBay, Vinted, Leboncoin, Wallapop) + extraction JSON-LD/OpenGraph/HTML via `app/collectors/page_fetch.py` | Saisie manuelle intégrale ou capture par extension |
+| **OCR local (Tesseract)** | Assistance à la lecture de photos | **Oui** (Binaire local conteneurisé, 100% hors-ligne) | Exécution locale stdin/stdout en mémoire éphémère | Saisie textuelle manuelle |
 | **ipify** | IP publique de sortie des agents | **Oui** (API publique sans authentification) | Une requête `https://api.ipify.org` à chaque démarrage du worker | IP inconnue, sans interruption du worker |
 
 ---
@@ -173,15 +175,46 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 - Prix brut affiché et devise.
 - Nom / pseudonyme du vendeur.
 - URL de l'annonce et URL de la vignette photo.
-- Détection des mots-clés Pokémon et extraction automatique du numéro et de l'extension si présents.
+- Détection des mots-clés Pokémon et extraction automatique du numéro (y compris numéros isolés sous garde-fous) et de l'extension si présents.
 
 ### Transmission à Pokébourse
-- Génération d'un fichier JSONL conforme au format d'import du catalogue.
-- Envoi direct en un clic vers l'instance Pokébourse locale (`POST http://localhost:8000/imports`), où l'annonce est réconciliée avec le catalogue TCGdex et analysée par le moteur de rentabilité.
+- **Mode Prévisualisation (recommandé)** : sélection d'une annonce unique et transmission vers `POST /previsualiser-capture`. Pokébourse analyse les données capturées sans rien écrire en base, expose la provenance de chaque champ (extrait, proposé, saisi, manquant) et permet à l'utilisateur de vérifier ou corriger avant confirmation explicite.
+- **Envoi direct en 1 clic** : transmission directe vers l'instance locale (`POST /imports`) avec calcul immédiat de la rentabilité.
+- **Export standard** : génération de fichier JSONL horodaté ou copie dans le presse-papier.
 
 ---
 
-## 7. Règles impératives appliquées dans le code
+## 7. Traitement d'images et OCR Local (Tesseract)
+
+L'assistance par lecture de photo (`POST /ocr/suggestions`) respecte des règles de sécurité et de confidentialité strictes :
+- **100 % local et éphémère** : le binaire Tesseract est exécuté localement dans le conteneur Docker de l'application (`tesseract stdin stdout -l fra+eng`). Aucun flux vidéo, aucune image et aucune métadonnée ne transitent par un service distant ou un tiers cloud.
+- **Zéro persistance** : la photo uploadée est décodée en mémoire (RAM), convertie en PNG épuré de toute métadonnée EXIF via Pillow, et analysée sans être jamais écrite sur le disque ni conservée dans la base de données.
+- **Bornes strictes** : taille limitée à 8 Mo, résolution maximale de 12 millions de pixels, sémaphore borné à 2 analyses simultanées et timeout strict de 20 secondes.
+- **Rôle d'assistance indicatif** : l'OCR ne valide jamais automatiquement une identité de carte. Il propose des suggestions de candidats (noms, numéros) que l'utilisateur doit confirmer explicitement.
+
+---
+
+## 8. Recherche externe contrôlée (`/search?external=1`)
+
+L'élargissement de la recherche au-delà du catalogue local applique une stricte politique d'accès :
+- **Action humaine explicite** : aucun appel réseau n'est émis lors des recherches ordinaires sur `/search`.
+- **Sources autorisées** :
+  - **TCGdex** : complétion du référentiel officiel mise en file worker (`identification_searches`) avec déduplication stricte des critères et limitation de cadence (`TCGDEX_SEARCHES_PER_TICK`). Seules les métadonnées de carte (nom, numéro, extension) sont envoyées, à l'exclusion de tout titre brut ou donnée vendeur.
+  - **eBay** : requêtes bornées avec gestion de backoff exponentiel et respect des quotas.
+- **Sources protégées exclues** : Vinted et Leboncoin ne sont pas interrogées et sont signalées avec un statut explicite « Non disponible » invitant à utiliser l'extension Chrome légitime ou l'import JSONL.
+
+---
+
+## 9. Récupération serveur bornée du parcours par URL (`app/collectors/page_fetch.py`)
+
+Le parcours « Ajout par URL » (`/ajouter-annonce`) applique une politique d'accès stricte, distincte des connecteurs de veille :
+- **Allowlist explicite** : la configuration Python reste vide par défaut ; la configuration Compose active `vinted.fr,vinted.net` à la demande de l’utilisateur. Ce paramétrage technique ne constitue pas une autorisation de Vinted. La page distante n'est téléchargée que si son domaine figure dans `POKEMON_PAGE_FETCH_ALLOWED_HOSTS` (paramètre `page_fetch_allowed_hosts`). Les autres plateformes restent exclues de la configuration Compose par défaut ; les restrictions contractuelles recensées aux sections 1 à 4 demeurent applicables. À défaut d'autorisation, l'interface propose la capture par extension Chrome ou la saisie manuelle.
+- **Bornes techniques** : HTTPS uniquement, anti-SSRF (rejet des adresses IP privées, bouclage ou réservées, vérifiées à chaque redirection), 3 redirections maximum, 10 secondes de timeout, HTML limité à 2 Mo, images limitées à 8 Mo.
+- **Contenu exploité** : métadonnées déclaratives uniquement (JSON-LD `Product`, OpenGraph, balises HTML) ; aucun JavaScript n'est exécuté ; l'OCR Tesseract reste local, éphémère et indicatif.
+
+---
+
+## 10. Règles impératives appliquées dans le code
 1. **Gestion des codes HTTP 403 et 429** : les réponses 403 ne sont pas retentées (arrêt immédiat et journalisation). Les réponses 429 respectent les en-têtes `Retry-After`.
-2. **Zéro appel réel dans les tests automatisés** : 100 % des tests unitaires et d'intégration utilisent des simulateurs (mocks) ou le cache local SQLite sans requêter Vinted, Leboncoin, TCGdex ou Cardmarket.
+2. **Zéro appel réel dans les tests automatisés** : 100 % des tests unitaires et d'intégration utilisent des simulateurs (mocks) ou le cache local SQLite sans requêter Vinted, Leboncoin, eBay, Wallapop, TCGdex ou Cardmarket.
 3. **Pas de collecte réelle en production sans cadre d'autorisation établi**.
