@@ -158,6 +158,7 @@ def test_service_unavailable_is_explicit_without_blocking_an_independent_title(c
     matcher = CardMatcher(TcgdexCache(connection))
     assert matcher.identify("Carte Pokémon", raw_data={"ocr_status": "unavailable"}).reason_code == "service_unavailable"
     assert matcher.identify("Pikachu 58/102", raw_data={"ocr_status": "unavailable"}).status == "identified"
+    assert matcher.identify("Pikachu 58/102 English", raw_data={"ocr_status": "unavailable"}).reason_code == "out_of_scope"
 
 
 def test_partial_reingestion_keeps_traced_proof_and_human_confirmation(connection: sqlite3.Connection) -> None:
@@ -213,3 +214,34 @@ def test_missing_title_does_not_turn_a_compound_prefill_into_text(connection: sq
     result = preview_listing(connection, {"title": "", "name": "Pikachu 58/102", "proposed_name": "Pikachu 58/102"})
     assert result["identification"]["status"] == "ambiguous"
     assert result["identification"]["matched_card"] is None
+
+
+def test_product_sentence_can_cross_title_description_without_losing_origins(connection: sqlite3.Connection) -> None:
+    """La séparation des observations conserve aussi les règles de lot antérieures."""
+    result = CardMatcher(TcgdexCache(connection)).identify("Dracaufeu 4/102 vendu avec", "3 cartes en plus")
+    assert result.status == "lot"
+    assert result.matched_card is None
+    assert {item.source for item in result.observations} == {"title", "description"}
+
+
+def test_text_annotation_does_not_reclassify_ocr_attributes_as_text(connection: sqlite3.Connection) -> None:
+    """Le pilote textuel conserve son périmètre après l'ajout des provenances."""
+    from app.identification.annotation_pilot import sample_pilot
+    from app.identification.reviews import review_context
+
+    payload = {"external_id": "text-pilot", "name": "Pikachu", "set_name": "Set de Base", "card_number": "58/102",
+               "raw_data": {"title": "Carte photographiée"}, "price_cents": 100,
+               "identity_evidence": [
+                   {"field": "name", "value": "Pikachu", "source": "prefill"},
+                   {"field": "set_name", "value": "Set de Base", "source": "prefill"},
+                   {"field": "card_number", "value": "58/102", "source": "ocr"}]}
+    import_jsonl(connection, json.dumps(payload).encode())
+    item_id = connection.execute("SELECT id FROM catalog_items").fetchone()[0]
+    context = review_context(connection, item_id, blind=True)
+    assert context["observed_attributes"] == {}
+    assert sample_pilot(connection, target_size=1, seed="text-only") == 1
+    row = connection.execute("SELECT automatic_top1_tcgdex_id, candidate_tcgdex_ids_json FROM annotation_pilot_items").fetchone()
+    assert row["automatic_top1_tcgdex_id"] is None
+    assert json.loads(row["candidate_tcgdex_ids_json"]) == []
+    frame = json.loads(connection.execute("SELECT frame_json FROM annotation_sampling_batches").fetchone()[0])
+    assert frame[0]["pipeline_version"] == PIPELINE_VERSION

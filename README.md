@@ -111,6 +111,15 @@ Pour surmonter les protections anti-bot (Cloudflare, DataDome) sans risque de ba
 
 **Limites réelles du parcours de prévisualisation** : l'extension ne transmet que ce qu'elle a lu sur la page ouverte — une information absente est présentée comme manquante, jamais inventée ; la langue n'est jamais déduite et doit être choisie avant confirmation ; l'image principale est affichée depuis son URL d'origine (le serveur local ne télécharge aucune image) et n'est pas conservée par le flux d'import ; les numéros/extensions extraits par l'extension sont des indices heuristiques, pas des preuves. L'estimation Cardmarket n'est ni un prix temps réel garanti, ni une vente conclue, ni une preuve d'état ou d'authenticité.
 
+**Provenance et confirmation de l’identité (T03)** : « Indices et provenance »
+distingue les textes, les champs extraits/saisis et les suggestions préremplies
+ou issues de l’OCR. Ces suggestions restent à vérifier après réanalyse et ajout
+de l’annonce. Un désaccord significatif bloque la nouvelle acceptation automatique ;
+les références contradictoires apparaissent séparément dans le diagnostic.
+La confirmation d’identité utilise l’action dédiée de la fiche, distincte de
+l’enregistrement. Le [contrat de preuves et la politique de réexamen](docs/identification/T03_EVIDENCE.md)
+documentent la compatibilité JSONL, les versions et la migration additive `0022`.
+
 ![Extension Chrome Pokébourse Capture](docs/images/02-chrome-extension.svg)
 
 > [!TIP]

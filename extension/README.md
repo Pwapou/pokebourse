@@ -102,6 +102,14 @@ Les protections fondées sur les noms du catalogue, les conflits de langues et
 l'état déclaré brut relèvent du backend ; aucun matcher n'est ajouté à
 l'extension.
 
+Le backend T03 conserve séparément les indices OCR et les valeurs préremplies.
+Une réanalyse ou « Confirmer et ajouter l’annonce » ne les transforme pas en
+confirmation humaine d’identité. Leur provenance est visible dans « Indices et
+provenance », avant et après l’import. Un désaccord significatif reste à vérifier,
+avec les références contradictoires dans une rubrique de diagnostic distincte.
+Le contrat JSONL historique reste accepté ; le champ optionnel `identity_evidence`
+est décrit dans [le guide T03](../docs/identification/T03_EVIDENCE.md).
+
 La compatibilité du manifest, des fichiers graphiques et du format d'échange JSONL avec le backend Pokébourse est validée par les tests d'intégration. Le parcours de prévisualisation (transmission des champs capturés, sélection unique, application indisponible) est couvert à la fois côté popup (Playwright) et côté serveur (analyse sans écriture, correction conservée, enregistrement confirmé, doublon) :
 ```bash
 docker compose exec app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v

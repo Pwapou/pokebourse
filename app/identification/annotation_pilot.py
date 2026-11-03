@@ -10,7 +10,8 @@ from typing import Any
 from app.identification.detector import extract_features
 from app.identification.lexical import RETRIEVAL_VERSION
 from app.identification.matcher import CardMatcher
-from app.identification.reviews import ReviewInput, canonical_json, freeze_catalog
+from app.identification.reviews import ReviewInput, canonical_json, freeze_catalog, text_observed_attributes
+from app.identification.evidence import PIPELINE_VERSION, OBSERVATION_VERSION
 from app.tcgdex.cache import TcgdexCache
 
 STRATEGY_VERSION = "pilot-status-platform-language-description-v1"
@@ -105,7 +106,7 @@ def sample_pilot(connection: sqlite3.Connection, *, target_size: int = 300, seed
         for row in rows:
             if row["group_key"] in excluded_groups:
                 continue
-            attributes = json.loads(row["attributes_json"])
+            attributes = text_observed_attributes(row["attributes_json"], row["observations_json"])
             observed_language = attributes.get("language") or extract_features(row["title"], row["description"]).language
             # Une langue absente demeure inconnue, même si le stockage ancien avait un défaut « fr ».
             key = canonical_json([row["identification_status"], row["platform"],
@@ -141,6 +142,7 @@ def sample_pilot(connection: sqlite3.Connection, *, target_size: int = 300, seed
                 count, population = counts[key], len(strata[key])
                 frame.append({"stratum": json.loads(key), "selected": count, "population": population,
                               "retrieval_version": RETRIEVAL_VERSION, "candidate_limit": 50,
+                              "pipeline_version": PIPELINE_VERSION, "observation_version": OBSERVATION_VERSION,
                               "snapshot_ids": [row["id"] for row in strata[key]]})
                 chosen.extend((row, key, count, population) for row in rng.sample(strata[key], count))
         if not chosen:
@@ -161,7 +163,11 @@ def sample_pilot(connection: sqlite3.Connection, *, target_size: int = 300, seed
         )
         batch_id = int(cursor.lastrowid)
         for row, key, count, population in chosen:
-            result = matcher.identify(row["title"], row["description"], raw_data=json.loads(row["attributes_json"]))
+            inputs: dict[str, Any] = dict(text_observed_attributes(row["attributes_json"], row["observations_json"]))
+            if row["observations_json"] != "[]":
+                inputs["identity_evidence"] = [item for item in json.loads(row["observations_json"])
+                                                if item["source"] not in {"ocr", "prefill"}]
+            result = matcher.identify(row["title"], row["description"], raw_data=inputs)
             candidates = [candidate.tcgdex_id for candidate in result.candidates]
             top1 = result.matched_card.tcgdex_id if result.matched_card else candidates[0] if candidates else None
             connection.execute(

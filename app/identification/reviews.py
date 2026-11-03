@@ -45,6 +45,16 @@ def redact_contacts(text: str | None) -> str | None:
     return re.sub(r"(?<!\w)(?:\+33\s?|0)[1-9](?:[ .-]?\d{2}){4}(?!\d)", "[contact masqué]", text)
 
 
+def text_observed_attributes(attributes_json: str, observations_json: str) -> dict[str, str]:
+    """Ne présente pas des préremplissages/OCR comme preuves du pilote textuel."""
+    attributes = json.loads(attributes_json)
+    observations = json.loads(observations_json)
+    if not observations:
+        return attributes
+    declared = {(item["field"], item["value"]) for item in observations if item["source"] not in {"ocr", "prefill"}}
+    return {field: value for field, value in attributes.items() if (field, value) in declared}
+
+
 class VerifiedAttribute(BaseModel):
     """Un attribut confirmé reste indépendant du rattachement d'identité."""
 
@@ -278,7 +288,7 @@ def review_context(connection: sqlite3.Connection, item_id: int, query: str = ""
     ).fetchall()
     return {
         "snapshot": snapshot, "revision": current_revision(connection, item_id),
-        "observed_attributes": json.loads(snapshot["attributes_json"]),
+        "observed_attributes": text_observed_attributes(snapshot["attributes_json"], snapshot["observations_json"]),
         "current": None if blind else current,
         "needs_review": bool(current and current["outcome"] != "withdrawn" and current["input_hash"] != evidence["hash"]),
         "history": history, "cards": cards[:25], "has_more": len(cards) > 25,

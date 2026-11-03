@@ -4,7 +4,7 @@ import json
 import sqlite3
 from typing import Any
 
-from app.identification.reviews import canonical_json, fingerprint
+from app.identification.reviews import canonical_json, fingerprint, text_observed_attributes
 
 
 def build_dataset(connection: sqlite3.Connection) -> bytes:
@@ -40,6 +40,7 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
             retrieval_metadata[batch["id"]] = {
                 "retrieval_version": metadata.get("retrieval_version", "rules-v1"),
                 "candidate_scope": f"up_to_{metadata.get('candidate_limit', 10)}_proposed_candidates",
+                "pipeline_version": metadata.get("pipeline_version", "lexical-v1"),
             }
         by_review = {}
         for item in assignments:
@@ -79,7 +80,7 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
                 "type": "review", "review_id": row["id"], "snapshot_id": row["snapshot_id"],
                 "input_hash": row["input_hash"], "group_key": row["group_key"],
                 "title": row["title"], "description": row["description"],
-                "observed_attributes": json.loads(row["attributes_json"]),
+                "observed_attributes": text_observed_attributes(row["attributes_json"], row["observations_json"]),
                 "input_origin": row["input_origin"], "source_kind": row["source_kind"],
                 "platform": row["platform"],
                 "normalization_version": row["normalization_version"],

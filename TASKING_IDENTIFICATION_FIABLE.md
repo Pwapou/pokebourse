@@ -1,6 +1,6 @@
 # Pokébourse — Identification fiable, comparaison de marché et marge
 
-Date : **2 novembre 2026**. Statut : **plan global en cours ; T02 implémenté et validé sur fixtures, autres lots non validés par cette livraison**. La rédaction d'une cible ne vaut pas réalisation.
+Date : **2 novembre 2026**, suivi T03 actualisé le **3 novembre 2026**. Statut : **plan global en cours ; T02 et T03 implémentés et validés sur fixtures, autres lots non validés par cette livraison**. La rédaction d'une cible ne vaut pas réalisation.
 
 **Recadrage produit :** ajout du parcours de comparaison et d'estimation (J3, T14 à T18). Ces lots sont à réaliser ; leur ajout ne modifie pas l'état des travaux d'identification existants.
 
@@ -196,16 +196,22 @@ T13 reste la matrice de recette de tous les lots, y compris J3 ; sa numérotatio
 
 ### T03 — Séparer preuves, recherche et acceptation
 
-- [ ] Ajouter un contrat de preuves compatible avec les snapshots existants ; conserver les observations concurrentes et la provenance après fusion.
-- [ ] Retirer la dépendance à la concaténation de textes comme seule trace d'origine ; distinguer champs saisis, extraits, préremplis et explicitement confirmés.
-- [ ] Conserver les contrats JSON/JSONL existants avec ajouts compatibles et validation des nouveaux champs. Une provenance déclarée par le client ne lui confère pas une autorité humaine.
-- [ ] Centraliser les règles réutilisées par prévisualisation, import, collecte, fiche et réidentification. Séparer la pure proposition de l'application transactionnelle à une annonce.
-- [ ] Exposer les motifs : preuve insuffisante, contradiction, plusieurs candidats, lot, référence locale absente, périmètre non couvert, service indisponible.
-- [ ] Conserver les candidats utiles mais contradictoires dans un espace de diagnostic explicitement marqué, sans les promouvoir parmi les suggestions admissibles ni masquer leur contradiction.
-- [ ] Vérifier en particulier qu'un nom/numéro apporté par OCR ne transforme pas silencieusement une proposition en confirmation humaine ou en nouvelle acceptation automatique J1.
-- [ ] Introduire des versions de pipeline/normalisation et une politique explicite de réexamen ; aucune mise à jour ne supprime l'audit.
+- [x] Ajouter un contrat de preuves compatible avec les snapshots existants ; conserver les observations concurrentes et la provenance après fusion.
+- [x] Retirer la dépendance à la concaténation de textes comme seule trace d'origine ; distinguer champs saisis, extraits, préremplis et explicitement confirmés.
+- [x] Conserver les contrats JSON/JSONL existants avec ajouts compatibles et validation des nouveaux champs. Une provenance déclarée par le client ne lui confère pas une autorité humaine.
+- [x] Centraliser les règles réutilisées par prévisualisation, import, collecte, fiche et réidentification. Séparer la pure proposition de l'application transactionnelle à une annonce.
+- [x] Exposer les motifs : preuve insuffisante, contradiction, plusieurs candidats, lot, référence locale absente, périmètre non couvert, service indisponible.
+- [x] Conserver les candidats utiles mais contradictoires dans un espace de diagnostic explicitement marqué, sans les promouvoir parmi les suggestions admissibles ni masquer leur contradiction.
+- [x] Vérifier en particulier qu'un nom/numéro apporté par OCR ne transforme pas silencieusement une proposition en confirmation humaine ou en nouvelle acceptation automatique J1.
+- [x] Introduire des versions de pipeline/normalisation et une politique explicite de réexamen ; aucune mise à jour ne supprime l'audit.
 
 **Fichiers :** `models.py`, `pipeline.py`, `matcher.py`, `resolution.py`, `reviews.py`, `app/listing_preview.py`, `capture_preview.py`, `manual_listing.py`, `catalog.py`, services d'ingestion. **Acceptation :** à observations et versions identiques, mêmes candidats/statut/motifs sur tous les points d'entrée ; une prévisualisation ne fait aucune écriture.
+
+**Livraison T03 — 3 novembre 2026 :** contrat optionnel `identity_evidence`, observations brutes/normalisées avec provenance, proposition locale commune et motifs structurés. Les candidats contradictoires sont séparés des suggestions admissibles. L'OCR et le préremplissage restent indicatifs, y compris après réanalyse/enregistrement ; la confirmation d'identité reste une action distincte. La migration additive `0022_identification_observations.sql` conserve les preuves/snapshots et leurs versions sans supprimer l'audit. Les empreintes historiques restent stables à preuves égales, les changements explicites de preuves demandent réexamen. Le pilote textuel filtre les attributs seulement indicatifs et garde la provenance dans l'audit.
+
+**Validation :** 386 tests ciblés Docker ; suite complète et recette Chromium locale détaillées dans [le guide T03](docs/identification/T03_EVIDENCE.md). Les cas couvrent la cohérence entre façades, l'absence d'écriture en prévisualisation, la réingestion partielle, les confirmations et les cotes existantes. Aucun seuil abaissé, dépendance ajoutée ou accès distant nouveau. Les essais utilisent uniquement des bases temporaires ; l'instance réelle n'est pas redémarrée par ce lot.
+
+**Dépendances et limites :** réalisé indépendamment de la finalisation de T00/T01 à la demande de l'utilisateur. Leur inventaire/annotation et leur benchmark restent à confronter à la version `evidence-rules-v1`. La conservation des images relève de T04, la qualification statistique de T10 ; ni leurs critères, ni la recette T13 globale ne sont déclarés acquis. Le contrat, les fichiers modifiés et la politique de réexamen sont décrits dans le guide T03.
 
 ### T04 — Rendre les preuves visuelles reproductibles
 

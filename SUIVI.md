@@ -364,3 +364,32 @@ La migration 0019 ajoute les décisions locales, les observations économiques e
 - **452 tests automatisés passants sur 43 suites** (0 échec, exécution rapide et entièrement hermétique).
 - **Zéro appel réseau réel** : tous les tests utilisent des simulateurs (mocks) ou le référentiel SQLite local embarqué (`seed_data.py`).
 - **Idempotence des 21 migrations SQLite** : rejeu intégral de `0001` à `0021` validé sans dérive de schéma (`test_migrations.py`).
+
+---
+
+## 23. T03 — Preuves, proposition et confirmation distinctes — 3 novembre 2026
+
+- Contrat optionnel `identity_evidence` compatible JSONL : valeurs brutes et
+  normalisées, sources, extraits et métadonnées d'image/région ; aucune
+  provenance cliente ne devient une confirmation humaine.
+- Proposition locale commune aux prévisualisations, imports, collecte et
+  réidentification ; OCR/préremplissages indicatifs, contradictions bloquantes,
+  références de diagnostic séparées des suggestions admissibles.
+- Migration additive `0022_identification_observations.sql` : observations et
+  versions dans les preuves/snapshots, sans réécriture des anciennes décisions.
+  Empreintes historiques conservées à preuves égales ; nouvelle preuve explicite
+  = confirmation à réexaminer, avec audit préservé.
+- Rubrique « Indices et provenance » dans la prévisualisation et la fiche.
+  La réanalyse et l'ajout d'une annonce ne confirment pas les indices OCR.
+  Le pilote et les exports textuels excluent les attributs seulement indicatifs
+  de leurs preuves textuelles, tout en conservant la provenance dans l'audit.
+- **Validation Docker :** 386 tests ciblés ; 749 tests sur la suite complète,
+  même avertissement de dépréciation FastAPI/Starlette/httpx. Recette Chromium
+  locale bureau/mobile, sans requête distante, avec contrôle des erreurs JS et
+  de l'absence d'écriture avant enregistrement. Les cotes historiques et le
+  moteur financier restent compatibles, sans modification du moteur financier.
+- **Limites :** T00/T01 et le benchmark ne sont pas déclarés terminés par cette
+  livraison ; pas de gain global de précision annoncé, pas de conservation
+  durable des images (T04), pas de validation de T13 global. Aucun redémarrage
+  ni migration de l'instance réelle n'est lancé par ce lot.
+- Contrat, politique de réexamen et fichiers : [guide T03](docs/identification/T03_EVIDENCE.md).

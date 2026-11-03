@@ -76,6 +76,7 @@ def test_ocr_prefill_is_indicative_after_reanalysis_and_save(tmp_path: Path, mon
                 page.get_by_text("Identification ambiguë", exact=True).scroll_into_view_if_needed()
                 page.screenshot(path=str(destination / "t03-desktop.png"))
                 page.set_viewport_size({"width": 390, "height": 844})
+                page.wait_for_function("document.getElementById('sidebar').getBoundingClientRect().right <= 1")
                 page.get_by_text("Identification ambiguë", exact=True).scroll_into_view_if_needed()
                 page.screenshot(path=str(destination / "t03-mobile.png"))
             page.get_by_role("button", name="Confirmer et ajouter l’annonce").click()

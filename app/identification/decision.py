@@ -86,7 +86,14 @@ def propose(matcher: CardMatcher, evidence: ListingEvidence, *, allow_lot_overri
     observations = [(item, _features(matcher, item)) for item in evidence.observations]
     trusted = [features for item, features in observations if item.source not in {"ocr", "prefill"}]
     indicative = [features for item, features in observations if item.source in {"ocr", "prefill"}]
-    base = _merge(ExtractedFeatures(), trusted)
+    trusted_title = evidence.title if any(item.field == "title" and item.value == evidence.title
+                                         and item.source not in {"ocr", "prefill"} for item, _ in observations) else ""
+    trusted_description = evidence.description if any(item.field == "description" and item.value == evidence.description
+                                                       and item.source not in {"ocr", "prefill"} for item, _ in observations) else None
+    # Préserver les règles T02 sur le couple titre/description (une formulation
+    # peut traverser leur frontière), sans perdre les observations séparées.
+    textual = extract_features(trusted_title, trusted_description, catalog_names=matcher._names, catalog_sets=matcher._sets)
+    base = _merge(textual, trusted)
     combined = _merge(base, indicative)
     # La recherche peut réunir les textes, mais toutes les observations gardent
     # leur origine et aucune de celles issues de l'OCR n'entre dans « trusted ».
@@ -135,7 +142,7 @@ def propose(matcher: CardMatcher, evidence: ListingEvidence, *, allow_lot_overri
         reason_code = "insufficient_evidence"
     else:
         reason_code = "local_reference_missing" if combined.name or combined.local_id else "insufficient_evidence"
-    if evidence.ocr_unavailable and result.status == "unidentified":
+    if evidence.ocr_unavailable and result.status == "unidentified" and reason_code in {"insufficient_evidence", "local_reference_missing"}:
         reason_code = "service_unavailable"
         result = replace(result, reason="Analyse OCR indisponible ; preuves locales insuffisantes pour identifier la carte.")
     return replace(result, candidates=admissible[:50], diagnostic_candidates=sorted(diagnostics.values(), key=lambda item: (-item.confidence, item.tcgdex_id))[:50],

@@ -126,6 +126,15 @@ et ne valident pas les autres volets de la recette T13.
 
 ## Lecture du diagnostic
 
+Depuis T03, les motifs sont également exposés par `reason_code`. Les suggestions
+admissibles (`candidates`) sont séparées des références contradictoires
+(`diagnostic_candidates`), avec les désaccords conservés. Les observations et
+leurs origines restent distinctes après fusion ; un complément OCR/prérempli ne
+suffit pas à accepter automatiquement une identité. Les textes indépendamment
+suffisants gardent leur traitement, sauf contradiction significative. Voir le
+[contrat T03](identification/T03_EVIDENCE.md) pour les versions et les garanties
+de réingestion, de snapshot et de confirmation humaine.
+
 Les catégories décrivent les observations du moteur : original indisponible,
 lot, langues contradictoires, langue hors périmètre, indices insuffisants, aucun candidat local,
 contradiction, nom approché, ambiguïté, correspondance partielle ou correspondance
