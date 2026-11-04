@@ -1,0 +1,1433 @@
+{
+  "schema_version": "identification-evaluation-v1",
+  "mode": "comparison",
+  "before": {
+    "schema_version": "identification-evaluation-v1",
+    "report": {
+      "id": "2026-11-02-30-liens",
+      "label": "30 annonces Vinted et eBay",
+      "created_at": "2026-11-02T21:54:06.787837+00:00"
+    },
+    "variants": {
+      "title_only": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 30,
+          "variant_missing": 0,
+          "photo_not_analyzed": 0,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035",
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [],
+          "photo_not_analyzed_ids": []
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": []
+      },
+      "ocr_only": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 15,
+          "variant_missing": 15,
+          "photo_not_analyzed": 15,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035"
+          ],
+          "photo_not_analyzed_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035"
+          ]
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": [
+          "Les variantes absentes ne sont pas converties en prédictions ou en annotations.",
+          "Certaines photos n'ont pas été analysées ; la variante OCR seule est indisponible."
+        ]
+      },
+      "combined": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 30,
+          "variant_missing": 0,
+          "photo_not_analyzed": 0,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035",
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [],
+          "photo_not_analyzed_ids": []
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": []
+      }
+    },
+    "limitations": [
+      "Résultats descriptifs sur les cas annotés ; aucune qualification statistique n'est déduite de petits échantillons."
+    ]
+  },
+  "after": {
+    "schema_version": "identification-evaluation-v1",
+    "report": {
+      "id": "2026-11-02-30-liens-rejeu",
+      "label": "30 annonces Vinted et eBay — rejeu local hermétique",
+      "created_at": "2026-11-03T21:03:41.778587+00:00",
+      "decision_origin": "automatic",
+      "pipeline_version": "evidence-rules-v1"
+    },
+    "variants": {
+      "title_only": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 30,
+          "variant_missing": 0,
+          "photo_not_analyzed": 0,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035",
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [],
+          "photo_not_analyzed_ids": []
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": []
+      },
+      "ocr_only": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 15,
+          "variant_missing": 15,
+          "photo_not_analyzed": 15,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035"
+          ],
+          "photo_not_analyzed_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035"
+          ]
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": [
+          "Les variantes absentes ne sont pas converties en prédictions ou en annotations.",
+          "Certaines photos n'ont pas été analysées ; la variante OCR seule est indisponible."
+        ]
+      },
+      "combined": {
+        "counts": {
+          "total": 30,
+          "annotated": 0,
+          "unannotated": 30,
+          "excluded": 0,
+          "variant_available": 30,
+          "variant_missing": 0,
+          "photo_not_analyzed": 0,
+          "identity_evaluable": 0,
+          "accepted_decisions": 0,
+          "accepted_evaluable": 0,
+          "accepted_not_evaluable": 0,
+          "correct_identities": 0,
+          "human_decisions_excluded": 0,
+          "unknown_origin_decisions": 0,
+          "top3_reference_absent_from_candidates": 0,
+          "catalog_absent": 0
+        },
+        "availability": {
+          "available_ids": [
+            "https://www.ebay.fr/itm/134107668325",
+            "https://www.ebay.fr/itm/135227993348",
+            "https://www.ebay.fr/itm/167982527425",
+            "https://www.ebay.fr/itm/188160633088",
+            "https://www.ebay.fr/itm/188297168172",
+            "https://www.ebay.fr/itm/256234628123",
+            "https://www.ebay.fr/itm/256579893665",
+            "https://www.ebay.fr/itm/298431309845",
+            "https://www.ebay.fr/itm/306719880013",
+            "https://www.ebay.fr/itm/314836778377",
+            "https://www.ebay.fr/itm/333772510908",
+            "https://www.ebay.fr/itm/358610033975",
+            "https://www.ebay.fr/itm/389444053811",
+            "https://www.ebay.fr/itm/404472812925",
+            "https://www.ebay.fr/itm/407016716035",
+            "https://www.vinted.fr/items/10347032106-leuphorie-ex-101115-ex-forces-cachees",
+            "https://www.vinted.fr/items/10600815808-carte-pokemon-florizzar",
+            "https://www.vinted.fr/items/10612701988-carte-pokemon-118127-poke-tour",
+            "https://www.vinted.fr/items/10612762451-carte-pokemon-104127-espace-temps-brise",
+            "https://www.vinted.fr/items/10612952900-carte-pokemon-87127-psykokwak",
+            "https://www.vinted.fr/items/10634647225-chef-de-fer-214-sar",
+            "https://www.vinted.fr/items/10640626189-azurill-115103",
+            "https://www.vinted.fr/items/10641462817-carte-pokemon-noadkoko-129128-30-ans-celebrations-fr-r",
+            "https://www.vinted.fr/items/10641893904-lots-de-100-cartes-pokemon-avec-reversesholo",
+            "https://www.vinted.fr/items/10641901335-lots-de-100-cartes-pokemon-avec-brillantes",
+            "https://www.vinted.fr/items/10641909296-lots-de-100-cartes-pokemon-avec-holographiques-et-reverses",
+            "https://www.vinted.fr/items/10641930023-carte-pokemon",
+            "https://www.vinted.fr/items/10641988212-carte-pokemon",
+            "https://www.vinted.fr/items/10642130722-carte-pokemon",
+            "https://www.vinted.fr/items/10642721576-carte-pokemon-ex-30-ans"
+          ],
+          "missing_ids": [],
+          "photo_not_analyzed_ids": []
+        },
+        "metrics": {
+          "automatic_coverage": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "automatic_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "correct_overall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "top3_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_or_sealed_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "out_of_catalog_false_acceptance": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          },
+          "lot_recall": {
+            "numerator": 0,
+            "denominator": 0,
+            "value": null
+          }
+        },
+        "lot_confusion_matrix": {
+          "choice": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "lot": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "sealed": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "single_card": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          },
+          "unknown": {
+            "single_card": 0,
+            "lot": 0,
+            "abstained": 0,
+            "missing": 0,
+            "human_or_mixed": 0
+          }
+        },
+        "decision_origins": {
+          "automatic": 0,
+          "human": 0,
+          "mixed": 0,
+          "unknown": 0
+        },
+        "limitations": []
+      }
+    },
+    "limitations": [
+      "Résultats descriptifs sur les cas annotés ; aucune qualification statistique n'est déduite de petits échantillons."
+    ]
+  },
+  "comparison": {
+    "intersection_size": 30,
+    "missing_from_before_ids": [],
+    "missing_from_after_ids": [],
+    "variants": {
+      "title_only": {
+        "paired_count": 30,
+        "missing_before_ids": [],
+        "missing_after_ids": [],
+        "changes": {
+          "errors_corrected": [],
+          "new_errors": [],
+          "correct_to_incorrect": [],
+          "correct_to_abstained": [],
+          "wrong_to_abstained": [],
+          "became_ambiguous": [],
+          "became_unidentified": [],
+          "identity_changes": [],
+          "status_changes": []
+        },
+        "change_counts": {
+          "errors_corrected": 0,
+          "new_errors": 0,
+          "correct_to_incorrect": 0,
+          "correct_to_abstained": 0,
+          "wrong_to_abstained": 0,
+          "became_ambiguous": 0,
+          "became_unidentified": 0,
+          "identity_changes": 0,
+          "status_changes": 0
+        },
+        "paired_metrics": {
+          "before": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "after": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "delta": {
+            "automatic_coverage": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "automatic_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "correct_overall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "top3_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            }
+          }
+        }
+      },
+      "ocr_only": {
+        "paired_count": 15,
+        "missing_before_ids": [
+          "https://www.ebay.fr/itm/134107668325",
+          "https://www.ebay.fr/itm/135227993348",
+          "https://www.ebay.fr/itm/167982527425",
+          "https://www.ebay.fr/itm/188160633088",
+          "https://www.ebay.fr/itm/188297168172",
+          "https://www.ebay.fr/itm/256234628123",
+          "https://www.ebay.fr/itm/256579893665",
+          "https://www.ebay.fr/itm/298431309845",
+          "https://www.ebay.fr/itm/306719880013",
+          "https://www.ebay.fr/itm/314836778377",
+          "https://www.ebay.fr/itm/333772510908",
+          "https://www.ebay.fr/itm/358610033975",
+          "https://www.ebay.fr/itm/389444053811",
+          "https://www.ebay.fr/itm/404472812925",
+          "https://www.ebay.fr/itm/407016716035"
+        ],
+        "missing_after_ids": [
+          "https://www.ebay.fr/itm/134107668325",
+          "https://www.ebay.fr/itm/135227993348",
+          "https://www.ebay.fr/itm/167982527425",
+          "https://www.ebay.fr/itm/188160633088",
+          "https://www.ebay.fr/itm/188297168172",
+          "https://www.ebay.fr/itm/256234628123",
+          "https://www.ebay.fr/itm/256579893665",
+          "https://www.ebay.fr/itm/298431309845",
+          "https://www.ebay.fr/itm/306719880013",
+          "https://www.ebay.fr/itm/314836778377",
+          "https://www.ebay.fr/itm/333772510908",
+          "https://www.ebay.fr/itm/358610033975",
+          "https://www.ebay.fr/itm/389444053811",
+          "https://www.ebay.fr/itm/404472812925",
+          "https://www.ebay.fr/itm/407016716035"
+        ],
+        "changes": {
+          "errors_corrected": [],
+          "new_errors": [],
+          "correct_to_incorrect": [],
+          "correct_to_abstained": [],
+          "wrong_to_abstained": [],
+          "became_ambiguous": [],
+          "became_unidentified": [],
+          "identity_changes": [],
+          "status_changes": []
+        },
+        "change_counts": {
+          "errors_corrected": 0,
+          "new_errors": 0,
+          "correct_to_incorrect": 0,
+          "correct_to_abstained": 0,
+          "wrong_to_abstained": 0,
+          "became_ambiguous": 0,
+          "became_unidentified": 0,
+          "identity_changes": 0,
+          "status_changes": 0
+        },
+        "paired_metrics": {
+          "before": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "after": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "delta": {
+            "automatic_coverage": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "automatic_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "correct_overall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "top3_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            }
+          }
+        }
+      },
+      "combined": {
+        "paired_count": 30,
+        "missing_before_ids": [],
+        "missing_after_ids": [],
+        "changes": {
+          "errors_corrected": [],
+          "new_errors": [],
+          "correct_to_incorrect": [],
+          "correct_to_abstained": [],
+          "wrong_to_abstained": [],
+          "became_ambiguous": [],
+          "became_unidentified": [],
+          "identity_changes": [],
+          "status_changes": []
+        },
+        "change_counts": {
+          "errors_corrected": 0,
+          "new_errors": 0,
+          "correct_to_incorrect": 0,
+          "correct_to_abstained": 0,
+          "wrong_to_abstained": 0,
+          "became_ambiguous": 0,
+          "became_unidentified": 0,
+          "identity_changes": 0,
+          "status_changes": 0
+        },
+        "paired_metrics": {
+          "before": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "after": {
+            "automatic_coverage": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "automatic_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "correct_overall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "top3_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            },
+            "lot_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null
+            }
+          },
+          "delta": {
+            "automatic_coverage": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "automatic_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "correct_overall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "top3_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_or_sealed_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "out_of_catalog_false_acceptance": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_precision": {
+              "before": null,
+              "after": null,
+              "delta": null
+            },
+            "lot_recall": {
+              "before": null,
+              "after": null,
+              "delta": null
+            }
+          }
+        }
+      }
+    },
+    "limitations": [
+      "catalog_version absent dans au moins un rapport : comparabilité limitée.",
+      "data_version absent dans au moins un rapport : comparabilité limitée.",
+      "pipeline_version absent dans au moins un rapport : comparabilité limitée."
+    ]
+  }
+}

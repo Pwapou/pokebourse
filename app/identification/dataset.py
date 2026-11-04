@@ -2,17 +2,26 @@
 
 import json
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from app.identification.reviews import canonical_json, fingerprint, text_observed_attributes
 
+VISUAL_BASIS = ("image", "both")
 
-def build_dataset(connection: sqlite3.Connection) -> bytes:
+
+def build_dataset(connection: sqlite3.Connection, database_path: Path | None = None) -> bytes:
     """Exporte décisions actives, annotations, catalogues figés et manifeste.
 
     Les snapshots obsolètes, supprimés ou sans original fiable sont conservés
     dans l'audit mais exclus du futur train. Aucun vendeur ni JSON brut n'est
     exporté. Le group_key ne remplace pas le futur dédoublonnage interplateforme.
+
+    Les provenances « image » et « both » (T04) ajoutent un éligibilité visuelle
+    : elle exige la preuve durable, ses octets présents et vérifiables. Une
+    preuve manquante ou supprimée rend le label visuel inéligible et demande
+    un réexamen des décisions qui en dépendent ; les règles textuelles
+    historiques et leur éligibilité sont conservées à l'identique.
     """
     # La transaction de lecture garantit un instantané cohérent face au worker.
     with connection:
@@ -58,6 +67,12 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
                         **retrieval_metadata[item["batch_id"]],
                     }
         records: list[dict[str, Any]] = []
+        image_rows = {
+            row["id"]: row for row in connection.execute(
+                "SELECT id, sha256, pixel_sha256, width, height, byte_size, purpose, deleted_at "
+                "FROM listing_image_evidence"
+            )
+        }
         for row in reviews:
             reasons = []
             if row["listing_id"] is None:
@@ -76,6 +91,43 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
                 reasons.append("withdrawn")
             if not row["text_sufficient"]:
                 reasons.append("insufficient_text")
+            if row["evidence_basis"] == "image":
+                # Une lecture fondée sur la seule image n'est pas une preuve textuelle.
+                reasons.append("image_based_annotation")
+            image_meta = None
+            image_status = None
+            visual_reasons: list[str] = []
+            if row["image_evidence_id"] is not None:
+                image_row = image_rows.get(row["image_evidence_id"])
+                if image_row is None:
+                    image_status = "missing"
+                    visual_reasons.append("image_evidence_missing")
+                else:
+                    image_meta = {
+                        "id": image_row["id"], "sha256": image_row["sha256"],
+                        "pixel_sha256": image_row["pixel_sha256"], "width": image_row["width"],
+                        "height": image_row["height"], "byte_size": image_row["byte_size"],
+                        "purpose": image_row["purpose"],
+                    }
+                    if database_path is not None:
+                        from app.identification.evidence_store import evidence_file_status
+                        image_status = evidence_file_status(connection, database_path, image_row["id"])
+                    else:
+                        image_status = "deleted" if image_row["deleted_at"] else "unverified"
+                    if image_status in {"deleted", "missing", "corrupted"}:
+                        visual_reasons.append("image_evidence_missing")
+                    elif image_status == "unverified":
+                        visual_reasons.append("image_evidence_unverified")
+            if row["evidence_basis"] in VISUAL_BASIS:
+                if row["image_evidence_id"] is None:
+                    visual_reasons.append("image_evidence_missing")
+                for reason in reasons:
+                    if reason not in {"insufficient_text", "image_based_annotation"}:
+                        visual_reasons.append(reason)
+            needs_reexamination = bool(
+                row["review_kind"] != "annotation" and row["image_evidence_id"] is not None
+                and image_status in {"deleted", "missing", "corrupted"}
+            )
             records.append({
                 "type": "review", "review_id": row["id"], "snapshot_id": row["snapshot_id"],
                 "input_hash": row["input_hash"], "group_key": row["group_key"],
@@ -96,8 +148,19 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
                 "pilot_assignment": by_review.get(row["id"]),
                 "supersedes_review_id": row["supersedes_review_id"],
                 "reviewed_annotation_ids": json.loads(row["reviewed_annotation_ids_json"]),
+                "evidence_basis": row["evidence_basis"],
+                "image_evidence": image_meta,
+                "image_evidence_status": image_status,
+                "needs_reexamination": needs_reexamination,
                 "eligible_for_text_training": not reasons,
                 "exclusion_reasons": reasons,
+                "eligible_for_visual_training": bool(
+                    row["evidence_basis"] in VISUAL_BASIS
+                    and row["image_evidence_id"] is not None
+                    and image_status == "present"
+                    and not visual_reasons
+                ),
+                "visual_exclusion_reasons": visual_reasons,
             })
         versions = sorted({record["catalog_version"] for record in records})
         catalogs = [
@@ -126,6 +189,8 @@ def build_dataset(connection: sqlite3.Connection) -> bytes:
         "type": "manifest", "schema_version": "identity-pilot-v2", "dataset_hash": fingerprint(content),
         "review_count": len(records),
         "eligible_count": sum(record["eligible_for_text_training"] for record in records),
+        "visual_eligible_count": sum(record["eligible_for_visual_training"] for record in records),
+        "needs_reexamination_count": sum(record["needs_reexamination"] for record in records),
         "catalog_versions": versions,
         "sampling_batch_count": len(batches),
         "scope": "text_only; no split; exact source groups only; no model trained",

@@ -234,6 +234,7 @@ Pokébourse intègre un moteur de reconnaissance optique de caractères (OCR) **
   - L'image est décodée en mémoire vive via Pillow, nettoyée de ses métadonnées EXIF, et détruite après analyse.
   - Aucun fichier photo n'est enregistré sur le disque de l'application ni stocké en base de données.
   - Aucun appel réseau distant : vos photos restent confinées à votre machine locale.
+  - *Exception explicite et opt-in* : un bloc dédié de la fiche annonce permet de **conserver volontairement** une photo comme preuve durable (benchmark, annotation ou confirmation). Ces preuves sont dédupliquées, dépourvues d'EXIF, stockées dans l'espace contrôlé `evidence/` (quotas, purges et statuts d'intégrité) et sauvegardées/restaurées avec la base. Sans cette action explicite, rien n'est conservé.
 
 ---
 
@@ -254,6 +255,7 @@ En cliquant sur une carte du catalogue (`/catalog/{id}`), vous accédez à l'ana
   3. *Déjà revendus par vos soins* : achats passés de votre portefeuille passés au statut `vendu`.
   Chaque ligne indique l'écart de prix net en centimes et euros ($\pm X,XX\text{ €}$ vs estimation) pour valider immédiatement la crédibilité du prix retenu.
 - **Assistance OCR intégrée** : bouton pour analyser une photo de la carte et suggérer les candidats du référentiel.
+- **Preuves visuelles conservées (opt-in)** : un bloc dédié permet de conserver explicitement une photo comme preuve durable (benchmark, annotation ou confirmation d'une décision fondée image). Chaque preuve est dédupliquée, dépourvue d'EXIF, rattachée à ses lectures (champ, région, version des transformations) et suivie par un statut d'intégrité (présent/manquant/corrompu/supprimé). L'analyse OCR simple, elle, ne conserve rien.
 - **Bouton d'enregistrement d'achat** : un clic convertit l'annonce observée en achat officiel dans votre carnet de suivi.
 
 ---

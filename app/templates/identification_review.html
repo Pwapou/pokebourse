@@ -77,6 +77,13 @@
         <label>Annotations arbitrées (arbitrage uniquement)<input name="annotation_ids" placeholder="Ex. 12, 15" maxlength="1000"></label>
         {% endif %}
         <label><input type="checkbox" name="text_sufficient" value="true"> Le texte seul suffit à établir ce résultat</label>
+        <label>Base de la lecture<select name="evidence_basis">
+            <option value="text" selected>Texte uniquement</option>
+            <option value="image">Image conservée uniquement</option>
+            <option value="both">Texte et image conservée</option>
+        </select></label>
+        <p class="field-hint">« Image » ou « texte et image » exigent une preuve visuelle explicitement conservée sur la fiche de l’annonce ; saisissez son identifiant ci-dessous. Une simple analyse OCR éphémère ne suffit jamais.</p>
+        <label>Identifiant de la preuve visuelle (requis pour image/both)<input name="image_evidence_id" type="number" min="1" step="1" placeholder="Ex. 3"></label>
         <fieldset class="form-fieldset review-attributes">
             <legend>Attributs vérifiés dans le texte (facultatif)</legend>
             <p>Laissez vide ce que le texte ne permet pas de confirmer. Le choix d’une carte ne vérifie aucun de ces attributs.</p>

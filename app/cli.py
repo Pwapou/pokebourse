@@ -58,6 +58,15 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("migrate", help="Appliquer les migrations SQLite")
     subparsers.add_parser("check", help="Vérifier l'intégrité et les migrations")
+    subparsers.add_parser("verify-evidence", help="Vérifier l'intégrité des preuves visuelles, sans écriture")
+    purge_evidence = subparsers.add_parser("purge-evidence", help="Purger les preuves visuelles orphelines ou expirées")
+    purge_evidence.add_argument(
+        "--days",
+        type=int,
+        choices=range(1, 3651),
+        metavar="1..3650",
+        help="Purger aussi les preuves non utilisées par une décision plus anciennes que ce nombre de jours",
+    )
     export_labels = subparsers.add_parser("export-labels", help="Exporter les validations humaines ML en JSONL")
     export_labels.add_argument("--output", required=True, type=Path, help="Fichier JSONL à créer (sans écrasement)")
     diagnostic = subparsers.add_parser("diagnose-identification", help="Diagnostiquer les annonces non résolues, en lecture seule")
@@ -241,10 +250,38 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif args.command == "check":
                 check_database(connection)
                 print(f"Base SQLite valide : {database_path}")
+            elif args.command == "verify-evidence":
+                from app.identification.evidence_store import verify_image_evidence
+                check_database(connection)
+                report = verify_image_evidence(connection, database_path)
+                state = "OK" if report["ok"] else "ANOMALIES"
+                print(
+                    f"Preuves visuelles : {report['present']}/{report['total']} présentes "
+                    f"({report['deleted']} supprimées) — {state}"
+                )
+                if report["missing"]:
+                    print(f"Fichiers manquants (ids) : {report['missing']}")
+                if report["corrupted"]:
+                    print(f"Fichiers altérés (ids) : {report['corrupted']}")
+                return 0 if report["ok"] else 1
+            elif args.command == "purge-evidence":
+                from app.identification.evidence_store import (
+                    purge_expired_evidence,
+                    purge_unreferenced_evidence,
+                )
+                check_database(connection)
+                orphaned = purge_unreferenced_evidence(connection, database_path)
+                connection.commit()
+                print(f"Preuves orphelines purgées : {orphaned}")
+                if args.days is not None:
+                    expired = purge_expired_evidence(connection, database_path, days=args.days)
+                    connection.commit()
+                    print(f"Preuves expirées purgées (rétention {args.days} jours) : {expired}")
+                return 0
             elif args.command == "export-labels":
                 from app.identification.dataset import build_dataset
                 check_database(connection)
-                payload = build_dataset(connection)
+                payload = build_dataset(connection, database_path)
                 with args.output.open("xb") as destination:
                     destination.write(payload)
                 print(f"Validations humaines exportées : {args.output}")

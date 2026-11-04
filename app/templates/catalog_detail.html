@@ -344,6 +344,35 @@
                 <p class="cell-sub">La lecture d’une photo ne permet pas d’attribuer une carte unique à un lot. Reclasser un faux positif exige une action explicite.</p>
                 {% endif %}
 
+                <section class="ocr-assist" aria-labelledby="evidence-store-title">
+                    <h3 id="evidence-store-title">Preuves visuelles conservées</h3>
+                    <p class="cell-sub">Conservez explicitement une photo pour benchmark, annotation ou confirmation durable. L’analyse ci-dessus reste éphémère : aucune photo n’est stockée sans cette action, et conserver une photo ne confirme aucune identité.</p>
+                    <form method="post" action="/catalog/{{ item.id }}/preuves-visuelles" enctype="multipart/form-data">
+                        <label for="evidence-photo">Photo à conserver (JPEG, PNG ou WebP, 8 Mo max)</label>
+                        <input id="evidence-photo" name="file" type="file" accept="image/jpeg,image/png,image/webp" required>
+                        <label for="evidence-purpose">Périmètre
+                            <select id="evidence-purpose" name="purpose">
+                                <option value="confirmation">Confirmation durable</option>
+                                <option value="annotation">Annotation</option>
+                                <option value="benchmark">Benchmark</option>
+                            </select>
+                        </label>
+                        <button class="button secondary" type="submit">Conserver la photo</button>
+                    </form>
+                    {% if visual_evidence %}
+                    <ul class="evidence-list" style="margin-top: 10px; padding-left: 18px;">
+                        {% for evidence in visual_evidence %}
+                        <li>preuve n° {{ evidence.id }} · {{ evidence.purpose }} · {{ evidence.width }}×{{ evidence.height }} · empreinte {{ evidence.sha256[:12] }}… ·
+                            {% if evidence.status == 'present' %}octets présents et vérifiés
+                            {% elif evidence.status == 'missing' %}fichier manquant — label visuel inéligible, réexamen requis
+                            {% elif evidence.status == 'corrupted' %}fichier altéré — label visuel inéligible, réexamen requis
+                            {% else %}preuve supprimée — réexamen requis{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </section>
+
                 {% with ident=identification.result %}{% include "_identification_evidence.html" %}{% endwith %}
                 {% if identification_candidates %}
                 <h3>Candidats locaux</h3>

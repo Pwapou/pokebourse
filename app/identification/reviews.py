@@ -9,6 +9,7 @@ import json
 import re
 import sqlite3
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -74,13 +75,18 @@ class VerifiedAttribute(BaseModel):
 
 
 class ReviewInput(BaseModel):
-    """Contrat validé des écritures humaines, sans identité opérateur libre."""
+    """Contrat validé des écritures humaines, sans identité opérateur libre.
+
+    evidence_basis « image »/« both » exige une preuve visuelle explicitement
+    conservée (T04) : la suggestion d'une analyse éphémère ne suffit jamais.
+    """
 
     model_config = ConfigDict(extra="forbid", strict=True)
     outcome: Literal["matched", "lot", "not_card", "no_catalog_match", "insufficient_evidence", "withdrawn"]
     review_kind: Literal["annotation", "decision", "adjudication"] = "decision"
     validated_card_id: int | None = Field(default=None, gt=0)
-    evidence_basis: Literal["text"] = "text"
+    evidence_basis: Literal["text", "image", "both"] = "text"
+    image_evidence_id: int | None = Field(default=None, gt=0)
     text_sufficient: bool
     reviewed_annotation_ids: list[int] = Field(default_factory=list)
     verified_attributes: dict[Literal["language", "variant", "edition", "condition"], VerifiedAttribute] = Field(default_factory=dict)
@@ -92,8 +98,13 @@ class ReviewInput(BaseModel):
         """Vérifie le rôle et les références de la lecture."""
         if (self.outcome == "matched") != (self.validated_card_id is not None):
             raise ValueError("Une référence est requise uniquement pour une carte reconnue.")
-        if self.outcome == "matched" and not self.text_sufficient:
+        if self.outcome == "matched" and self.evidence_basis == "text" and not self.text_sufficient:
             raise ValueError("Ce pilote exige un texte suffisant pour reconnaître une carte.")
+        if self.evidence_basis in {"image", "both"}:
+            if self.image_evidence_id is None:
+                raise ValueError("Une base de preuve visuelle exige une preuve explicitement conservée.")
+        elif self.image_evidence_id is not None:
+            raise ValueError("Une preuve visuelle n'est référencée que pour les bases « image » ou « both ».")
         if self.outcome == "withdrawn" and self.review_kind == "annotation":
             raise ValueError("Une annotation indépendante ne retire pas une décision.")
         ids = self.reviewed_annotation_ids
@@ -171,7 +182,7 @@ def freeze_catalog(connection: sqlite3.Connection) -> str:
 
     rows = connection.execute(
         "SELECT tcgdex_id, name, local_id, set_id, set_name, rarity, reference_language "
-        "FROM pokemon_reference_cards ORDER BY tcgdex_id"
+        "FROM pokemon_reference_cards ORDER BY tcgdex_id, reference_language"
     ).fetchall()
     cards = [dict(row) for row in rows]
     version = fingerprint(cards)
@@ -186,14 +197,32 @@ def save_review(
     connection: sqlite3.Connection, item_id: int, review: ReviewInput, *,
     expected_hash: str, expected_revision: int, operator: str = "local",
     assignment_id: int | None = None, assignment_stage: str | None = None,
+    database_path: "Path | None" = None,
 ) -> int:
-    """Ajoute une lecture et publie sa décision sous verrou SQLite optimiste."""
+    """Ajoute une lecture et publie sa décision sous verrou SQLite optimiste.
+
+    Une base de preuve visuelle vérifie que la preuve est conservée et que ses
+    octets sont présents : une preuve absente ne confirme jamais une identité.
+    """
     from app.identification.resolution import (
         IdentificationConflictError, apply_resolution, capture_evidence, resolve_listing, utc_now,
     )
 
     if not operator.strip() or len(operator) > 100:
         raise ValueError("Identifiant opérateur local invalide.")
+    image_evidence = None
+    if review.image_evidence_id is not None:
+        from app.identification.evidence_store import evidence_file_status
+
+        image_evidence = connection.execute(
+            "SELECT * FROM listing_image_evidence WHERE id=?", (review.image_evidence_id,),
+        ).fetchone()
+        if image_evidence is None:
+            raise ValueError("Preuve visuelle introuvable.")
+        if image_evidence["deleted_at"] is not None:
+            raise ValueError("Une preuve supprimée ne peut pas étayer une décision.")
+        if database_path is not None and evidence_file_status(connection, database_path, review.image_evidence_id) != "present":
+            raise ValueError("Les octets de la preuve visuelle sont indisponibles : conservez-la à nouveau avant de décider.")
     with connection:
         if not connection.in_transaction:
             connection.execute("BEGIN IMMEDIATE")
@@ -234,15 +263,15 @@ def save_review(
             (snapshot_id, outcome, validated_card_id, validated_tcgdex_id, review_kind,
              supersedes_review_id, legacy_revision, reviewed_annotation_ids_json, verified_attributes_json,
              validated_by, validated_at, evidence_basis, text_sufficient, catalog_version,
-             sampling_probability, comment)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             sampling_probability, comment, image_evidence_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (snapshot["id"], review.outcome, card.id if card else None, card.tcgdex_id if card else None,
              review.review_kind, previous["id"] if previous and review.review_kind != "annotation" else None,
              legacy_revision,
              canonical_json(review.reviewed_annotation_ids),
              canonical_json({key: value.model_dump() for key, value in review.verified_attributes.items()}),
              operator, utc_now(), review.evidence_basis, int(review.text_sufficient), catalog_version,
-             review.sampling_probability, redact_contacts(review.comment)),
+             review.sampling_probability, redact_contacts(review.comment), review.image_evidence_id),
         )
         review_id = int(cursor.lastrowid)
         if pilot_item is not None:

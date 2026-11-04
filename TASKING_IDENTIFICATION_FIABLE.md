@@ -4,6 +4,10 @@ Date : **2 novembre 2026**, suivi T03 actualisé le **3 novembre 2026**. Statut 
 
 **Recadrage produit :** ajout du parcours de comparaison et d'estimation (J3, T14 à T18). Ces lots sont à réaliser ; leur ajout ne modifie pas l'état des travaux d'identification existants.
 
+**Adaptation OCR confirmée le 3 novembre 2026 :** renforcer T06/T07 autour de trois objectifs : **repérer et redresser la carte avant lecture, conserver la position des textes, produire plusieurs hypothèses de numéro**. Conserver Tesseract local comme point de départ ; mesurer les gains avant tout changement de moteur. Ces travaux restent à réaliser. Le pHash reste une expérience conditionnelle de T11, sans activation par cette adaptation.
+
+**Procédure de développement T06/T07 :** suivre [Cadrage, OCR spatial et hypothèses de numéro](docs/identification/T06_T07_PROCEDURE_OCR.md) pour le découpage des modules, les contrats, les algorithmes, les limites, l'intégration T03 et les tests. Cette spécification détaillée ne constitue pas une livraison du moteur.
+
 ## 1. Objectif et définition de « terminé »
 
 Livrer un parcours utilisable : **capturer une annonce et sa photo → identifier la carte et ses attributs → demander confirmation en cas de doute → enregistrer → rechercher les offres comparables et les ventes documentées accessibles → estimer un prix de revente et une marge lorsque les données le permettent**. Identification et calcul restent locaux ; la recherche de marché utilise uniquement les sources externes autorisées et configurées.
@@ -54,7 +58,7 @@ Constats vérifiés lors de la préparation :
 |---|---|
 | `detector.py` reçoit les noms de cartes et d'extensions du cache, avec alias historiques en repli | Compléter les alias et la couverture ; conserver ce qui fonctionne |
 | `listing_preview.py` ajoute les noms/numéros OCR seulement lorsque les preuves textuelles correspondantes manquent | Préserver cette priorité et éviter de perdre la provenance dans une chaîne concaténée |
-| `ocr.py` lit l'image entière et deux bandes de secours, avec taille, concurrence et délais bornés | Mesurer avant/après ; localiser la carte plutôt que supposer sa position dans la photo |
+| `ocr.py` lit l'image entière puis, si nécessaire, les 20 % supérieurs et 15 % inférieurs de la photo ; retourne du texte sans positions ; délai de 20 secondes par appel Tesseract | Localiser/redresser la carte avant de définir ses régions, conserver les positions et instaurer un budget global couvrant les essais de secours ; mesurer avant/après |
 | `resolution.py`, `reviews.py` et le pilote gèrent déjà décisions, snapshots, révisions et export | Étendre les contrats existants plutôt que créer une seconde vérité humaine |
 | Le pilote Phase 0 est textuel ; des campagnes manuelles conservent séparément certaines photos | Ne pas assimiler ces photos à des preuves visuelles déjà rattachées et sauvegardées par le pilote |
 | Le schéma possède `reference_language`, mais `tcgdex_id` reste unique | Le champ de langue ne suffit pas à permettre plusieurs localisations d'un même identifiant |
@@ -118,6 +122,8 @@ Réutiliser les modules actuels et extraire uniquement les responsabilités néc
 
 Le contrat d'une preuve doit pouvoir porter : champ, valeur brute, valeur normalisée, origine, extrait ou image/région, version d'extracteur, qualité technique et éventuelle transformation. Distinguer extrait, déclaré, inféré, corrigé et vérifié. Une confiance qualitative n'est pas une probabilité.
 
+Pour l'OCR spatial de T06/T07, relier chaque fragment à l'image, à l'objet/région et à sa boîte englobante. Documenter les repères photo orientée EXIF, carte redressée et sous-région OCR ainsi que les transformations entre eux. Une hypothèse de numéro référence ses fragments d'origine, les opérations appliquées et son rang ; elle ne remplace jamais la lecture brute. Ces ajouts restent compatibles avec les consommateurs actuels de `recognized.names` et `recognized.numbers` et n'accordent aucune autorité supplémentaire à la provenance OCR.
+
 Conserver une représentation transitoire en mémoire pour l'OCR éphémère. La persistance durable des preuves visuelles est un mode explicite distinct, décrit en T04. Ne jamais conserver silencieusement toutes les images analysées.
 
 ## 5. Ordre d'exécution
@@ -130,8 +136,8 @@ Conserver une représentation transitoire en mémoire pour l'OCR éphémère. La
 | T03 — Contrat de preuves et décision commune | P0 | T00, T02 | Même décision de tous les points d'entrée |
 | T04 — Preuves visuelles et annotations | P0 | T01, T03 | Benchmark photos et confirmations reproductibles |
 | T05 — Alias et couverture du référentiel | P0 | T02, T03 | Recherche et enrichissement explicables |
-| T06 — Lecture photographique locale | P1 | T04, T05 | Cadrage et OCR mesurés |
-| T07 — Réparations OCR sous contrôle | P1 | T03, T05, T06 | Suggestions auditables sans identité fabriquée |
+| T06 — Cadrage, redressement et OCR spatial | P1 | T04, T05 | Carte localisée, positions conservées et gain mesuré |
+| T07 — Hypothèses de numéro et réparations OCR | P1 | T03, T05, T06 | Alternatives bornées et auditables sans identité fabriquée |
 | T08 — Parcours utilisateur et capture | P0 | T03 à T07 | Capture → résolution → enregistrement cohérents |
 | T09 — Persistance et usage métier | P0 | T03, T04, T05, T08 | Décisions durables et rentabilité admissible |
 | T10 — Qualification indépendante | P0 | T01 à T09 | Rapport de qualité et périmètre d'automatisation |
@@ -149,28 +155,32 @@ T13 reste la matrice de recette de tous les lots, y compris J3 ; sa numérotatio
 
 ### T00 — Inventorier et figer le point de départ
 
-- [ ] Relever les modifications de travail, versions, migrations et tests existants ; ne pas écraser les travaux en cours.
-- [ ] Exécuter les tests Docker sur les bases temporaires et consigner les échecs initiaux sans les attribuer au chantier.
-- [ ] Auditer les entrées : URL, extension, JSONL, saisie, collecte, prévisualisation, fiche, réidentification, worker et validation.
-- [ ] Comparer code, documentation et Compose : autorisations réseau réellement actives, persistance des photos, limites OCR, locales et sources de vérité.
-- [ ] Inventorier le catalogue sur copie/sauvegarde : cartes/extensions/locales, fiches partielles, images disponibles et manquantes. Ne pas modifier la base réelle pour établir cet inventaire.
-- [ ] Figer la version initiale, le catalogue et les rapports existants avant toute comparaison.
+- [x] Relever les modifications de travail, versions, migrations et tests existants ; ne pas écraser les travaux en cours.
+- [x] Exécuter les tests Docker sur les bases temporaires et consigner les échecs initiaux sans les attribuer au chantier.
+- [x] Auditer les entrées : URL, extension, JSONL, saisie, collecte, prévisualisation, fiche, réidentification, worker et validation.
+- [x] Comparer code, documentation et Compose : autorisations réseau réellement actives, persistance des photos, limites OCR, locales et sources de vérité.
+- [x] Inventorier le catalogue sur copie/sauvegarde : cartes/extensions/locales, fiches partielles, images disponibles et manquantes. Ne pas modifier la base réelle pour établir cet inventaire.
+- [x] Figer la version initiale, le catalogue et les rapports existants avant toute comparaison.
 
 **Livrable :** rapport initial versionné, matrice des entrées et lacunes ; liste des acquis à réutiliser. **Acceptation :** aucune référence absente n'est présentée comme un défaut OCR sans vérification.
 
+**Livraison T00 — 3 novembre 2026 :** inventaire consigné dans [validation/ocr/evaluation/STATUS_T00_T01.md](validation/ocr/evaluation/STATUS_T00_T01.md) avec manifeste figé, inventaire catalogue sur sauvegarde cohérente et baseline tests. Actualisation du soir : la suite complète est verte sur l'état courant (749 réussites, 0 échec) ; les 21 échecs historiques consignés au contrôle initial sont résolus par la livraison T03. Verdict : terminé comme inventaire, avec la réserve que l'état antérieur aux changements déjà présents n'est pas reconstituable.
+
 ### T01 — Construire la vérité terrain et le benchmark hors ligne
 
-- [ ] Reprendre les 30 annonces existantes : conserver titre ET description disponibles, photos exactes, provenance et données manquantes. Ne pas compléter les absences par invention.
+- [x] Reprendre les 30 annonces existantes : conserver titre ET description disponibles, photos exactes, provenance et données manquantes. Ne pas compléter les absences par invention.
 - [ ] Annoter indépendamment type de produit, identité/impression déterminable, présence dans le catalogue figé, attributs observables, suffisance texte seul puis apport des images.
-- [ ] Permettre une identité externe documentée si la carte manque au référentiel, sans lui fabriquer un ID TCGdex ; un ID absent n'est pas une mauvaise prédiction exacte.
+- [x] Permettre une identité externe documentée si la carte manque au référentiel, sans lui fabriquer un ID TCGdex ; un ID absent n'est pas une mauvaise prédiction exacte.
 - [ ] Séparer annotation indépendante et décision appliquée. Rechercher au-delà des candidats automatiques, arbitrer les désaccords, conserver les lectures initiales.
-- [ ] Versionner un manifeste avec empreintes, catalogue, règles, moteur OCR/langues, configurations, partitions et groupes de doublons ; y joindre les images via T04.
-- [ ] Séparer acquisition réseau manuelle et rejeu strictement local. Le rejeu refuse un artefact manquant et ne le télécharge pas implicitement.
-- [ ] Produire des rapports texte seul, OCR seul, texte+OCR ; ajouter ensuite les variantes de cadrage et de vision sans changer les labels.
+- [x] Versionner un manifeste avec empreintes, catalogue, règles, moteur OCR/langues, configurations, partitions et groupes de doublons ; y joindre les images via T04.
+- [x] Séparer acquisition réseau manuelle et rejeu strictement local. Le rejeu refuse un artefact manquant et ne le télécharge pas implicitement.
+- [x] Produire des rapports texte seul, OCR seul, texte+OCR ; ajouter ensuite les variantes de cadrage et de vision sans changer les labels.
 - [ ] Étendre à 300 cas diagnostiques, dont au moins 20 % en double lecture indépendante, puis environ 1 000 cas pour les comparaisons. Réutiliser le pilote existant ; ne pas déclarer ces volumes acquis.
 - [ ] Constituer séparément un audit aléatoire représentatif du flux local admissible et un jeu difficile. Documenter les probabilités de sélection ; ne pas assimiler le flux local à tout le marché.
 
 **Livrable :** jeu de développement annoté, protocole, comparateur et rapport initial. **Acceptation :** les compteurs `identified` sont distingués des identités correctes ; toutes les métriques donnent leur dénominateur et leurs exclusions.
+
+**Livraison partielle T01 — 3 novembre 2026 :** manifeste figé, squelette de labels (30 URL, 0 annotation préremplie), comparateur, rapport initial à 0 annotation et **rejeu strictement local hermétique** (`validation/ocr/marketplaces/replay_local.py`, tests dédiés) livrés ; le rejeu du 3 novembre reproduit le rapport historique du 2 novembre avec zéro changement de statut ou d'identité (voir STATUS_T00_T01.md). **Non terminé :** les annotations humaines indépendantes, la double lecture/arbitrage, le rapport de justesse, les volumes 300/1 000, l'audit aléatoire et la résolution des quasi-doublons restent ouverts ; aucun volume n'est déclaré acquis.
 
 ### T02 — Corriger les règles de détection
 
@@ -215,56 +225,87 @@ T13 reste la matrice de recette de tous les lots, y compris J3 ; sa numérotatio
 
 ### T04 — Rendre les preuves visuelles reproductibles
 
-- [ ] Garder l'OCR courant éphémère par défaut. Créer un mode explicite de conservation locale pour benchmark/annotation ou confirmation durable sur photo, distinct d'une simple analyse.
-- [ ] Nettoyer les métadonnées ; stocker les images dans un espace contrôlé persistant, non dans une URL publique ou un répertoire temporaire de conteneur.
-- [ ] Rattacher chaque preuve à ses octets exacts par empreinte, à une observation et à la version des transformations ; identifier image et région pour chaque lecture.
-- [ ] Prévoir stockage atomique, déduplication, quotas, suppression des temporaires/orphelins, rétention et purge. Une photo peut contenir des contacts : limiter l'archivage aux preuves nécessaires et ne pas l'exporter par défaut.
-- [ ] Étendre le pilote et l'export pour les provenances `image` et `both`, en conservant les anciennes annotations textuelles et leurs règles d'éligibilité.
-- [ ] Sauvegarder/restaurer ensemble base, manifeste et preuves ; tester la vérification d'intégrité et les fichiers manquants.
-- [ ] Si la preuve durable n'est pas conservée, ne pas créer de label visuel reproductible ; signaler les limites de la confirmation opérationnelle. Une preuve supprimée/indisponible rend son label visuel inéligible et demande un réexamen des décisions qui en dépendent.
-- [ ] Une simple analyse ne change pas l'identité. Remplacement explicite d'une preuve, ajout de contradiction, décision et invalidation sont des opérations distinctes et auditables.
+- [x] Garder l'OCR courant éphémère par défaut. Créer un mode explicite de conservation locale pour benchmark/annotation ou confirmation durable sur photo, distinct d'une simple analyse.
+- [x] Nettoyer les métadonnées ; stocker les images dans un espace contrôlé persistant, non dans une URL publique ou un répertoire temporaire de conteneur.
+- [x] Rattacher chaque preuve à ses octets exacts par empreinte, à une observation et à la version des transformations ; identifier image et région pour chaque lecture.
+- [x] Prévoir stockage atomique, déduplication, quotas, suppression des temporaires/orphelins, rétention et purge. Une photo peut contenir des contacts : limiter l'archivage aux preuves nécessaires et ne pas l'exporter par défaut.
+- [x] Étendre le pilote et l'export pour les provenances `image` et `both`, en conservant les anciennes annotations textuelles et leurs règles d'éligibilité.
+- [x] Sauvegarder/restaurer ensemble base, manifeste et preuves ; tester la vérification d'intégrité et les fichiers manquants.
+- [x] Si la preuve durable n'est pas conservée, ne pas créer de label visuel reproductible ; signaler les limites de la confirmation opérationnelle. Une preuve supprimée/indisponible rend son label visuel inéligible et demande un réexamen des décisions qui en dépendent.
+- [x] Une simple analyse ne change pas l'identité. Remplacement explicite d'une preuve, ajout de contradiction, décision et invalidation sont des opérations distinctes et auditables.
 
 **Fichiers :** `ocr.py`, `reviews.py`, `dataset.py`, `annotation_pilot.py`, stockage et `backups.py`. **Acceptation :** scénario sauvegarde → restauration → rejeu identique ; fonctionnement éphémère sans persistance implicite ; aucun accès à un fichier hors de l'espace de preuves.
 
+**Réalisé (3 novembre 2026) :** migrations `0023_visual_evidence.sql` (tables `listing_image_evidence` + lectures régionnées, reconstruction additive des reviews), `app/identification/evidence_store.py` (stockage atomique dédupliqué sans EXIF, quota, statuts présent/manquant/corrompu/supprimé, purges, sauvegarde sidecar dans `backups.py`), provenances `image`/`both` dans `reviews.py` et éligibilité visuelle + `needs_reexamination` dans `dataset.py` (manifeste inchangé `identity-pilot-v2`). Couvert par `tests/test_visual_evidence.py`.
+
 ### T05 — Alias, couverture et langues du référentiel
 
-- [ ] Alimenter les noms depuis le référentiel déjà utilisé ; créer des alias contrôlés portant cible, langue/périmètre, provenance et version.
-- [ ] Conserver les collisions d'alias et les fautes approchées comme suggestions. Ne pas utiliser une correspondance floue unique comme preuve exacte.
+- [x] Alimenter les noms depuis le référentiel déjà utilisé ; créer des alias contrôlés portant cible, langue/périmètre, provenance et version.
+- [x] Conserver les collisions d'alias et les fautes approchées comme suggestions. Ne pas utiliser une correspondance floue unique comme preuve exacte.
 - [ ] Vérifier la cible de « gempack 2 » sur une source de référence et les photos disponibles avant de l'ajouter ; ne pas inventer une équivalence française ou un ID attendu pour le cas B.
-- [ ] Distinguer répertoire d'extensions, manifestes, cartes détaillées et images ; afficher ce qui manque et ce qui est effectivement couvert.
-- [ ] Réutiliser les files `research.py`/`tcgdex/sync.py`, déduplication, pause/reprise, erreurs et cadence. Pas de seconde file ad hoc, pas d'appel réseau depuis le matcher.
-- [ ] Étendre le modèle pour isoler identité et localisations. Préserver les identifiants SQLite, relations humaines, liens Cardmarket et anciennes clés externes lors de la migration.
-- [ ] Charger les locales utiles à la demande, sans supposer que les IDs, numéros ou impressions coïncident entre langues/régions. Les rapprochements inter-impressions exigent un lien vérifié séparé.
-- [ ] Versionner périmètres et locales réellement pris en charge. Une locale ajoutée n'active pas automatiquement son identification ni sa rentabilité.
-- [ ] Conserver la langue de l'exemplaire inconnue si elle n'est pas observée ; la langue d'une fiche de référence est une propriété distincte.
+- [x] Distinguer répertoire d'extensions, manifestes, cartes détaillées et images ; afficher ce qui manque et ce qui est effectivement couvert.
+- [x] Réutiliser les files `research.py`/`tcgdex/sync.py`, déduplication, pause/reprise, erreurs et cadence. Pas de seconde file ad hoc, pas d'appel réseau depuis le matcher.
+- [x] Étendre le modèle pour isoler identité et localisations. Préserver les identifiants SQLite, relations humaines, liens Cardmarket et anciennes clés externes lors de la migration.
+- [x] Charger les locales utiles à la demande, sans supposer que les IDs, numéros ou impressions coïncident entre langues/régions. Les rapprochements inter-impressions exigent un lien vérifié séparé.
+- [x] Versionner périmètres et locales réellement pris en charge. Une locale ajoutée n'active pas automatiquement son identification ni sa rentabilité.
+- [x] Conserver la langue de l'exemplaire inconnue si elle n'est pas observée ; la langue d'une fiche de référence est une propriété distincte.
 
 **Fichiers :** `tcgdex/cache.py`, client/modèles/sync, recherche locale, `identification/research.py`, alias Cardmarket et migrations. **Acceptation :** ajout d'une localisation sans écrasement d'une autre ; cas absent conservé et enrichissable ; confirmations et liaisons financières préservées.
 
-### T06 — Améliorer et mesurer le cadrage/OCR
+**Réalisé (3 novembre 2026) :** migrations `0024_reference_localizations.sql` (unicité par `(tcgdex_id, reference_language)`, données et identifiants internes préservés), `0025_reference_aliases.sql`, `0026_tcgdex_sync_locale.sql` (locale par file de sync, clé historique conservée pour `fr`) ; `app/identification/aliases.py` (alias contrôlés, collisions dégradées en suggestions, suggestions floues sans écriture), résolution d'alias dans `reference_search.py`, clé `catalog.localization` dans `diagnostics.py`. « gempack 2 » reste volontairement non résolu (aucun alias inventé, cas enrichissable). Couvert par `tests/test_reference_aliases_localizations.py`.
+
+### T06 — Repérer/redresser la carte et conserver la position des textes
+
+**Méthode et développement :** [procédure T06/T07, étapes A à D et F](docs/identification/T06_T07_PROCEDURE_OCR.md). Elle précise les repères EXIF/CSS, contours/quadrilatères, homographie et reprojection, parsing TSV, ordre des passes et budget global. OpenCV headless est un backend expérimental pour l'automatique ; le manuel reste utilisable avec les dépendances actuelles.
+
+**Ordre de réalisation :** recadrage manuel et repères de coordonnées → lecture Tesseract avec positions → localisation/redressement automatiques comparés au manuel. Les bandes sont définies relativement à la carte sélectionnée, pas à la photo entière. Conserver le parcours actuel comme baseline de comparaison.
+
+#### T06.1 — Repérer et redresser la carte avant lecture
 
 - [ ] Comparer photo entière, recadrage manuel et recadrage automatique sur les mêmes images ; conserver la baseline existante.
 - [ ] Introduire d'abord le recadrage manuel utilisable au clavier/avec alternative de saisie ; transmettre ses coordonnées dans le repère correct après orientation EXIF.
-- [ ] Expérimenter la localisation par contours/quadrilatères, orientation et perspective ; rejeter les géométries douteuses et proposer le manuel.
+- [ ] Localiser les contours/quadrilatères plausibles ; corriger orientation et perspective pour produire une vue rectangulaire de la carte. Versionner les transformations et borner les dimensions/pixels de sortie, y compris après agrandissement.
+- [ ] Rejeter les quadrilatères dégénérés, hors image, trop petits ou insuffisamment étayés ; signaler l'échec et proposer le cadrage manuel ou la lecture de la photo entière. Ne jamais présenter le repli comme une localisation réussie.
 - [ ] Séparer carte, boîtier et étiquette de gradation. Plusieurs régions/cartes restent séparées ; ne pas combiner le nom d'une carte et le numéro d'une autre.
 - [ ] Une carte détectée sur plusieurs photos ne prouve pas l'absence d'autres objets vendus. Plusieurs vues recto/verso ne deviennent pas un lot par simple comptage d'images.
+
+#### T06.2 — Conserver et exploiter la position des textes
+
+- [ ] Utiliser la sortie structurée TSV de Tesseract pour conserver mots, lignes reconstituées, boîtes englobantes et scores techniques disponibles ; un score absent reste inconnu et un score OCR n'est pas une probabilité d'identité.
+- [ ] Associer chaque fragment à l'image, à la carte/étiquette et à la région analysée ; conserver coordonnées en pixels, dimensions du repère, coordonnées normalisées et transformations permettant le retour à la photo orientée EXIF.
+- [ ] Prioriser les noms dans le haut et les numéros dans le bas de la carte redressée, sans exclure définitivement les autres positions. Paramétrer/versionner les zones et garder un repli pour les mises en page atypiques.
+- [ ] Rapprocher les fragments voisins d'un numéro séparé par l'OCR (par exemple `025`, `/`, `165`) uniquement dans une même région/objet et avec une cohérence spatiale ; ne pas concaténer toute la bande basse sans contrôle.
 - [ ] Lire les régions nom/numéro/code/symbole avec quelques échelles et modes de segmentation adaptés ; conserver la lecture originale et éviter les traitements destructifs systématiques.
 - [ ] Employer des jeux de caractères adaptés uniquement sur les régions correspondantes ; préserver lettres, préfixes, zéros et suffixes valides selon le référentiel.
-- [ ] Mesurer les noms/numéros exacts et l'identité finale, pas seulement le nombre de caractères reconnus. Mesurer séparément échec de localisation et échec OCR sur cadrage humain.
+- [ ] Réutiliser le matcher commun avec les observations spatiales ; ne pas créer un moteur d'acceptation OCR distinct ni supprimer les contradictions avec titre/description.
+
+#### T06.3 — Mesurer et borner le traitement
+
+- [ ] Comparer baseline, cadrage manuel, cadrage/redressement automatique et lecture spatiale à labels/catalogue figés. Mesurer noms/numéros exacts, rappel top-3 des références et identité finale ; distinguer échec de localisation et échec OCR sur cadrage humain.
+- [ ] Publier les effectifs par segment (carte décentrée/inclinée, boîtier PSA/PCA, reflet, texte fragmenté, plusieurs cartes) et la latence p50/p95 de bout en bout ; les cas refusés et les replis restent dans le bilan.
 - [ ] Préserver taille maximale 8 Mo, 12 millions de pixels et deux analyses simultanées ; ajouter un budget global de 20 secondes de calcul OCR par image, cancellation et limites mémoire. Ce budget inclut les essais de secours, hors téléversement.
 - [ ] Langue OCR non installée, image inexploitable ou délai dépassé : réponse explicite et saisie manuelle, sans boucle infinie ni téléchargement implicite.
 
-**Fichiers :** `ocr.py`, `app/static/ocr.js`, templates concernés, Dockerfile si nécessaire. **Acceptation :** rapport de comparaison et latence p50/p95 sur machine décrite ; essais bornés ; aucune régression des garde-fous ; aucun modèle de détection lourd imposé sans gain démontré.
+**Fichiers :** `ocr.py`, contrat d'observations/modèles, `app/static/ocr.js`, templates concernés, tests OCR locaux/web et Dockerfile si nécessaire. **Acceptation :** repères et transformations vérifiés sur fixtures, fragments rattachés au bon objet, replis utilisables et rapport de comparaison avec latence sur machine décrite ; essais bornés ; aucune régression des garde-fous ; aucun changement de moteur ni modèle de détection lourd imposé sans gain démontré.
 
-### T07 — Proposer des réparations OCR contrôlées
+### T07 — Produire plusieurs hypothèses de numéro et des réparations contrôlées
 
-- [ ] Générer des hypothèses bornées à partir d'erreurs observées ; garder lecture originale, opération et alternatives. Ne pas modifier silencieusement un numéro textuel.
+**Méthode et développement :** [procédure T06/T07, étapes E/F et sections 7 à 10](docs/identification/T06_T07_PROCEDURE_OCR.md). Elle distingue lectures originales et alternatives d'une même lecture, fixe des plafonds initiaux versionnés et décrit la recherche/unification des candidats. Les alternatives ne doivent pas devenir des assertions simultanées dans `decision._conflicts()` ; les vrais désaccords avec les preuves restent visibles.
+
+- [ ] Extraire plusieurs lectures de numéro depuis les fragments spatiaux de T06 ; conserver la lecture brute, le numéro complet (préfixe, numérateur, dénominateur, suffixe lorsqu'ils existent), la région et la version d'extraction.
+- [ ] Générer des hypothèses bornées à partir d'erreurs observées : slash Unicode, espaces/fragments séparés, confusions `O/0` ou `I/1`, insertion éventuelle d'un caractère. Garder original, opération et alternatives ; ne pas appliquer de substitution globale aux noms ou aux préfixes alphanumériques valides.
+- [ ] Fixer et versionner avant expérimentation les plafonds de fragments, variantes par lecture et recherches par image ; dédupliquer par numéro canonique en conservant toutes les provenances. Classer par qualité de lecture, cohérence spatiale et coût de correction, sans présenter ce rang comme une certitude.
+- [ ] Vérifier les hypothèses dans le catalogue et les extensions compatibles, en préservant promos, sous-séries et numéros secrets. Ne pas recopier une règle universelle `numéro ≤ 1,6 × total`, ni les seuils du scanner de référence, sans validation sur notre périmètre.
+- [ ] Examiner les hypothèses admissibles dans le budget puis unir les candidats ; ne pas s'arrêter à la première lecture ayant un résultat. Utiliser nom, extension et autres observations pour départager, garder les alternatives plausibles et tracer les contradictions.
+- [ ] Ne pas modifier silencieusement un numéro du titre/de la description ; exposer toute contradiction avec une hypothèse OCR et conserver la priorité des preuves et confirmations existantes.
 - [ ] Tester `108/59 → 108/159` comme hypothèse d'insertion, jamais comme vérité acquise. Vérifier le numéro imprimé et le périmètre d'extension plutôt qu'un effectif global générique.
 - [ ] Rechercher les autres références compatibles et les cas où la bonne réponse est absente ; l'unicité dans un cache partiel ne démontre pas l'unicité réelle.
 - [ ] Exiger un indice discriminant supplémentaire pour mettre une réparation en avant ; l'absence de contradiction ne suffit pas.
 - [ ] Ne pas compter les essais OCR d'une même image/région comme preuves indépendantes.
 - [ ] Garder les réparations soumises à confirmation humaine en J1 et après, sauf chantier ultérieur explicitement qualifié selon T10.
+- [ ] Comparer lecture originale seule et hypothèses multiples sur les mêmes cas annotés : numéro exact parmi les hypothèses, rappel top-3, nouvelles erreurs de suggestion, identité finale et temps ajouté. Ne pas confondre présence du bon numéro et confirmation de la bonne carte.
 
-**Acceptation :** suggestion lisible « lu / proposé / pourquoi / autres possibilités » ; cas négatifs de réparation passants ; un lot reste lot malgré une réparation plausible.
+**Fichiers :** `ocr.py`, extraction/normalisation, matcher/recherche locale, modèles/contrat de preuves et tests associés. **Acceptation :** suggestion lisible « lu / proposé / pourquoi / autres possibilités », plafonds testés, provenance spatiale conservée et comparaison appariée publiée ; cas négatifs de réparation passants ; un lot reste lot malgré une réparation plausible.
 
 ### T08 — Terminer le parcours utilisateur, y compris les erreurs
 
@@ -373,6 +414,8 @@ Une qualification insuffisante signifie « non démontré » ; elle n'autorise n
 
 **Livrable / acceptation :** matrice de capacités et décision par source, avec références officielles datées. Chaque capacité manquante est visible et son impact sur J3 explicite ; aucune souscription ou acquisition réelle déclenchée par ce tasking documentaire.
 
+**Livraison T15 — 3 novembre 2026 :** matrice versionnée dans [docs/identification/T15_SOURCES_PRIX.md](docs/identification/T15_SOURCES_PRIX.md), section consignée dans [SOURCES.md](SOURCES.md) (§10). Constats établis : le connecteur eBay actuel interroge la page de recherche HTML publique sans authentification (ce n'est pas l'API officielle, aucune clé configurée) ; l'historique des ventes eBay (Marketplace Insights) reste indisponible (API restreinte, fermée aux nouveaux utilisateurs) ; Cardmarket fichiers publics est la seule source automatique disponible et ne couvre que des cotes agrégées non gradées ; aucune source automatique ne couvre les gradées PSA/PCA. Divergence code/documentation corrigée dans SOURCES.md. Décisions §1.2 encore ouvertes, recensées en section 4 de la matrice (D1 à D6) ; aucun comportement dépendant activé, aucune souscription, aucun accès réel déclenché.
+
 ### T16 — Déclencher la recherche de marché après identification admissible
 
 - [ ] Après enregistrement d'une annonce avec identité admissible, mettre en file une recherche de marché sans clic de recherche supplémentaire ; si une confirmation a été demandée, déclencher après cette confirmation. Une suggestion OCR seule en J1 n'autorise pas ce déclenchement comme identité confirmée.
@@ -434,6 +477,12 @@ T13 est le référentiel de vérification des lots précédents, pas un chantier
 | Holo/reverse, photo sans preuve de finition | Finition inconnue, aucune cote spécifique implicitement confirmée |
 | Proxy/faux visuellement proche | Aucune conclusion d'authenticité |
 | Photo inclinée, carte loin du centre, masquage, reflet | Cadrage/OCR bornés, qualité signalée, correction manuelle disponible |
+| Photo avec orientation EXIF, carte en perspective et recadrage imbriqué | Orientation appliquée une seule fois ; boîtes OCR reprojetables sur la bonne zone de la photo ; transformations vérifiées |
+| Quadrilatère dégénéré, contour de boîtier ou carte partiellement hors champ | Géométrie douteuse rejetée, motif visible et repli manuel/photo entière ; aucune localisation réussie inventée |
+| Nom en haut de la photo mais hors de la carte, étiquette PSA/PCA séparée | Positions interprétées dans le repère de chaque objet ; aucun texte de fond/certificat substitué au nom ou au numéro de carte |
+| Numéro séparé en `025`, `/`, `165` et fragments provenant d'une autre carte | Reconstruction des fragments voisins du même objet uniquement ; aucune fraction composée entre cartes |
+| OCR `O25／165`, préfixe promo valide, numéro secret ou lecture atypique | Original et hypothèses distincts, préfixes préservés, vérification catalogue ; aucune correction globale ni rejet fondé sur le seul ratio 1,6 |
+| Première hypothèse sans résultat ou menant à une mauvaise référence, suivante compatible | Hypothèses examinées dans les plafonds, candidats réunis puis départagés ; aucune acceptation de la première correspondance par défaut |
 | Plusieurs cartes/régions | Aucune combinaison nom/numéro provenant d'objets distincts |
 | Image absente, invalide, trop grande, OCR saturé ou délai dépassé | Message utile, pas de crash ni blocage de l'enregistrement |
 | Poids/index/langue OCR non disponibles | Repli local explicite, aucune récupération distante implicite |
@@ -483,6 +532,8 @@ La recette navigateur utilise les données locales prévues et le réseau market
 
 Pour chaque lot, enregistrer état (`à faire`, `en cours`, `bloqué`, `validé`, `non retenu` pour T11), dépendances, fichiers touchés, tests/rapports, limites et prochaine action. Un blocage d'annotation humaine ou de référence indisponible ne se résout pas avec des labels automatiques.
 
+**Préparation T06/T07 — 3 novembre 2026 :** procédure technique rédigée dans [docs/identification/T06_T07_PROCEDURE_OCR.md](docs/identification/T06_T07_PROCEDURE_OCR.md). Contrats, algorithmes, étapes, tests et comparaison avant/après y sont proposés ; aucun nouveau code OCR, dépendance, migration ou benchmark de justesse n'est livré par cette rédaction. Prochaine action : étape A (contrats/limites), puis cadrage manuel et TSV, en respectant les dépendances T04/T05 et les annotations nécessaires à la mesure.
+
 Le développement peut produire les outils et commencer sur les fixtures, mais ne peut déclarer acquises des annotations indépendantes, une expertise humaine ou une qualification statistique manquantes. Réaliser toutes les tâches indépendantes ; laisser explicitement ouverts les critères non démontrés.
 
 **Premier lot de travail concret :** compléter le point de départ T00/T01 sur les 30 annonces disponibles, préserver le correctif T02 déjà implémenté et validé sur fixtures, puis raccorder T03. Vérifier les acquis sur l'état courant avant les travaux de cadrage et de vision.
@@ -496,6 +547,7 @@ Le développement peut produire les outils et commencer sur les fixtures, mais n
 Ces sources documentent des méthodes ; elles ne démontrent pas leur performance sur Pokébourse. Figer les versions effectivement retenues au moment des expériences.
 
 - [Tesseract — qualité d'entrée, redressement et segmentation](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html).
+- [Tesseract — sortie TSV, positions et scores des mots](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html#tsv-output).
 - [OpenCV — correspondances locales et homographie](https://docs.opencv.org/4.x/d1/de0/tutorial_py_feature_homography.html).
 - [DINOv2 — représentations visuelles](https://arxiv.org/abs/2304.07193).
 - [CLIP — apprentissage image/texte](https://proceedings.mlr.press/v139/radford21a.html).

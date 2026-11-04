@@ -1,6 +1,6 @@
 # Conditions d'accès aux sources et référentiels — Pokébourse
 
-Date de vérification globale : **2026-11-01**
+Date de vérification globale : **2026-11-01** ; ligne eBay du tableau de synthèse et section 10 ajoutées le **2026-11-03** (lot T15).
 
 Ce document consigne l'audit juridique, technique et contractuel des sources utilisées par Pokébourse pour la collecte d'annonces de marché et l'accès au catalogue de référence Pokémon.
 
@@ -151,7 +151,7 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 |---|---|---|---|---|
 | **Vinted** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `vinted_scraper` (API privée) | Import manuel JSONL ou extension Chrome |
 | **Leboncoin** | Annonces de marché | **Non établi** (scraping interdit par CGU) | `lbc` (endpoints non officiels) | Import manuel JSONL ou extension Chrome |
-| **eBay** | Annonces de marché | **Oui / API officielle** | Endpoint de recherche / API eBay | Import manuel JSONL ou saisie assistée par URL |
+| **eBay** | Annonces de marché | **Non établi** (connecteur actuel = page de recherche HTML publique sans authentification, sans autorisation contractuelle ; API officielle Browse non configurée) | Page `ebay.fr/sch` sans clé (best-effort) ; API officielle absente du code et de la configuration | Import manuel JSONL ou saisie assistée par URL |
 | **Wallapop** | Annonces de marché | **Non établi** (accès public C2C) | API de recherche Wallapop | Import manuel JSONL ou extension Chrome |
 | **TCGdex** | Référentiel cartes et sets Pokémon | **Oui** (API publique ouverte, Fair Use) | Client REST `api.tcgdex.net` + cache local | Cache SQLite local autonome pré-embarqué |
 | **Cardmarket** | Cotes de marché (prix tendance réels) | **Oui** (fichiers publics quotidiens officiels ; API fermée aux nouvelles demandes) | Synchronisation des fichiers officiels + stockage local `cardmarket_prices` | Cotes manuelles et médiane du catalogue inchangées |
@@ -214,7 +214,20 @@ Le parcours « Ajout par URL » (`/ajouter-annonce`) applique une politique d'ac
 
 ---
 
-## 10. Règles impératives appliquées dans le code
+## 10. Vérification T15 — capacités réelles des sources de prix (2026-11-03)
+
+Dans le cadre du lot T15 de `TASKING_IDENTIFICATION_FIABLE.md`, une matrice complète a été établie : offres actives, ventes conclues individuelles et cotes agrégées sont distinguées, pour les cartes non gradées et gradées, avec accès théorique vs accès réellement configuré. Voir [la matrice T15](docs/identification/T15_SOURCES_PRIX.md). Constatations principales, sans souscription ni accès réel déclenché :
+
+1. **eBay** : le connecteur existant (`app/collectors/ebay.py`) interroge la page de recherche HTML publique sans authentification ; ce n'est pas l'API officielle. Aucune clé eBay (Browse API) n'est configurée. L'historique des ventes (Marketplace Insights) est documenté comme restreint et fermé aux nouveaux utilisateurs : **aucune capacité automatique de ventes conclues n'est disponible**, et aucune simulation de ventes à partir des offres n'est admise. La ligne du tableau de synthèse (section 5) est corrigée en conséquence.
+2. **Cardmarket** : seule source automatique disponible = fichiers publics quotidiens (cotes agrégées non gradées, anglais, 75 082 prix locaux au 2026-11-03). Le guide n'est ni une liste d'offres, ni une liste de transactions, ni une source de prix par certificateur/note.
+3. **Gradées PSA/PCA** : aucune source automatique configurée ; la comparaison qualifiée requiert des ventes documentées manuelles ou une source nouvelle soumise à décision budgétaire.
+4. **Ventes documentées locales** : `market_references` (nature `ventes_conclues`, prix en centimes, source et date à documenter) et `purchases.sale_price_cents` (reventes personnelles) restent la voie disponible dès saisie.
+
+Décisions produit encore ouvertes avant d'activer un comportement dépendant : zone géographique, repli en cas de prix insuffisants, canal de revente, niveau de comparabilité, source complémentaire éventuellement payante, demande d'accès eBay officiel (voir §1.2 du tasking et la section 4 de la matrice T15).
+
+---
+
+## 11. Règles impératives appliquées dans le code
 1. **Gestion des codes HTTP 403 et 429** : les réponses 403 ne sont pas retentées (arrêt immédiat et journalisation). Les réponses 429 respectent les en-têtes `Retry-After`.
 2. **Zéro appel réel dans les tests automatisés** : 100 % des tests unitaires et d'intégration utilisent des simulateurs (mocks) ou le cache local SQLite sans requêter Vinted, Leboncoin, eBay, Wallapop, TCGdex ou Cardmarket.
 3. **Pas de collecte réelle en production sans cadre d'autorisation établi**.

@@ -5,3 +5,8 @@ __pycache__/
 .pytest_cache/
 data/
 .DS_Store
+
+# Artefacts lourds de validation OCR (snapshot figé, photos de campagne ;
+# reproductibles par acquisition manuelle, non requis par les tests)
+validation/ocr/benchmarks/
+validation/ocr/marketplaces/runs/

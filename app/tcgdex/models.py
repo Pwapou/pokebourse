@@ -25,6 +25,10 @@ class TcgdexCard(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     set_id: str = Field(min_length=1, max_length=50)
     set_name: str = Field(min_length=1, max_length=200)
+    # Locale de la fiche : une même identité TCGdex peut exister en plusieurs
+    # localisations (fr, en, ja…) sans écrasement (T05). La langue d'une fiche
+    # ne prouve pas celle de l'exemplaire vendu.
+    reference_language: str = Field(default="fr", min_length=1, max_length=20)
     rarity: str | None = Field(default=None, max_length=100)
     category: str | None = Field(default=None, max_length=50)
     types: list[str] = Field(default_factory=list)
@@ -52,3 +56,5 @@ class ReferenceCardRecord:
     image_url: str | None
     raw_data: dict[str, Any]
     updated_at: str
+    # Locale de la fiche de référence ; distincte de la langue d'un exemplaire.
+    reference_language: str = "fr"

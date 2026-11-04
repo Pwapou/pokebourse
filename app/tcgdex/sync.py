@@ -12,7 +12,7 @@ from typing import Any, Literal
 from app.identification.detector import extract_features
 from app.identification.normalization import canonical_local_id, normalize_text
 from app.tcgdex.cache import TcgdexCache
-from app.tcgdex.client import TcgdexClient, TcgdexError, TcgdexNotFoundError, TcgdexRateLimitError
+from app.tcgdex.client import TCGDEX_LOCALE_BASE_URL, TcgdexClient, TcgdexError, TcgdexNotFoundError, TcgdexRateLimitError
 from app.tcgdex.models import TcgdexCard, TcgdexSet
 
 STATUS_LABELS = {
@@ -42,14 +42,31 @@ def validate_set_selection(set_ids: list[str]) -> list[str]:
     return [_identifier(value, maximum=50) for value in selected]
 
 
+def _locale(value: Any) -> str:
+    """Valide une locale de fiche TCGdex (ex. fr, en, ja)."""
+    if not isinstance(value, str) or len(value) > 20:
+        raise ValueError("Locale de synchronisation invalide.")
+    if not re.fullmatch(r"[a-z]{2}(-[a-z0-9]{2,4})?", value):
+        raise ValueError("Locale de synchronisation invalide.")
+    return value
+
+
 def enqueue_sync(
     connection: sqlite3.Connection, set_id: str | None = None, *,
-    include_details: bool = True, now: datetime | None = None,
+    include_details: bool = True, now: datetime | None = None, locale: str = "fr",
 ) -> int:
-    """Déduplique une demande et réutilise pendant 24 h les étapes terminées."""
+    """Déduplique une demande et réutilise pendant 24 h les étapes terminées.
+
+    La locale « fr » conserve la clé historique ; les autres locales reçoivent
+    leur propre tâche, sans écraser les localisations déjà chargées (T05).
+    Une locale ajoutée n'active pas automatiquement son identification.
+    """
     now = now or datetime.now(UTC)
     set_id = _identifier(set_id, maximum=50) if set_id is not None else None
+    locale = _locale(locale)
     key = f"set:{set_id}" if set_id else "directory"
+    if set_id and locale != "fr":
+        key = f"set:{set_id}:{locale}"
     with connection:
         if not connection.in_transaction:
             connection.execute("BEGIN IMMEDIATE")
@@ -57,9 +74,9 @@ def enqueue_sync(
         if job is None:
             cursor = connection.execute(
                 """INSERT INTO tcgdex_sync_jobs(resource_key, kind, set_id, status, stage,
-                include_details, next_attempt_at, created_at, updated_at)
-                VALUES (?, ?, ?, 'queued', 'manifest', ?, ?, ?, ?)""",
-                (key, "set" if set_id else "directory", set_id, int(bool(set_id and include_details)), _iso(now), _iso(now), _iso(now)),
+                include_details, next_attempt_at, created_at, updated_at, locale)
+                VALUES (?, ?, ?, 'queued', 'manifest', ?, ?, ?, ?, ?)""",
+                (key, "set" if set_id else "directory", set_id, int(bool(set_id and include_details)), _iso(now), _iso(now), _iso(now), locale),
             )
             return int(cursor.lastrowid)
         fresh = bool(job["last_success_at"] and now - datetime.fromisoformat(job["last_success_at"].replace("Z", "+00:00")) < timedelta(hours=24))
@@ -177,7 +194,7 @@ def _set_model(raw: Any) -> TcgdexSet:
     )
 
 
-def _card_model(raw: Any, extension: TcgdexSet) -> TcgdexCard:
+def _card_model(raw: Any, extension: TcgdexSet, *, locale: str = "fr") -> TcgdexCard:
     """Valide l'identité avant toute publication ; aucun identifiant n'est deviné."""
     if not isinstance(raw, dict) or type(raw.get("localId")) not in (str, int):
         raise ValueError("Fiche TCGdex invalide ou numéro manquant.")
@@ -186,7 +203,8 @@ def _card_model(raw: Any, extension: TcgdexSet) -> TcgdexCard:
         raise ValueError("Carte rattachée à une autre extension.")
     return TcgdexCard(
         id=card_id, local_id=str(raw["localId"]), name=raw.get("name"),
-        set_id=extension.id, set_name=extension.name, rarity=raw.get("rarity"), category=raw.get("category"),
+        set_id=extension.id, set_name=extension.name, reference_language=locale,
+        rarity=raw.get("rarity"), category=raw.get("category"),
         types=raw.get("types") or [], hp=raw.get("hp"), stage=raw.get("stage"), illustrator=raw.get("illustrator"),
         image_url=raw.get("image"), raw_data=raw,
     )
@@ -207,8 +225,8 @@ def _release(connection: sqlite3.Connection, token: str) -> None:
 
 
 def _store_card(cache: TcgdexCache, card: TcgdexCard) -> None:
-    """Préserve les attributs et le JSON détaillé déjà connus lors d'un résumé."""
-    existing = cache.get_card_by_tcgdex_id(card.id)
+    """Préserve les attributs et le JSON détaillé déjà connus d'une même localisation."""
+    existing = cache.get_card_by_tcgdex_id(card.id, locale=card.reference_language)
     if existing:
         merged = dict(existing.raw_data)
         merged.update({key: value for key, value in card.raw_data.items() if value is not None})
@@ -225,7 +243,8 @@ def process_sync_step(
     task = claim_sync(connection, now=now, interval_seconds=interval_seconds)
     if task is None:
         return False
-    client = client or TcgdexClient(max_retries=1)
+    locale = task.get("locale") or "fr"
+    client = client or TcgdexClient(base_url=TCGDEX_LOCALE_BASE_URL.format(locale=locale), max_retries=1)
     try:
         # Aucun verrou SQLite n'est conservé pendant les appels HTTP.
         operation = task["operation"]
@@ -241,7 +260,7 @@ def process_sync_step(
             extension = _set_model(raw)
             if extension.id != task["set_id"] or not isinstance(raw.get("cards"), list) or len(raw["cards"]) > 5000:
                 raise ValueError("Manifeste d'extension TCGdex invalide.")
-            cards = [_card_model(item, extension) for item in raw["cards"]]
+            cards = [_card_model(item, extension, locale=locale) for item in raw["cards"]]
             if len({item.id for item in cards}) != len(cards):
                 raise ValueError("Cartes dupliquées dans le manifeste TCGdex.")
         else:
@@ -249,7 +268,7 @@ def process_sync_step(
             if not isinstance(raw, dict) or not isinstance(raw.get("set"), dict):
                 raise ValueError("Détails d'extension manquants dans la fiche carte.")
             extension = _set_model(raw["set"])
-            card = _card_model(raw, extension)
+            card = _card_model(raw, extension, locale=locale)
             if card.id != task["card_id"] or extension.id != task["set_id"] or canonical_local_id(card.local_id) != canonical_local_id(str(task["summary"]["localId"])):
                 raise ValueError("La fiche détaillée contredit l'identité du manifeste.")
         with connection:

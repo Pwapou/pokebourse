@@ -90,6 +90,27 @@ def identification_diagnostics(connection: sqlite3.Connection, *, limit: int = 1
         matcher = CardMatcher(TcgdexCache(connection), seed_if_empty=False, repair_index=False)
         statuses = dict(connection.execute("SELECT identification_status, count(*) FROM catalog_items GROUP BY identification_status").fetchall())
         reference_languages = dict(connection.execute("SELECT reference_language, count(*) FROM pokemon_reference_cards GROUP BY reference_language").fetchall())
+        localization = {
+            "covered_locales": sorted(reference_languages),
+            "multi_locale_identities": connection.execute(
+                "SELECT COUNT(*) FROM (SELECT tcgdex_id FROM pokemon_reference_cards GROUP BY tcgdex_id HAVING COUNT(DISTINCT reference_language) > 1)"
+            ).fetchone()[0],
+            "cards_missing_image_url": connection.execute(
+                "SELECT COUNT(*) FROM pokemon_reference_cards WHERE image_url IS NULL OR image_url=''"
+            ).fetchone()[0],
+            "cards_missing_details": connection.execute(
+                "SELECT COUNT(*) FROM pokemon_reference_cards WHERE rarity IS NULL"
+            ).fetchone()[0],
+            "aliases_active": connection.execute(
+                "SELECT COUNT(*) FROM reference_aliases WHERE status='active'"
+            ).fetchone()[0],
+            "aliases_suggestions": connection.execute(
+                "SELECT COUNT(*) FROM reference_aliases WHERE status='suggestion'"
+            ).fetchone()[0],
+            # Une locale de fiche ne prouve ni la langue d'un exemplaire, ni
+            # l'activation de l'identification ou de la rentabilité pour elle.
+            "note": "Langues de fiches de référence, distinctes des langues d'exemplaires ; une locale couverte n'active aucune identification automatique.",
+        }
         sets = [dict(row) for row in connection.execute(
             """SELECT s.id, s.name, s.card_count_total AS expected_total,
             s.card_count_official AS expected_official, count(c.id) AS cached_cards
@@ -150,7 +171,8 @@ def identification_diagnostics(connection: sqlite3.Connection, *, limit: int = 1
             "with_candidates": sum(bool(item["candidates"]) for item in items),
             "counts": dict(counts), "labels": DIAGNOSTIC_LABELS, "items": items,
             "catalog": {"card_count": sum(row["cached_cards"] for row in sets), "set_count": len(sets),
-                        "sets": sets, "reference_languages": reference_languages},
+                        "sets": sets, "reference_languages": reference_languages,
+                        "localization": localization},
             "p95_us": sorted(durations)[max(0, (len(durations) * 95 + 99) // 100 - 1)] if durations else None,
             "scope": "recent_unresolved_listings; descriptive_only; no_accuracy_estimate; no_writes; text_only",
         }

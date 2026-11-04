@@ -393,3 +393,120 @@ La migration 0019 ajoute les décisions locales, les observations économiques e
   durable des images (T04), pas de validation de T13 global. Aucun redémarrage
   ni migration de l'instance réelle n'est lancé par ce lot.
 - Contrat, politique de réexamen et fichiers : [guide T03](docs/identification/T03_EVIDENCE.md).
+
+---
+
+## 24. T00/T01 — Inventaire, benchmark figé et rejeu local — 3 novembre 2026
+
+- **T00 terminé comme inventaire** (réserves consignées) : manifeste figé avec
+  empreintes SHA-256 (jeu de 30 annonces, rapport historique, 15 photos,
+  catalogue, labels), inventaire du référentiel sur sauvegarde cohérente
+  (202 extensions, 22 201 cartes, locale `fr` unique), baseline tests.
+  Détail : [STATUS_T00_T01.md](validation/ocr/evaluation/STATUS_T00_T01.md).
+- **Baseline verte confirmée le soir même** : suite complète Docker à
+  **751 réussites, 0 échec** (749 + 2 tests du rejeu local) ; les 21 échecs
+  consignés au contrôle initial (commit `b7b1a20`) sont résolus par la livraison
+  T03 (`778c28c`).
+- **Rejeu strictement local hermétique livré** :
+  `validation/ocr/marketplaces/replay_local.py` relit les artefacts figés sur
+  une sauvegarde SQLite en lecture seule, DNS désactivé, refus explicite de
+  tout artefact manquant (aucun téléchargement implicite). Exécuté sur la
+  sauvegarde `pokebourse-20261102-230603-171195.sqlite`, il reproduit le
+  rapport historique avec **zéro changement de statut ou d'identité** sur les
+  variantes titre/OCR/combiné (30/30, 30/30 et 15/15 cas appariés).
+- **Tests dédiés** : `tests/test_replay_local.py` (refus sans acquisition,
+  fonctionnement hermétique figé). Aucune base réelle modifiée, aucun appel
+  réseau, aucune photo écrite hors des artefacts de validation.
+- **T01 non terminé** : annotations humaines indépendantes, double lecture,
+  rapport de justesse, volumes 300/1 000 et audit aléatoire restent ouverts ;
+  les compteurs `identified` ne sont toujours pas une mesure de justesse.
+
+## 25. T15 — Capacités réelles des sources de prix — 3 novembre 2026
+
+- Matrice versionnée : [docs/identification/T15_SOURCES_PRIX.md](docs/identification/T15_SOURCES_PRIX.md),
+  consignée dans [SOURCES.md](SOURCES.md) (§10). Distingue capacité théorique et
+  accès réellement configuré, sans secret ni souscription.
+- **Divergence corrigée** : le connecteur eBay existant interroge la page de
+  recherche HTML publique sans authentification — ce n'est pas l'API officielle
+  (aucune clé configurée). La ligne eBay du tableau de synthèse de SOURCES.md
+  est rectifiée ; aucune recherche serveur automatique nouvelle n'est ajoutée.
+- **Ventes conclues automatiques indisponibles** : Marketplace Insights restreint
+  et fermé aux nouveaux utilisateurs ; aucune simulation de ventes à partir des
+  offres. Voies disponibles : `market_references` (1 660 références
+  `ventes_conclues` locales, nature et dates à documenter) et
+  `purchases.sale_price_cents` (0 enregistrement à ce jour).
+- **Cardmarket** reste la seule source automatique : cotes agrégées non gradées
+  (75 082 prix locaux), jamais des offres ni des transactions, sans prix par
+  certificateur/note.
+- **Trou de couverture explicite pour J3** : aucune source automatique ne couvre
+  les gradées PSA/PCA. Les décisions produit ouvertes (D1–D6 : zone géographique,
+  repli prix insuffisants, canal de revente, comparabilité, source éventuellement
+  payante, accès eBay officiel) sont recensées ; aucun comportement dépendant
+  n'est activé.
+- **Validation documentaire** : audit lecture seule du code et de la base
+  (compteurs uniquement) ; aucune requête d'essai vers une marketplace.
+
+## 26. T04/T05 — Preuves visuelles reproductibles et alias/localisations du référentiel — 3 novembre 2026
+
+- **T04** : conservation explicite et contrôlée des photos (magasin `evidence/` à
+  côté de la base, écriture atomique, déduplication par empreinte, quota 512 Mo,
+  PNG nettoyé de tout EXIF avec orientation d'origine conservée comme repère,
+  `image-store-v1` / `transforms-v1` comme socle T06). Statuts explicites
+  présent/manquant/corrompu/supprimé (purge logique) ; purges orphelines et par
+  rétention ; vérification d'intégrité sans écriture. Sauvegardes `.sqlite` avec
+  sidecar `.sqlite.evidence` restauré ensemble. Provenances `image`/`both`
+  acceptées par les reviews (preuve obligatoire et octets présents) ; export
+  `identity-pilot-v2` inchangé en règles textuelles, ajout de
+  `eligible_for_visual_training` et `needs_reexamination`. L'OCR reste éphémère
+  par défaut, sans persistance implicite. Interface : bloc « Preuves visuelles
+  conservées » sur la fiche catalogue.
+- **T05** : localisations du référentiel (unicité `(tcgdex_id, reference_language)`,
+  identifiants internes et données préservés, `fr` référence par défaut) ;
+  file de sync TCGdex à locales (`fr` conserve sa clé historique, aucune
+  identification/rentabilité activée par une locale ajoutée). Alias contrôlés
+  (cible locale vérifiée, provenance, version `aliases-v1`) : collisions
+  dégradées en suggestions sans effacement, suggestions floues bornées (distance
+  ≤ 2) sans écriture, « gempack 2 » volontairement non résolu. Recherche
+  référent : alias exact actif → redirection vers la cible, jamais de
+  correspondance floue unique promue en preuve exacte. Diagnostic enrichi
+  (clé `catalog.localization` : locales couvertes, identités multi-locales,
+  manques image/détails, alias actifs/suggestions).
+- **Migrations** : `0023_visual_evidence.sql`, `0024_reference_localizations.sql`,
+  `0025_reference_aliases.sql`, `0026_tcgdex_sync_locale.sql` — reconstruction
+  additive ; reviews et fiches pré-existantes survivent à l'identique (test
+  dédié sur base à l'état 0022). Seed TCGdex rendu compatible avec les bases
+  antérieures à 0024.
+- **Tests** : nouvelles suites `tests/test_visual_evidence.py` et
+  `tests/test_reference_aliases_localizations.py` ; suite complète à jour.
+
+---
+
+## 27. Audit d'avant-commit et corrections P1–P5 — 4 novembre 2026
+
+- **Audit en lecture seule** du lot T04/T05/T00-T01/T15 (périmètre : commit
+  `778c28c` + modifications locales) : lecture du code, exécution complète de la
+  suite Docker, reproductions sur bases temporaires isolées et serveur HTTP
+  temporaire ; base réelle et volume `pokemon-data` non touchés.
+- **P1 confirmé et corrigé** : la route `/catalog/{id}/preuves-visuelles`
+  affichait « Preuve visuelle conservée » sans persister la ligne (aucun
+  commit côté route, INSERT non engagé) et laissait un PNG orphelin. Le
+  magasin valide désormais sa propre transaction et retire les octets si le
+  commit échoue ; test de route HTTP ajouté (12/12 dans la suite dédiée).
+- **P2 confirmé et corrigé** : re-conserver les octets d'une preuve supprimée
+  échouait silencieusement (unicité d'empreinte) et annonçait une fausse
+  conservation. La re-conservation réactive l'enregistrement existant
+  (identité et décisions rattachées conservées) après contrôle du quota.
+- **P3 traité** : vérification d'intégrité généralisée (`verify_evidence_store`)
+  câblée dans `create_backup` (refus si le sidecar copié est dégradé, nettoyage
+  complet) et dans `restore_backup` (refus avant toute écriture) ; nouvelles
+  commandes CLI `verify-evidence` et `purge-evidence [--days N]`.
+- **P4 traité** : le formulaire de review expose la base de lecture
+  (texte/image/both) et l'identifiant de la preuve (affiché sur la fiche
+  catalogue) ; la résolution d'alias ne court-circuite plus la recherche dès
+  qu'un filtre numéro/extension explicite est présent.
+- **P5 traité** : l'archive d'espace de preuves `.pre-restore-*` est supprimée
+  après une restauration réussie (déjà contenue dans la sauvegarde de sécurité).
+- **Validation** : 818 tests hermétiques, 0 échec (5 nouveaux) ; vérifications
+  HTTP réelles sur base temporaire (conservation, affichage, réactivation).
+- Artefacts lourds de validation exclus du dépôt (snapshot figé 8 Mo et photos
+  de campagne 1,8 Mo, non requis par les tests) ; `.gitignore` mis à jour.

@@ -31,12 +31,33 @@ class TcgdexCache:
         row = self.connection.execute("SELECT COUNT(*) FROM pokemon_reference_cards").fetchone()
         return (row[0] if row else 0) == 0
 
+    def _cards_conflict_target(self) -> str:
+        """Cible de conflit réelle de la table, sur schéma ancien comme récent.
+
+        Avant la migration 0024, la contrainte d'unicité portait sur le seul
+        tcgdex_id et la colonne reference_language n'existait pas ; le seed doit
+        rester utilisable sur ces bases pendant la montée de version.
+        """
+        columns = [row["name"] for row in self.connection.execute("PRAGMA table_info(pokemon_reference_cards)")]
+        if "reference_language" not in columns:
+            return "(tcgdex_id)", False
+        for index in self.connection.execute("PRAGMA index_list(pokemon_reference_cards)"):
+            if not index["unique"]:
+                continue
+            indexed = [row["name"] for row in self.connection.execute(f'PRAGMA index_info("{index["name"]}")')]
+            if indexed == ["tcgdex_id", "reference_language"]:
+                return "(tcgdex_id, reference_language)", True
+        return "(tcgdex_id)", False
+
     def seed_initial_if_empty(self) -> int:
         """Remplit le cache avec les données de base si la base est vide."""
         if not self.is_empty():
             return 0
 
         inserted = 0
+        conflict_target, has_language = self._cards_conflict_target()
+        language_column = ", reference_language" if has_language else ""
+        language_value = ", 'fr'" if has_language else ""
         with self.connection if not self.connection.in_transaction else nullcontext():
             for s in INITIAL_SETS:
                 self.connection.execute(
@@ -68,14 +89,14 @@ class TcgdexCache:
 
             for c in INITIAL_CARDS:
                 self.connection.execute(
-                    """
+                    f"""
                     INSERT INTO pokemon_reference_cards (
                         tcgdex_id, local_id, name, set_id, set_name,
                         rarity, category, types, hp, stage, illustrator,
                         image_url, raw_data, normalized_name, normalized_set_name,
-                        canonical_local_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(tcgdex_id) DO UPDATE SET
+                        canonical_local_id{language_column}
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?{language_value})
+                    ON CONFLICT{conflict_target} DO UPDATE SET
                         local_id = excluded.local_id,
                         name = excluded.name,
                         set_id = excluded.set_id,
@@ -148,7 +169,13 @@ class TcgdexCache:
             )
 
     def upsert_card(self, card_obj: TcgdexCard) -> int:
-        """Insère un résumé sans effacer les détails absents de la réponse."""
+        """Insère un résumé sans effacer les détails absents de la réponse.
+
+        La localisation de la fiche est portée par le modèle : une même
+        identité TCGdex peut exister en plusieurs localisations sans
+        écrasement (T05). L'identifiant interne SQLite est conservé lors
+        des réécritures de la même localisation.
+        """
         with self.connection if not self.connection.in_transaction else nullcontext():
             cursor = self.connection.execute(
                 """
@@ -156,9 +183,9 @@ class TcgdexCache:
                     tcgdex_id, local_id, name, set_id, set_name,
                     rarity, category, types, hp, stage, illustrator,
                     image_url, raw_data, normalized_name, normalized_set_name,
-                    canonical_local_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(tcgdex_id) DO UPDATE SET
+                    canonical_local_id, reference_language
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(tcgdex_id, reference_language) DO UPDATE SET
                     local_id = excluded.local_id,
                     name = excluded.name,
                     set_id = excluded.set_id,
@@ -184,7 +211,7 @@ class TcgdexCache:
                     card_obj.stage, card_obj.illustrator, card_obj.image_url,
                     json.dumps(card_obj.raw_data, ensure_ascii=False),
                     normalize_text(card_obj.name), normalize_text(card_obj.set_name),
-                    canonical_local_id(card_obj.local_id),
+                    canonical_local_id(card_obj.local_id), card_obj.reference_language,
                 ),
             )
             row = cursor.fetchone()
@@ -194,7 +221,7 @@ class TcgdexCache:
         row = self.connection.execute(
             """
             SELECT id, tcgdex_id, local_id, name, set_id, set_name,
-                   rarity, category, types, hp, stage, illustrator,
+                   reference_language, rarity, category, types, hp, stage, illustrator,
                    image_url, raw_data, updated_at
             FROM pokemon_reference_cards
             WHERE id = ?
@@ -205,20 +232,50 @@ class TcgdexCache:
             return None
         return self._row_to_record(row)
 
-    def get_card_by_tcgdex_id(self, tcgdex_id: str) -> ReferenceCardRecord | None:
-        row = self.connection.execute(
-            """
-            SELECT id, tcgdex_id, local_id, name, set_id, set_name,
-                   rarity, category, types, hp, stage, illustrator,
-                   image_url, raw_data, updated_at
-            FROM pokemon_reference_cards
-            WHERE tcgdex_id = ?
-            """,
-            (tcgdex_id,),
-        ).fetchone()
+    def get_card_by_tcgdex_id(self, tcgdex_id: str, *, locale: str | None = None) -> ReferenceCardRecord | None:
+        """Retourne une localisation de l'identité ; « fr » reste la référence."""
+        if locale is not None:
+            row = self.connection.execute(
+                """
+                SELECT id, tcgdex_id, local_id, name, set_id, set_name,
+                       reference_language, rarity, category, types, hp, stage, illustrator,
+                       image_url, raw_data, updated_at
+                FROM pokemon_reference_cards
+                WHERE tcgdex_id = ? AND reference_language = ?
+                """,
+                (tcgdex_id, locale),
+            ).fetchone()
+        else:
+            row = self.connection.execute(
+                """
+                SELECT id, tcgdex_id, local_id, name, set_id, set_name,
+                       reference_language, rarity, category, types, hp, stage, illustrator,
+                       image_url, raw_data, updated_at
+                FROM pokemon_reference_cards
+                WHERE tcgdex_id = ?
+                ORDER BY CASE WHEN reference_language = 'fr' THEN 0 ELSE 1 END, reference_language
+                LIMIT 1
+                """,
+                (tcgdex_id,),
+            ).fetchone()
         if not row:
             return None
         return self._row_to_record(row)
+
+    def get_card_localizations(self, tcgdex_id: str) -> list[ReferenceCardRecord]:
+        """Toutes les localisations connues d'une identité, sans en préférer."""
+        rows = self.connection.execute(
+            """
+            SELECT id, tcgdex_id, local_id, name, set_id, set_name,
+                   reference_language, rarity, category, types, hp, stage, illustrator,
+                   image_url, raw_data, updated_at
+            FROM pokemon_reference_cards
+            WHERE tcgdex_id = ?
+            ORDER BY CASE WHEN reference_language = 'fr' THEN 0 ELSE 1 END, reference_language
+            """,
+            (tcgdex_id,),
+        ).fetchall()
+        return [self._row_to_record(row) for row in rows]
 
     def get_cards_by_ids(self, card_ids: list[int]) -> list[ReferenceCardRecord]:
         """Lit des références connues sans tronquer avant leur classement."""
@@ -228,7 +285,7 @@ class TcgdexCache:
             batch = ids[start:start + 500]
             placeholders = ",".join("?" for _ in batch)
             rows = self.connection.execute(
-                f"SELECT id, tcgdex_id, local_id, name, set_id, set_name, rarity, category, "
+                f"SELECT id, tcgdex_id, local_id, name, set_id, set_name, reference_language, rarity, category, "
                 f"types, hp, stage, illustrator, image_url, raw_data, updated_at "
                 f"FROM pokemon_reference_cards WHERE id IN ({placeholders}) ORDER BY id", batch,
             ).fetchall()
@@ -266,7 +323,7 @@ class TcgdexCache:
         rows = self.connection.execute(
             f"""
             SELECT id, tcgdex_id, local_id, name, set_id, set_name,
-                   rarity, category, types, hp, stage, illustrator,
+                   reference_language, rarity, category, types, hp, stage, illustrator,
                    image_url, raw_data, updated_at
             FROM pokemon_reference_cards {where}
             ORDER BY name COLLATE NOCASE ASC, set_name COLLATE NOCASE ASC,
@@ -277,13 +334,15 @@ class TcgdexCache:
         ).fetchall()
         return [self._row_to_record(row) for row in rows]
 
-    def catalog_vocabulary(self) -> tuple[list[str], list[str]]:
-        """Noms et extensions dérivés du référentiel, sans liste figée."""
+    def catalog_vocabulary(self, *, locale: str = "fr") -> tuple[list[str], list[str]]:
+        """Noms et extensions d'une localisation, sans liste figée."""
         names = [row[0] for row in self.connection.execute(
-            "SELECT DISTINCT name FROM pokemon_reference_cards ORDER BY length(name) DESC"
+            "SELECT DISTINCT name FROM pokemon_reference_cards WHERE reference_language=? "
+            "ORDER BY length(name) DESC", (locale,),
         )]
         sets = [row[0] for row in self.connection.execute(
-            "SELECT DISTINCT set_name FROM pokemon_reference_cards ORDER BY length(set_name) DESC"
+            "SELECT DISTINCT set_name FROM pokemon_reference_cards WHERE reference_language=? "
+            "ORDER BY length(set_name) DESC", (locale,),
         )]
         return names, sets
 
@@ -352,6 +411,7 @@ class TcgdexCache:
             name=row["name"],
             set_id=row["set_id"],
             set_name=row["set_name"],
+            reference_language=row["reference_language"],
             rarity=row["rarity"],
             category=row["category"],
             types=row["types"],

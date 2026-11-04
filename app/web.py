@@ -732,8 +732,9 @@ def trends_page(
 def identification_labels_export(request: Request) -> Response:
     """Télécharge un jeu pilote humain sans données structurées de vendeur."""
     from app.identification.dataset import build_dataset
-    with connect(settings_from(request).database_path) as connection:
-        payload = build_dataset(connection)
+    database_path = settings_from(request).database_path
+    with connect(database_path) as connection:
+        payload = build_dataset(connection, database_path)
     return Response(payload, media_type="application/x-ndjson", headers={
         "Content-Disposition": 'attachment; filename="pokebourse-labels.jsonl"',
     })
@@ -913,21 +914,25 @@ def identification_review_submit(
     verified_edition: str = Form(default="", max_length=100),
     verified_condition: str = Form(default="", max_length=100),
     assignment_id: int | None = Form(default=None), assignment_stage: str | None = Form(default=None),
+    evidence_basis: str = Form(default="text"), image_evidence_id: int | None = Form(default=None),
 ) -> Response:
     """Enregistre une révision avec identité locale fixe et contrôle du snapshot."""
     try:
         review = ReviewInput.model_validate({
             "outcome": outcome, "review_kind": review_kind, "validated_card_id": reference_card_id,
             "text_sufficient": text_sufficient, "comment": comment,
+            "evidence_basis": evidence_basis, "image_evidence_id": image_evidence_id,
             "reviewed_annotation_ids": [int(value.strip()) for value in annotation_ids.split(",") if value.strip()],
             "verified_attributes": {key: {"status": "verified" if value.strip() else "unknown", "value": value.strip() or None}
                 for key, value in (("language", verified_language), ("variant", verified_variant),
                                    ("edition", verified_edition), ("condition", verified_condition))},
         })
-        with connect(settings_from(request).database_path) as connection:
+        database_path = settings_from(request).database_path
+        with connect(database_path) as connection:
             save_review(connection, item_id, review, expected_hash=evidence_hash, expected_revision=revision,
                         operator=settings_from(request).review_operator,
-                        assignment_id=assignment_id, assignment_stage=assignment_stage)
+                        assignment_id=assignment_id, assignment_stage=assignment_stage,
+                        database_path=database_path)
     except IdentificationConflictError as exc:
         path = f"/annotations/items/{assignment_id}" if assignment_id is not None else f"/catalog/{item_id}/review"
         return HTMLResponse(f"<p>{str(exc)}</p><a href='{path}'>Recharger la fiche</a>", status_code=409)
@@ -979,6 +984,37 @@ def reidentify_item(request: Request, item_id: int) -> RedirectResponse:
     )
 
 
+@app.post("/catalog/{item_id}/preuves-visuelles")
+def store_listing_visual_evidence(
+    request: Request, item_id: int,
+    file: UploadFile = File(...), purpose: str = Form(default="confirmation"),
+) -> RedirectResponse:
+    """Conserve explicitement une photo dans l'espace de preuves contrôlé (T04).
+
+    Distinct de l'analyse OCR, qui reste éphémère : aucune photo n'est
+    conservée sans cette action explicite, et la conservation ne confirme
+    aucune identité.
+    """
+    from urllib.parse import quote
+
+    from app.identification.evidence_store import store_image_evidence
+    from app.identification.ocr import MAX_IMAGE_BYTES
+
+    database_path = settings_from(request).database_path
+    content = file.file.read(MAX_IMAGE_BYTES + 1)
+    try:
+        with connect(database_path) as connection:
+            store_image_evidence(connection, database_path, content, purpose=purpose, listing_id=item_id)
+    except ValueError as exc:
+        return RedirectResponse(url=f"/catalog/{item_id}?error={quote(str(exc))}", status_code=303)
+    except LookupError:
+        return RedirectResponse(url="/catalog?error=Annonce+introuvable", status_code=303)
+    return RedirectResponse(
+        url=f"/catalog/{item_id}?notice=Preuve+visuelle+conserv%C3%A9e",
+        status_code=303,
+    )
+
+
 @app.get("/catalog/{item_id}", response_class=HTMLResponse)
 def catalog_item(
     request: Request,
@@ -990,6 +1026,8 @@ def catalog_item(
         item = catalog_item_detail(connection, item_id)
         seller_profile_row = None
         cardmarket_view = None
+        visual_evidence: list[dict[str, Any]] = []
+        database_path = settings_from(request).database_path
         comparables: dict[str, list[dict[str, Any]]] = {
             "listings": [],
             "sales": [],
@@ -1021,6 +1059,16 @@ def catalog_item(
                 seller_profile_id=item["seller_profile_id"],
                 seller_external_id=item["seller_external_id"],
             )
+            from app.identification.evidence_store import evidence_file_status
+
+            for evidence_row in connection.execute(
+                "SELECT id, sha256, width, height, byte_size, purpose, created_at "
+                "FROM listing_image_evidence WHERE listing_id=? ORDER BY id DESC LIMIT 20",
+                (item_id,),
+            ):
+                evidence_dict = dict(evidence_row)
+                evidence_dict["status"] = evidence_file_status(connection, database_path, evidence_row["id"])
+                visual_evidence.append(evidence_dict)
     if item is None:
         return templates.TemplateResponse(
             request=request,
@@ -1053,6 +1101,7 @@ def catalog_item(
             "identification": identification,
             "identification_candidates": identification_candidates,
             "identification_search": identification_search,
+            "visual_evidence": visual_evidence,
             "error": error,
         },
     )

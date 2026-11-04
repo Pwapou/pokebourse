@@ -1,14 +1,22 @@
 # Qualification T00 / T01 — état constaté
 
-Date du contrôle : 3 novembre 2026. Périmètre : inventaire du point de départ et premier outillage d’évaluation de `TASKING_IDENTIFICATION_FIABLE.md`.
+Date du contrôle initial : 3 novembre 2026 ; actualisation : 3 novembre 2026 (fin de journée). Périmètre : inventaire du point de départ et premier outillage d’évaluation de `TASKING_IDENTIFICATION_FIABLE.md`.
 
 ## Verdict
 
 | Lot | Statut | Portée du verdict |
 |---|---|---|
 | **T00 — Inventaire et point de départ** | **Terminé comme inventaire, avec réserves** | Les artefacts, versions, lacunes et échecs courants sont consignés. Le code courant n’est pas validé et l’état antérieur aux changements déjà présents ne peut pas être reconstitué. |
-| **T01 — Vérité terrain et benchmark hors ligne** | **Non terminé** | Le comparateur, le manifeste, le squelette de labels et le rapport initial sont livrés. La vérité terrain humaine, le rejeu local figé et le rapport de justesse restent absents. |
+| **T01 — Vérité terrain et benchmark hors ligne** | **Non terminé — outillage complété** | Comparateur, manifeste, squelette de labels, rapport initial **et rejeu strictement local hermétique** livrés ; le rejeu reproduit le rapport historique sans aucun changement de statut ni d’identité. La vérité terrain humaine et le rapport de justesse restent absents. |
 | **T10 — Qualification indépendante** | **Non démontrée** | Aucun test indépendant, intervalle ou seuil de promotion n’est établi par ce travail. |
+
+## Actualisation du 3 novembre 2026 (soir)
+
+- **Baseline tests courante verte** : `docker compose run --rm app pytest` → **751 réussites, 0 échec** (749 avant l'ajout des 2 tests du rejeu), un avertissement FastAPI/Starlette/httpx déjà connu. Les 21 échecs consignés ci-dessous (état au commit `b7b1a20`, avant la livraison T03 `778c28c`) sont résolus sur l’état courant ; ils restent documentés comme état historique.
+- **Rejeu strictement local hermétique livré** : `validation/ocr/marketplaces/replay_local.py` rejoue la campagne figée depuis les artefacts locaux et une sauvegarde SQLite en lecture seule, sans aucun accès réseau (résolution DNS désactivée), en refusant tout artefact manquant. Exécuté sur la sauvegarde `pokebourse-20261102-230603-171195.sqlite`, il produit `runs/2026-11-02-30-liens-rejeu/resultats.json` (variantes `title_only`, `ocr_only`, `combined`, `decision_origin: automatic`, versions de pipeline/normalisation).
+- **Comparaison au rapport historique** (`evaluation/comparaison-rejeu.json`) : 30/30 cas appariés sur `title_only` et `combined`, 15/15 sur `ocr_only` ; **zéro changement de statut, zéro changement d’identité, zéro candidat modifié** entre l’acquisition du 2 novembre et le rejeu du 3 novembre. La reproductibilité du pipeline sur artefacts figés est établie ; la justesse n’est toujours pas mesurée (aucune annotation humaine).
+- **Tests dédiés** : `tests/test_replay_local.py` (2 tests) vérifie le refus sans téléchargement implicite et le fonctionnement hermétique sur artefacts figés.
+- Limite conservée : le rapport historique ne porte ni origine de décision ni version de pipeline ; la comparaison signale cette limite de comparabilité.
 
 ## T00 — Inventaire réalisé
 
@@ -112,7 +120,7 @@ Le contrôle automatique du manifeste a vérifié 20 empreintes, l’égalité e
 1. **Annotations humaines indépendantes** : renseigner type de produit, déterminabilité, identité vérifiée éventuelle, présence dans le catalogue figé et statut. Rechercher au-delà des candidats automatiques.
 2. **Double lecture et arbitrage** : conserver les lectures initiales et arbitrer les désaccords selon le protocole ; ne pas transformer une suggestion en vérité.
 3. **Complétude des preuves** : conserver titre et description lorsqu’ils sont disponibles et documenter les photos manquantes. Ne pas reconstituer les absences par invention.
-4. **Rejeu strictement local** : figer le code et la configuration du pipeline, refuser tout artefact manquant et ne lancer aucun téléchargement implicite. Le script historique `run_30_liens.py` n’est pas ce rejeu hermétique.
+4. **Rejeu strictement local** : ~~restant~~ **livré** (`replay_local.py`, voir actualisation ci-dessus). Le script historique `run_30_liens.py` n'est toujours pas un rejeu hermétique : il télécharge les photos.
 5. **Rapport initial de justesse** : relancer l’évaluateur avec les labels renseignés et publier effectifs, dénominateurs, exclusions et limites.
 6. **Volumes ultérieurs** : les 300 cas diagnostiques, les doubles lectures, l’environ 1 000 cas et l’audit aléatoire distinct ne sont pas acquis.
 7. **Partitions** : résoudre republications, quasi-doublons et images identiques avant tout test indépendant. Les 30 cas sont un jeu de développement/régression, pas le test T10.

@@ -25,7 +25,36 @@ def search_references(
     cache: TcgdexCache, *, name: str = "", local_id: str | None = None,
     set_name: str | None = None, tcgdex_id: str | None = None, limit: int = 26, offset: int = 0,
 ) -> ReferenceSearchResult:
-    """Préserve la pagination des résultats exacts ; les fautes restent des suggestions."""
+    """Préserve la pagination des résultats exacts ; les fautes restent des suggestions.
+
+    Un alias actif et non ambigu redirige vers sa cible vérifiée localement ;
+    une collision ou une suggestion approximative reste affichée comme telle,
+    jamais promue en correspondance exacte (T05).
+    """
+    from app.identification.aliases import resolve_alias, suggest_aliases
+
+    # L'alias ne redirige que lorsque le nom est le seul critère : dès qu'un
+    # filtre (numéro, extension, identifiant) précise la requête, la recherche
+    # exacte classique s'applique et l'alias reste une piste secondaire.
+    if not tcgdex_id and name.strip() and offset <= 0 and local_id is None and set_name is None:
+        alias = resolve_alias(cache.connection, name)
+        if alias.status == "exact":
+            card = cache.get_card_by_id(alias.matches[0]["target_card_id"])
+            if card is not None:
+                return ReferenceSearchResult([card])
+        elif alias.matches:
+            cards = {card.id: card for card in cache.get_cards_by_ids(
+                [match["target_card_id"] for match in alias.matches[:limit]])}
+            ordered = [cards[match["target_card_id"]] for match in alias.matches
+                       if match["target_card_id"] in cards]
+            return ReferenceSearchResult(ordered, approximate=True)
+        approximate = suggest_aliases(cache.connection, name, limit=max(1, min(limit, 10)))
+        if approximate:
+            cards = {card.id: card for card in cache.get_cards_by_ids(
+                [item["target_card_id"] for item in approximate])}
+            ordered = [cards[item["target_card_id"]] for item in approximate
+                       if item["target_card_id"] in cards]
+            return ReferenceSearchResult(ordered, approximate=True)
     exact_id = tcgdex_id or (name if cache.get_card_by_tcgdex_id(name) else None)
     parameters = {"name": name if not exact_id else None, "local_id": local_id,
                   "set_query": set_name, "tcgdex_id": exact_id}
