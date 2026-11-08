@@ -1,6 +1,6 @@
 # Suivi de stabilisation — Pokébourse
 
-**État courant au 8 novembre 2026 :** [TASKING_PROJET.md](TASKING_PROJET.md). Ce fichier est un **journal chronologique** : les constats, nombres de tests, accès et volumes de chaque section valent à leur date. Les sections anciennes n'annulent pas les livraisons ultérieures. Le dernier bilan transversal est en §28.
+**État courant au 8 novembre 2026 :** [TASKING_PROJET.md](TASKING_PROJET.md). Ce fichier est un **journal chronologique** : les constats, nombres de tests, accès et volumes de chaque section valent à leur date. Les sections anciennes n'annulent pas les livraisons ultérieures. Le dernier bilan transversal est en §32.
 
 Date du contrôle initial : 2026-11-01  
 Date de la révision TCGdex & Identification : 2026-11-01
@@ -617,3 +617,23 @@ Résultat : **14 passed** sur les collecteurs, puis suite complète **840 passed
 **Validation exécutée :**
 - Tests ciblés : `docker compose run --rm app pytest tests/test_search.py tests/test_trends.py tests/test_chrome_extension.py -v` → **93 passed**.
 - Suite complète : `docker compose run --rm app pytest -ra` → **867 passed, 1 warning in 38.35s**, code 0, zéro échec et zéro skip.
+
+---
+
+## 32. Consolidation des développements et des deux branches OCR — 8 novembre 2026
+
+**Socle préservé :** les changements précédemment non committés de `main` ont été enregistrés dans `codex/consolidation-main-20261108` (`0a07d7b`) : capture/T08, cadrage manuel, conversion monétaire exacte, recherche, tendances, responsive et suivi `/tasking`. Les documents et comptes rendus historiques restent inchangés dans leurs sections datées.
+
+**Intégration OCR :** `codex/ocr-parallele` (`4d0746d`) est conservé pour les contrats/types, la géométrie et localisation optionnelle, le TSV, les hypothèses, la langue, la récupération commune et l’enveloppe interne. De `codex/ocr-p2` (`862a0d7`), le runner renforcé et ses tests de processus/annulation/saturation sont réutilisés avec le `Deadline` commun. Les autres variantes p2 ne sont pas empilées : elles doublonnent le pipeline retenu avec des contrats incompatibles. Les précisions documentaires locales p2 (`2b48633`) étaient déjà présentes dans le socle et ne créent pas un second changement. Détail : [intégration OCR](docs/identification/T06_T07_INTEGRATION_JOB3.md).
+
+**Réconciliation :** les corrections T08 du socle et `retrieve_candidates()` coexistent dans `matcher.py`, sans choix « ours/theirs » global. Les statuts T06/T07 restent partiels : absence de raccordement HTTP/T03/T08.2 complet, de choix de photo dans la capture, de concurrence app/worker, de file T19 et de décision atomique. TRK-200/201/203/204 sont intégrés au tracker ; TRK-202 reste dédupliqué dans TRK-009 et TRK-205 n’est pas rouvert pour une capacité interne déjà couverte.
+
+**Validation exécutée dans Docker, sur bases temporaires et images simulées/synthétiques :**
+
+- Variantes avant sélection : `ocr-parallele` **59 passed**, `ocr-p2` **77 passed**, zéro skip.
+- OCR intégré : `docker compose run --rm app pytest tests/test_ocr_geometry.py tests/test_ocr_hypotheses.py tests/test_ocr_languages.py tests/test_ocr_spatial.py tests/test_ocr_limits.py tests/test_ocr_local.py tests/test_ocr_web.py tests/test_ocr_crop_browser.py -ra` → **86 passed**, zéro skip.
+- Capture Chrome/MV3, prévisualisation, reviews, migrations, sauvegarde/restauration, preuves visuelles, recherche, tendances et suivi : **359 passed**, zéro skip. Les scénarios Playwright/Chromium couvrent les interactions, le clavier, les largeurs mobiles/desktop et l’extension réellement chargée selon les harnais existants.
+- `docker compose run --rm app pytest -ra` → **936 passed, 1 warning in 45.18s**, code 0, zéro échec et zéro skip. Avertissement de dépréciation Starlette/TestClient/httpx existant.
+- Deux corrections d’intégration documentées au tracker : retrait des imports/tests spatiaux p2 doublons et restauration du message historique de sortie OCR excessive. Aucune migration publiée, dépendance, base utilisateur ou photo de validation ajoutée.
+
+**Limites :** les tests mockés et Tesseract sur image synthétique ne mesurent pas un gain de précision sur photographies marketplace. Aucun benchmark apparié annoté nouveau, accès externe, déploiement ou parcours T08.2/T09 complet n’est déclaré livré. TRK-002/004/005/007/008/009/017/100/200/203/204 restent ouverts selon leur périmètre ; TRK-201 est validé pour le contrôle `/proc`.

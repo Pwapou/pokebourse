@@ -1,6 +1,6 @@
 # Pokébourse — Suivi consolidé du développement
 
-Révision du **8 novembre 2026**. Référence inspectée : commit `a904eca` et arbre de travail non committé, comprenant les corrections de capture et la page `/tasking` déjà en cours. Ce document donne l'ordre de reprise de tous les chantiers ; les spécifications détaillées restent dans leurs documents respectifs.
+Révision du **8 novembre 2026**. Référence inspectée : branche `codex/integration-ocr-consolidation-20261108`, réunissant le socle `0a07d7b`, le pipeline OCR `4d0746d` et le runner renforcé issu de `862a0d7`. Ce document donne l'ordre de reprise de tous les chantiers ; les spécifications détaillées restent dans leurs documents respectifs.
 
 ## 1. Règles de lecture et sources de vérité
 
@@ -41,7 +41,7 @@ Les contrats et critères détaillés sont dans [Identification](TASKING_IDENTIF
 | T02–T03 | Réalisés et testés sur fixtures | Détection, provenance, abstention et décision communes ; [contrat T03](docs/identification/T03_EVIDENCE.md) |
 | T04 | Réalisé et testé | `evidence_store.py`, migration `0023`, tests visuels et sauvegardes ; conservation explicite distincte de l'OCR éphémère |
 | T05 | Partiel, socle livré | Alias/localisations/diagnostic et migrations `0024`–`0026` ; cible « gempack 2 » toujours à vérifier, aucune équivalence inventée |
-| T06.1–T06.4 / T07 | Partiel | T06.1 : cadrage manuel sur fiche et OCR local, testé sur images synthétiques ; capture, localisation automatique et recette restent ouvertes (TRK-017). [Procédure OCR](docs/identification/T06_T07_PROCEDURE_OCR.md) : TSV, langue, hypothèses et budget global encore à réaliser ; timeout actuel par appel |
+| T06.1–T06.4 / T07 | Partiel, composants internes consolidés | Cadrage manuel sur fiche et OCR local ; pipeline spatial interne (géométrie, TSV, hypothèses, langue, recherche commune) et runner renforcé testés sur fixtures/synthétique. [Intégration retenue](docs/identification/T06_T07_INTEGRATION_JOB3.md) | Raccordement HTTP/T03/T08.2, choix de photo/capture, concurrence app/worker et recette photographique restent ouverts (TRK-017/TRK-204). Aucun gain de précision déduit des tests mockés |
 | T08.1 | Réalisé et testé | [Contrôles du moteur actuel](docs/identification/T08_CONTROLES_MOTEUR_ACTUEL.md), TRK-001/013/014 ; titre séparé du nom canonique |
 | T08.3 | Partiel | Prix/port/devise indépendants de l'identification, indices invalides filtrés, préremplissage non auto-confirmant ; sélection transitoire, résolution motivée et invalidation à intégrer avec T08.2/T09 |
 | T08.2 / T09 | À compléter | TRK-004/005/007 : exécution hors popup, choix avant ajout et décision atomique ; contrôle commun d'admissibilité financière à terminer |
@@ -63,7 +63,7 @@ Ordre opérationnel, sans confondre dépendance de développement et qualificati
 5. **Qualifier J2 via T10**, puis décider T11. Aucune nouvelle acceptation automatique OCR/vision avant les critères de T10.
 6. **Préparer J3 sans attendre T11.** Actualiser T15 et trancher D1–D6 ; intégrer T14 → T16 → T17 → T18, puis T12/T13 J3. Contrats et simulations peuvent être préparés avant l'accès réel ; la disponibilité finale ne peut pas être simulée.
 
-Les anciens « jobs 1/2/3 » dans les rapports désignent des périmètres de travaux antérieurs, pas des processus actuellement lancés : job 1 = contrôles moteur actuel, job 2 = moteur OCR cible, job 3 = intégration capture/collecteurs. Vérifier la présence des modules avant de les raccorder ; au présent audit les modules spatiaux restent absents.
+Les anciens « jobs 1/2/3 » dans les rapports désignent des périmètres de travaux antérieurs, pas des processus actuellement lancés : job 1 = contrôles moteur actuel, job 2 = moteur OCR cible, job 3 = intégration capture/collecteurs. Les modules spatiaux internes sont désormais présents après consolidation ; leur raccordement au parcours utilisateur et aux collecteurs reste à réaliser.
 
 ## 4. File d'actions restante
 
@@ -92,11 +92,11 @@ Le code eBay actuel est un connecteur HTML ; il ne prouve pas un accès Browse A
 
 ## 6. Vérification de cette remise à jour
 
-- `docker compose run --rm app pytest -ra` : **867 passants, 0 échec, 0 sauté**, 38,35 s ; un avertissement existant de dépréciation Starlette/TestClient/httpx. Tests de migrations, navigateur/extension, performance/responsive et suivi inclus. Ce résultat qualifie les tests existants, pas les futurs lots.
-- Inventaire source : **26 migrations** `0001`–`0026`, dernière `0026_tcgdex_sync_locale.sql` ; **58 fichiers** `tests/test_*.py`. Le numéro suivant devra être revérifié avant tout changement de schéma.
-- Contrôles documentaires : **220 liens locaux/ancres sur 29 documents**, correspondance des 30 IDs de lots/sous-lots Identification avec le plan de validation, et `git diff --check`. Détail reproductible dans [SUIVI §28](SUIVI.md#28-remise-à-jour-transversale-du-tasking--8-novembre-2026).
-- Lecture de `tasking_data()` dans Docker : **7 plans chargés**, dont ce suivi consolidé (12 actions), **18 incidents uniques**, sans ouverture de base.
-- Aucune modification du code applicatif, des dépendances, migrations ou données par cette remise à jour. Les changements applicatifs préexistants sont conservés ; ils restent non committés.
+- `docker compose run --rm app pytest -ra` : **936 passants, 0 échec, 0 sauté**, 45,18 s ; un avertissement existant de dépréciation Starlette/TestClient/httpx. Tests OCR, migrations, sauvegardes, navigateur/extension, recherche/tendances et suivi inclus. Détail et commandes ciblées dans [SUIVI §32](SUIVI.md#32-consolidation-des-développements-et-des-deux-branches-ocr--8-novembre-2026).
+- Inventaire source : **26 migrations** `0001`–`0026`, inchangées, dernière `0026_tcgdex_sync_locale.sql` ; **63 fichiers** `tests/test_*.py`. Aucune dépendance ajoutée.
+- Les deux variantes OCR ont été comparées et leurs suites rejouées avant sélection ; les contrats historiques, la langue inconnue, l’absence de confirmation implicite et les décisions humaines restent couverts par les suites communes.
+- Lecture Docker de `tasking_data()` : **7 plans**, **24 incidents uniques** ; **228 liens locaux** valides dans les documents changés, avec une regex et un chemin de skill externe explicitement exclus ; `git diff --check` sans erreur. Les anciens résultats restent historiques.
+- Les composants OCR internes sont intégrés, mais le parcours T08.2/T09, la qualification photographique, la concurrence app/worker et T19 restent ouverts ; aucun gain OCR n’est déduit des tests mockés.
 
 ## 7. Tenue du suivi à chaque livraison
 

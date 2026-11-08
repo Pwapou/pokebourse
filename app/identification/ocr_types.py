@@ -91,6 +91,8 @@ class Deadline:
     """Échéance monotone globale ; chaque sous-opération reçoit le temps restant."""
 
     def __init__(self, budget_seconds: float, clock: Callable[[], float] = time.monotonic) -> None:
+        if budget_seconds <= 0:
+            raise ValueError("Échéance globale strictement positive requise.")
         self._clock = clock
         self._start = clock()
         self._budget = float(budget_seconds)
@@ -100,6 +102,9 @@ class Deadline:
 
     def remaining(self) -> float:
         return self._budget - self.elapsed()
+
+    def expired(self) -> bool:
+        return self.remaining() <= 0
 
     def check(self) -> None:
         """Lève OcrDeadlineExceeded lorsque plus aucun essai ne doit démarrer."""

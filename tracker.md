@@ -40,6 +40,10 @@ Référence de code lue : **`a904eca`**, avec changements applicatifs et documen
 | TRK-100 | P1 | ouvert | Intégration cible manquante — T19, C01–C06 | Collecteurs/veilles à raccorder aux images et à l'OCR commun |
 | TRK-101 | P2 | résolu | Conversion exacte livrée — T19.1 | Filtres Vinted/eBay convertis depuis les centimes sans flottant ; 840 tests passants |
 | TRK-102 | P2 | validé | Recette responsive & actions UI — Recherche T1.5/T3.4, Design T2/T5/T6 | Débordements à 320/390 px, 6e colonne ROI à 1024 px sur `/trends` et 3 formulaires GET sans `action` explicite corrigés ; 867 tests passants |
+| TRK-200 | P2 | ouvert | Outillage / données de test | Un clone neuf doit retrouver ou documenter les fixtures locales ignorées requises par certaines suites |
+| TRK-201 | P3 | validé | Outillage T06.3 | `pgrep` absent ; contrôle des processus orphelins réalisé via `/proc` dans les tests du runner |
+| TRK-203 | P1 | ouvert | Concurrence T06.3/T19.2 | Le sémaphore intégré borne un processus ; la limite agrégée app/worker reste à réaliser |
+| TRK-204 | P1 | ouvert | Intégration T06/T07/T08.2 | Composants spatiaux internes consolidés ; parcours HTTP/capture, confirmation et recette photographique non livrés |
 
 ### TRK-017 — Recadrage à intégrer à la capture et à qualifier
 
@@ -275,3 +279,34 @@ Référence de code lue : **`a904eca`**, avec changements applicatifs et documen
   - Dans [annotation_dashboard.html](app/templates/annotation_dashboard.html), [identification_diagnostics.html](app/templates/identification_diagnostics.html) et [tcgdex_sync.html](app/templates/tcgdex_sync.html) : ajout des attributs `action="/annotations"`, `action="/identification/diagnostics"` et `action="/tcgdex"`.
 - **Revalidation :** exécutée le 8 novembre 2026 dans Docker (`test_responsive_and_keyboard_qa_for_catalog_search_and_trends` et `test_ui_actions_inventory_has_no_decorative_noop_buttons` dans [tests/test_search.py](tests/test_search.py)) : contrôle Playwright/Chromium aux 5 largeurs (`1440`, `1024`, `768`, `390`, `320` px) sur `/catalog`, `/search` et `/trends` (`scrollWidth <= innerWidth`, absence de chevauchement `.product-identity` / `.decision-wrap`, tiroir mobile `#menu-button` + touche `Escape`, focus clavier) et suite complète `docker compose run --rm app pytest -ra` : **867 passed, 1 warning in 38.35s**, code 0, zéro skip.
 - **Clôture :** validé sur `/catalog`, `/search` et `/trends` aux 5 largeurs et sur l'inventaire des actions des 26 templates. La recette visuelle des autres écrans secondaires reste ouverte dans `TASKING_INTEGRATION_DESIGN.md` (`T6`).
+
+## Consolidation des branches OCR — 8 novembre 2026
+
+- **Branches comparées :** `codex/ocr-parallele` (`4d0746d`) et `codex/ocr-p2` (`862a0d7`), sur le socle consolidé `0a07d7b`. Leurs suites d’origine ont été rejouées dans Docker : respectivement **59 passed** et **77 passed**, zéro skip.
+- **Choix d’intégration :** pipeline spatial de `ocr-parallele` pour géométrie/localisation optionnelle, TSV, noms, hypothèses, langue, recherche et transport ; runner `ocr-p2` pour annulation, groupe de processus, sortie strictement bornée et sémaphore. Le `Deadline` est commun et l’adaptateur historique délègue au nouveau runner. Les autres implémentations p2 ne sont pas empilées : contrats concurrents et couverture spatiale doublonnée.
+- **Revalidation ciblée intégrée :** `docker compose run --rm app pytest tests/test_ocr_geometry.py tests/test_ocr_hypotheses.py tests/test_ocr_languages.py tests/test_ocr_spatial.py tests/test_ocr_limits.py tests/test_ocr_local.py tests/test_ocr_web.py tests/test_ocr_crop_browser.py -ra` → **86 passed**, zéro skip, 1 avertissement Starlette/httpx connu. Premier essai interrompu à la collecte par les imports des tests p2 retirés ; second essai : 85 passed/1 failed sur le seul message historique de sortie excessive ; correction du libellé puis résultat vert ci-dessus.
+- **Parcours communs :** capture, extension MV3, prévisualisation, reviews, migrations, sauvegardes/restauration, preuves visuelles, recherche, tendances et tasking → **359 passed**, zéro skip, avec la commande complète consignée dans SUIVI §32.
+- **Suite complète intégrée :** `docker compose run --rm app pytest -ra` → **936 passed, 1 warning in 45.18s**, code 0, zéro échec et zéro skip. Recettes Chromium/Playwright et extension MV3 incluses ; aucune mesure OCR photographique nouvelle.
+- **Dédoublonnage :** TRK-202 (gain non démontré) reste couvert par TRK-009 ; TRK-205 est couvert au niveau interne par l’extraction de noms et les tests de `ocr-parallele`, sans clore l’intégration utilisateur TRK-204. Aucun nouvel incident n’est créé pour ces doublons.
+- **Limites :** aucune nouvelle route, capture complète, file worker ou décision atomique ; aucun benchmark apparié nouveau et aucun gain OCR revendiqué. Voir [l’intégration retenue](docs/identification/T06_T07_INTEGRATION_JOB3.md).
+
+### TRK-200 — Fixtures locales ignorées dans un worktree neuf
+
+- **Preuve / périmètre :** constat d’outillage du job p2 ; certaines données locales nécessaires aux suites historiques sont ignorées et ne sont pas ajoutées par cette consolidation. Aucun fichier de données ou photo n’est versionné pour contourner ce constat.
+- **Prochaine action / responsable :** chantier outillage/T12 ; décider quelles fixtures minimales doivent être versionnées ou documenter leur restauration, puis valider depuis un clone neuf.
+- **Revalidation :** les worktrees existants conservent leurs données locales ; le test en clone neuf n’est pas exécuté. Incident ouvert.
+
+### TRK-201 — Contrôle d’orphelins sans pgrep
+
+- **Correction / revalidation :** la suite du runner inspecte `/proc/*/cmdline`, sans installer procps ni modifier le Dockerfile. Ce contrôle est inclus dans les **86 tests OCR** intégrés passants. État validé pour l’outillage, sans lien avec la justesse OCR.
+
+### TRK-203 — Concurrence app/worker encore locale
+
+- **Preuve :** `OcrSupervisor` utilise un `threading.BoundedSemaphore` et gère les processus de son instance ; aucun verrou partagé entre application et worker n’est ajouté.
+- **Prochaine action / responsable :** T06.3/T19.2 ; composer le verrou inter-processus, tester saturation, équité et libération après erreur. La présence du sémaphore local ne ferme pas ce critère.
+
+### TRK-204 — Composants internes ne valent pas parcours T06/T07 complet
+
+- **Intégré :** pipeline spatial, localisation optionnelle avec repli, hypothèses et candidats communs, indices de langue, transport interne et exécution bornée.
+- **Restant :** raccordement `/ocr/suggestions` et observations T03, choix de photo/recadrage dans la capture, orchestration hors popup, ajout/décision atomiques, budget de recherche SQLite, T19 et recette photographique annotée.
+- **Revalidation :** suites internes et parcours historiques passants ; critères complets non exécutés. Incident ouvert, sans confirmation automatique ni mesure de gain déduite des mocks.

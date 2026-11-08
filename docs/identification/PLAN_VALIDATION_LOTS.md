@@ -69,47 +69,47 @@ Les étapes Python, SQLite, OCR, statistiques et logique financière n'ont **auc
 
 - **Skill :** UI pour sélection photo/recadrage et rendu des régions ; aucun pour géométrie/Tesseract/langue.
 - **Intégrations :** extension/téléversement → EXIF/géométrie → processus OCR borné → TSV/fragments/langue → API et recherche commune.
-- **Tests :** bases `tests/test_ocr_local.py`, `tests/test_ocr_web.py`, `tests/test_visual_evidence.py`. À créer : `tests/test_ocr_geometry.py`, `tests/test_ocr_spatial.py`, `tests/test_ocr_languages.py`. EXIF, transformation/reprojection, objets distincts, texte fragmenté, abstention de langue, six passes/budget global, sortie excessive, annulation et libération des processus/sémaphores.
+- **Tests :** bases `tests/test_ocr_local.py`, `tests/test_ocr_web.py`, `tests/test_visual_evidence.py` ; composants présents `tests/test_ocr_geometry.py`, `tests/test_ocr_spatial.py`, `tests/test_ocr_languages.py` et `tests/test_ocr_limits.py`. EXIF, transformation/reprojection, objets distincts, texte fragmenté, abstention de langue, six passes/budget global, sortie excessive, annulation et libération des processus/sémaphores.
 - **Validation :** fixtures géométriques passantes et petit jeu de photos autorisées/annotées avec Tesseract réel ; comparaison appariée baseline/manuel/spatial, noms/numéros exacts, rappel, abstention, mémoire et latence. Raccordement T08.2 requis pour déclarer le parcours utilisateur livré.
 
 ### T06.1
 
 - **Skill :** UI pour choix/cadrage ; aucun pour géométrie.
 - **Intégrations :** photo capturée ou téléversée → orientation EXIF → coordonnées CSS/image → région redressée → moteur OCR.
-- **Tests :** `tests/test_ocr_local.py`, futurs `tests/test_ocr_geometry.py` et harnais navigateur. EXIF 1/3/6/8, marges/zoom CSS, rotations, coins croisés/colinéaires/hors cadre, confusion boîtier/carte et sélection d'une autre photo.
+- **Tests :** `tests/test_ocr_local.py`, `tests/test_ocr_geometry.py` et harnais navigateur. EXIF 1/3/6/8, marges/zoom CSS, rotations, coins croisés/colinéaires/hors cadre, confusion boîtier/carte et sélection d'une autre photo.
 - **Validation :** reprojection vérifiée sur géométrie connue, source/région visibles, repli manuel utilisable, latence/mémoire bornées ; ancienne réponse jamais appliquée à la nouvelle photo.
 
 ### T06.2
 
 - **Skill :** aucun ; UI si affichage des régions modifié.
 - **Intégrations :** TSV → tokens/lignes → transformations de coordonnées → lectures nom/numéro du même objet → matcher commun.
-- **Tests :** futurs `tests/test_ocr_spatial.py`, `tests/test_ocr_geometry.py` et bases `tests/test_ocr_local.py`. Confiance absente, boîtes invalides, blocs distincts, fragments `025`, `/`, `165`, texte hors carte et suffixes/préfixes.
+- **Tests :** `tests/test_ocr_spatial.py`, `tests/test_ocr_geometry.py` et bases `tests/test_ocr_local.py`. Confiance absente, boîtes invalides, blocs distincts, fragments `025`, `/`, `165`, texte hors carte et suffixes/préfixes.
 - **Validation :** lectures brutes et positions conservées, aucune association entre objets ni concaténation globale, sortie compatible avec les consommateurs historiques.
 
 ### T06.3
 
 - **Skill :** aucun.
 - **Intégrations :** superviseur/processus Tesseract → budget global → recherche locale et sérialisation → réponse/erreur HTTP.
-- **Tests :** `tests/test_ocr_local.py`, `tests/test_ocr_web.py` ; créer `tests/test_ocr_limits.py` pour délai, six passes, sortie excessive, saturation, annulation et processus récoltés. Mesurer séparément latence/mémoire sur photos annotées et matériel décrit.
+- **Tests :** `tests/test_ocr_local.py`, `tests/test_ocr_web.py` et `tests/test_ocr_limits.py` pour délai, six passes, sortie excessive, saturation, annulation et processus récoltés. Mesurer séparément latence/mémoire sur photos annotées et matériel décrit.
 - **Validation :** budget global respecté, pas de processus orphelin ni sémaphore perdu, sortie partielle/indisponible expliquée ; bilan incluant refus/replis et p50/p95, sans assimiler vitesse et justesse.
 
 ### T06.4
 
 - **Skill :** aucun pour la méthode ; UI pour suggestion et confirmation.
 - **Intégrations :** fragments discriminants de la carte → hypothèses de langue → validation des observations → exploration des locales → formulaire/confirmation distincte.
-- **Tests :** futur `tests/test_ocr_languages.py`, `tests/test_identification_evidence.py`, `tests/test_capture_preview.py`, `tests/test_reference_aliases_localizations.py`. Français/anglais, nom commun, texte court/bruité, langue du site différente et conflit déclaré/photo.
+- **Tests :** `tests/test_ocr_languages.py`, `tests/test_identification_evidence.py`, `tests/test_capture_preview.py`, `tests/test_reference_aliases_localizations.py`. Français/anglais, nom commun, texte court/bruité, langue du site différente et conflit déclaré/photo.
 - **Validation :** suggestion justifiée ou abstention, alternatives non transformées en déclarations simultanées, aucun défaut français ni confiance tirée de `fra+eng` ; mesures par langue effectivement testée.
 
 ## T07
 
 - **Skill :** aucun ; UI si l'affichage des hypothèses est modifié.
 - **Intégrations :** lectures/groupes d'alternatives → hypothèses → recherche structurée/lexicale → décision commune → candidats/champs T08.
-- **Tests :** `tests/test_identification.py`, `tests/test_identification_evidence.py`, `tests/test_candidate_number_warning.py`, `tests/test_lexical_identification.py`, `tests/test_ocr_local.py`. À créer : `tests/test_ocr_hypotheses.py`. Original conservé, préfixes/secrets, mauvaise réparation plausible, bonne référence absente, première hypothèse erronée, fragment `n`, absence de fausses contradictions entre alternatives.
+- **Tests :** `tests/test_identification.py`, `tests/test_identification_evidence.py`, `tests/test_candidate_number_warning.py`, `tests/test_lexical_identification.py`, `tests/test_ocr_local.py` et `tests/test_ocr_hypotheses.py`. Original conservé, préfixes/secrets, mauvaise réparation plausible, bonne référence absente, première hypothèse erronée, fragment `n`, absence de fausses contradictions entre alternatives.
 - **Validation :** recherche bornée et déterministe, provenance et dénominateur attesté, aucune auto-confirmation par réparation ; gain de rappel mesuré sans masquer les nouvelles fausses suggestions ; cas §1.3 utilisé dans T08.
 
 ## T08
 
-**État :** T08.1 et contrôles T08.3 du moteur actuel acquis ; T08.2 et contrôles de sélection/révision à intégrer avec T09. Les nouveaux modules spatiaux ne sont pas encore présents.
+**État :** T08.1 et contrôles T08.3 du moteur actuel acquis ; T08.2 et contrôles de sélection/révision à intégrer avec T09. Les modules spatiaux internes sont présents après consolidation OCR, mais ne valident pas le parcours utilisateur ni les mesures photographiques.
 
 - **Skill :** UI ; références projet Mosaic × Flowbite, extension MV3 et procédure OCR.
 - **Intégrations :** couvrir ensemble T08.1, T08.2 et T08.3, jusqu'à la fiche persistée et aux critères structurés transmis à T16 ; T19 vérifie le même contrat depuis les collecteurs/veilles.

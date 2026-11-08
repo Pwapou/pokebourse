@@ -350,7 +350,7 @@ T13 reste la matrice de recette de tous les lots, y compris J3 ; sa numérotatio
 
 ### T06 — Repérer/redresser la carte et conserver la position des textes
 
-**État au 8 novembre :** moteur spatial à réaliser ; `ocr.py` reste la baseline texte avec recadrages fixes. Les contrôles T08 du moteur actuel ne livrent ni TSV, ni redressement, ni langue photographique.
+**État au 8 novembre :** composants internes spatiaux consolidés (géométrie, TSV, hypothèses, langue et exécution bornée) selon [l’intégration retenue](docs/identification/T06_T07_INTEGRATION_JOB3.md) ; `ocr.py` reste la baseline HTTP texte avec recadrage manuel. Le raccordement T03/T08.2, la concurrence app/worker et la qualification photographique restent ouverts (TRK-204). Les contrôles T08 du moteur actuel ne valident pas ces nouveaux composants.
 
 **Skills, tests et intégrations :** [fiche T06](docs/identification/PLAN_VALIDATION_LOTS.md#t06).
 

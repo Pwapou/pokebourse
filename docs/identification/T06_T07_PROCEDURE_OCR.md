@@ -1,6 +1,6 @@
 # Procédure T06/T07 — Cadrage, OCR spatial et hypothèses de numéro
 
-**État réconcilié au 8 novembre :** cette procédure reste à implémenter pour le moteur spatial. T08.1 et les contrôles du moteur actuel sont depuis livrés/testés : réutiliser [leur contrat et le relais](T08_CONTROLES_MOTEUR_ACTUEL.md), sans refaire ces correctifs. Ordre global : [TASKING_PROJET.md](../../TASKING_PROJET.md).
+**État réconcilié au 8 novembre :** les composants internes du moteur spatial sont désormais consolidés depuis `ocr-parallele` et `ocr-p2` ; le raccordement HTTP/T03/T08.2, la concurrence app/worker et la qualification photographique restent à réaliser. Voir [l’intégration retenue](T06_T07_INTEGRATION_JOB3.md). T08.1 et les contrôles du moteur actuel sont préservés : réutiliser [leur contrat et le relais](T08_CONTROLES_MOTEUR_ACTUEL.md), sans refaire ces correctifs. Ordre global : [TASKING_PROJET.md](../../TASKING_PROJET.md).
 
 Date : **3 novembre 2026**. Statut : **spécification à implémenter**, sans changement du moteur livré ni résultat de précision acquis. Ce document précise les lots [T06/T07 du tasking](../../TASKING_IDENTIFICATION_FIABLE.md#t06--repérerredresser-la-carte-et-conserver-la-position-des-textes). Les valeurs de réglage ci-dessous constituent un point de départ expérimental versionné, pas des seuils de fiabilité démontrés.
 

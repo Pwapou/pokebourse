@@ -127,7 +127,14 @@ pokebourse/
 │   │   ├── matcher.py       # Rapprochement avec le catalogue TCGdex et calcul de confiance
 │   │   ├── models.py        # IdentificationResult, CardFeatures, statuts (identified, ambiguous, lot, unidentified)
 │   │   ├── normalization.py # Normalisation de chaînes, accents, casse et numéros
-│   │   ├── ocr.py           # Lecture locale éphémère d'images (Tesseract), cadrage et suggestions
+│   │   ├── ocr.py           # API OCR historique, cadrage manuel et suggestions
+│   │   ├── ocr_types.py     # Contrats, budgets, échéance et transport du moteur spatial interne
+│   │   ├── ocr_geometry.py  # EXIF, cadrage/homographie et localisation optionnelle
+│   │   ├── ocr_text.py      # Parsing TSV et adaptation au runner borné
+│   │   ├── ocr_numbers.py   # Lectures/hypothèses spatiales et recherche commune
+│   │   ├── ocr_language.py  # Suggestions de langue avec abstention
+│   │   ├── ocr_runner.py    # Processus Tesseract, annulation et sémaphore local
+│   │   ├── ocr_spatial.py   # Orchestration interne sans raccordement HTTP automatique
 │   │   ├── pipeline.py      # Orchestration du pipeline de détection et matching
 │   │   ├── reference_search.py # Recherche plein texte et approchée dans le référentiel officiel
 │   │   ├── research.py      # File d'enrichissement approfondi traitée par le worker
@@ -215,7 +222,7 @@ pokebourse/
 ├── scripts/                 # Scripts utilitaires en lecture seule ou de test ponctuel
 │   ├── comparables_report.py # Rapport de contrôle des comparables et preuves de prix
 │   └── manual_collect_test.py # Test ponctuel manuel d'une recherche marketplace
-└── tests/                   # 58 fichiers test_*.py ; 860 tests passants dans Docker au 8 novembre 2026
+└── tests/                   # 63 fichiers test_*.py ; 936 tests passants dans Docker au 8 novembre 2026
 ```
 
 ---

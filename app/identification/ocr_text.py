@@ -10,15 +10,17 @@ from __future__ import annotations
 
 import csv
 import io
-import os
-import selectors
-import subprocess
-import time
 from typing import Literal
 
 from app.identification.ocr_geometry import project_quad
+from app.identification.ocr_runner import (
+    CancellationToken,
+    OcrOutputLimitError,
+    run_tesseract_tsv as _run_tesseract_tsv,
+)
 from app.identification.ocr_types import (
     MAX_TESSERACT_PASSES,
+    Deadline,
     OcrConfig,
     OcrError,
     OcrLine,
@@ -46,66 +48,25 @@ class TsvTruncatedError(OcrError):
     """Sortie TSV excessive ou invalide : aucune identité ne doit en découler."""
 
 
-def run_tesseract_tsv(image_png: bytes, *, psm: int = DEFAULT_PSM, timeout_seconds: float,
-                      max_bytes: int) -> str:
-    """Exécute une passe TSV bornée et récolte toujours le processus à l'échéance.
-
-    Le délai reçu est le temps restant du budget global ; ce n'est pas une
-    garantie supplémentaire. La lecture du pipe s'arrête au plafond de sortie :
-    le processus est tué, jamais laissé orphelin.
-    """
-    environment = dict(os.environ, OMP_THREAD_LIMIT="1")
-    command = ["tesseract", "stdin", "stdout", "-l", TESSERACT_LANGUAGES, "--psm", str(psm), "tsv"]
+def run_tesseract_tsv(
+    image_png: bytes,
+    *,
+    psm: int = DEFAULT_PSM,
+    timeout_seconds: float,
+    max_bytes: int,
+    token: CancellationToken | None = None,
+) -> str:
+    """Adapte le contrat historique au superviseur de processus renforcé."""
     try:
-        process = subprocess.Popen(
-            command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, env=environment,
+        return _run_tesseract_tsv(
+            image_png,
+            psm=psm,
+            deadline=Deadline(timeout_seconds),
+            token=token,
+            max_output_bytes=max_bytes,
         )
-    except FileNotFoundError as error:
-        raise TesseractUnavailableError(
-            "Moteur OCR indisponible. Reconstruisez l'image Docker de l'application."
-        ) from error
-    assert process.stdin is not None and process.stdout is not None
-    chunks: list[bytes] = []
-    total = 0
-    selector: selectors.BaseSelector | None = None
-    try:
-        process.stdin.write(image_png)
-        process.stdin.close()
-        selector = selectors.DefaultSelector()
-        selector.register(process.stdout, selectors.EVENT_READ)
-        deadline = time.monotonic() + max(0.1, timeout_seconds)
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                process.kill()
-                raise TsvTruncatedError("Analyse trop longue : délai de la passe dépassé.")
-            events = selector.select(timeout=remaining)
-            if not events:
-                process.kill()
-                raise TsvTruncatedError("Analyse trop longue : délai de la passe dépassé.")
-            chunk = process.stdout.read1(65536)
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > max_bytes:
-                process.kill()
-                raise TsvTruncatedError("Sortie OCR excessive : analyse refusée.")
-            chunks.append(chunk)
-        try:
-            return_code = process.wait(timeout=1)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            raise TsvTruncatedError("Analyse non récoltée après la sortie du pipe.")
-        if return_code != 0:
-            raise TesseractUnavailableError("Analyse OCR impossible pour cette image.")
-        return b"".join(chunks).decode("utf-8", errors="replace")
-    finally:
-        if selector is not None:
-            selector.close()
-        if process.poll() is None:
-            process.kill()
-            process.wait(timeout=5)
+    except OcrOutputLimitError as error:
+        raise TsvTruncatedError("Sortie OCR excessive : analyse refusée.") from error
 
 
 def parse_tsv(payload: str, *, pass_id: str, raster_width: int, raster_height: int,

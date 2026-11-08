@@ -451,7 +451,7 @@ docker compose run --rm app pokemon-arbitrage export-labels --output /data/label
 
 ## 🧪 Tests & Assurance Qualité
 
-Au contrôle du **8 novembre 2026**, les **58 fichiers** de tests automatisés totalisent **840 réussites, 0 échec et 0 sauté** dans Docker : **aucun appel réseau externe n'est émis pendant les tests**.
+Après consolidation OCR du **8 novembre 2026**, les **63 fichiers** de tests automatisés totalisent **936 réussites, 0 échec et 0 sauté** dans Docker : **aucun appel réseau externe n'est émis pendant les tests**.
 
 ```bash
 # Exécution complète de tous les tests
