@@ -93,6 +93,7 @@ class TrendsFilters(BaseModel):
     min_observations: int = Field(default=1, ge=1, le=1000)
     max_quote_age_days: int = Field(default=30, ge=1, le=365)
     limit: int = Field(default=20, ge=1, le=100)
+    page: int = Field(default=1, ge=1, le=100_000)
 
     @model_validator(mode="before")
     @classmethod
@@ -106,7 +107,7 @@ class TrendsFilters(BaseModel):
         for str_key in ("set_name", "rarity", "language"):
             val = copied.get(str_key)
             copied[str_key] = "" if val is None else str(val).strip()
-        for int_key in ("min_observations", "max_quote_age_days", "limit"):
+        for int_key in ("min_observations", "max_quote_age_days", "limit", "page"):
             val = copied.get(int_key)
             if val is not None and str(val).strip():
                 try:
@@ -114,6 +115,36 @@ class TrendsFilters(BaseModel):
                 except (ValueError, TypeError):
                     pass
         return copied
+
+
+class PriceMovementsPage(BaseModel):
+    """Page de variations de prix avec totaux pour la pagination stable."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    hausses: list[PriceVariation] = Field(default_factory=list)
+    baisses: list[PriceVariation] = Field(default_factory=list)
+    total_compared: int = 0
+    hausses_total: int = 0
+    baisses_total: int = 0
+
+
+class ListingActivityPage(BaseModel):
+    """Page d'activité des annonces avec total pour la pagination stable."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    items: list[ListingActivityItem] = Field(default_factory=list)
+    total: int = 0
+
+
+class OpportunitiesPage(BaseModel):
+    """Page de meilleures affaires avec total pour la pagination stable."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    items: list[BestOpportunityItem] = Field(default_factory=list)
+    total: int = 0
 
 
 class TrendsPageData(BaseModel):
@@ -124,11 +155,16 @@ class TrendsPageData(BaseModel):
     computed_at: str
     last_cardmarket_sync_at: str | None = None
     filters: TrendsFilters
+    page: int = 1
     hausses: list[PriceVariation] = Field(default_factory=list)
     baisses: list[PriceVariation] = Field(default_factory=list)
     total_price_compared: int = 0
+    hausses_total: int = 0
+    baisses_total: int = 0
     listing_activity: list[ListingActivityItem] = Field(default_factory=list)
+    activity_total: int = 0
     best_opportunities: list[BestOpportunityItem] = Field(default_factory=list)
+    opportunities_total: int = 0
     available_sets: list[str] = Field(default_factory=list)
     available_rarities: list[str] = Field(default_factory=list)
     available_languages: list[str] = Field(default_factory=list)

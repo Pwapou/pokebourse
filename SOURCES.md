@@ -1,5 +1,7 @@
 # Conditions d'accès aux sources et référentiels — Pokébourse
 
+**Relecture documentaire du 8 novembre :** les vérifications contractuelles et compteurs ci-dessous gardent leur date ; aucune nouvelle consultation externe n’a été effectuée par l’audit du tasking. Réactualiser les capacités en T15 avant tout nouvel usage ; [suivi consolidé](TASKING_PROJET.md).
+
 Date de vérification globale : **2026-11-01** ; ligne eBay du tableau de synthèse et section 10 ajoutées le **2026-11-03** (lot T15).
 
 Ce document consigne l'audit juridique, technique et contractuel des sources utilisées par Pokébourse pour la collecte d'annonces de marché et l'accès au catalogue de référence Pokémon.
@@ -188,8 +190,8 @@ Ce document consigne l'audit juridique, technique et contractuel des sources uti
 
 L'assistance par lecture de photo (`POST /ocr/suggestions`) respecte des règles de sécurité et de confidentialité strictes :
 - **100 % local et éphémère** : le binaire Tesseract est exécuté localement dans le conteneur Docker de l'application (`tesseract stdin stdout -l fra+eng`). Aucun flux vidéo, aucune image et aucune métadonnée ne transitent par un service distant ou un tiers cloud.
-- **Zéro persistance** : la photo uploadée est décodée en mémoire (RAM), convertie en PNG épuré de toute métadonnée EXIF via Pillow, et analysée sans être jamais écrite sur le disque ni conservée dans la base de données.
-- **Bornes strictes** : taille limitée à 8 Mo, résolution maximale de 12 millions de pixels, sémaphore borné à 2 analyses simultanées et timeout strict de 20 secondes.
+- **Zéro persistance par simple analyse OCR** : la photo uploadée est décodée en mémoire (RAM), convertie en PNG épuré de toute métadonnée EXIF via Pillow, et analysée sans être jamais écrite sur le disque ni conservée dans la base de données.
+- **Bornes strictes** : taille limitée à 8 Mo, résolution maximale de 12 millions de pixels, sémaphore borné à 2 analyses simultanées par processus et timeout de 20 secondes par appel Tesseract. Le budget global par image et la concurrence agrégée app/worker restent T06.3/T19 ; ils ne sont pas garantis par ce sémaphore local.
 - **Rôle d'assistance indicatif** : l'OCR ne valide jamais automatiquement une identité de carte. Il propose des suggestions de candidats (noms, numéros) que l'utilisateur doit confirmer explicitement.
 
 ---

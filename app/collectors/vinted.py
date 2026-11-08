@@ -13,7 +13,10 @@ MAX_PER_PAGE = 48
 
 
 def _euros_from_cents(cents: int) -> str:
-    return f"{cents / 100:.2f}"
+    """Convertit des centimes en montant décimal exact, sans virgule flottante."""
+    if cents < 0:
+        raise CollectorError("Le prix ne peut pas être négatif.")
+    return f"{cents // 100}.{cents % 100:02d}"
 
 
 def build_vinted_search_params(

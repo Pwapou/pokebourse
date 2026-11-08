@@ -78,3 +78,48 @@ def test_number_conflict_is_not_relaxed(client: TestClient, monkeypatch: pytest.
     assert result["recognized"]["numbers"] == ["999/102"]
     assert result["status"] == "no_match"
     assert not result["candidates"]
+
+
+@pytest.mark.parametrize("orientation,expected", [(1, (4, 3)), (3, (4, 3)), (6, (3, 4)), (8, (3, 4))])
+def test_preview_and_crop_use_oriented_pixels(client: TestClient, orientation: int, expected: tuple[int, int], monkeypatch: pytest.MonkeyPatch) -> None:
+    """La prévisualisation et l'OCR partagent le repère EXIF, puis la rotation."""
+    source = Image.new("RGB", (4, 3), "red")
+    exif = source.getexif()
+    exif[274] = orientation
+    output = io.BytesIO()
+    source.save(output, format="JPEG", exif=exif)
+    content = output.getvalue()
+    response = client.post("/ocr/preview", files={"file": ("photo.jpg", content, "image/jpeg")})
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert Image.open(io.BytesIO(response.content)).size == expected
+    seen = []
+    def read(image: bytes, _psm: int = 11) -> str:
+        seen.append(Image.open(io.BytesIO(image)).size)
+        return "Pikachu 58/102"
+    monkeypatch.setattr(ocr, "_run_tesseract", read)
+    data = {"crop_x": 0, "crop_y": 1, "crop_width": 2, "crop_height": 2, "image_width": expected[0], "image_height": expected[1], "crop_rotation": 90}
+    result = client.post("/ocr/suggestions", files={"file": ("photo.jpg", content, "image/jpeg")}, data=data)
+    assert result.status_code == 200
+    assert seen[0] == (2, 2)
+
+
+@pytest.mark.parametrize("changes", [{"crop_x": -1}, {"crop_width": 0}, {"crop_x": 99}, {"image_width": 99}, {"crop_rotation": 45}, {"crop_height": ""}])
+def test_invalid_crop_is_rejected(client: TestClient, changes: dict[str, object]) -> None:
+    """Une sélection partielle, hors image ou incohérente ne lance pas l'OCR."""
+    data = {"crop_x": 0, "crop_y": 0, "crop_width": 10, "crop_height": 20, "image_width": 100, "image_height": 100, "crop_rotation": 0} | changes
+    response = client.post("/ocr/suggestions", files={"file": ("photo.png", _image(), "image/png")}, data=data)
+    assert response.status_code == 400
+
+
+def test_crop_preserves_selected_pixels_and_rotates_clockwise() -> None:
+    """La sélection et sa rotation portent sur les pixels attendus."""
+    image = Image.new("RGB", (4, 3), "white")
+    image.putpixel((1, 0), (255, 0, 0))
+    image.putpixel((1, 1), (0, 0, 255))
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    cropped = Image.open(io.BytesIO(ocr._crop_image(output.getvalue(), (1, 0, 2, 3, 4, 3, 90))))
+    assert cropped.size == (3, 2)
+    assert cropped.getpixel((2, 0)) == (255, 0, 0)
+    assert cropped.getpixel((1, 0)) == (0, 0, 255)

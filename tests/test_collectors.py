@@ -233,6 +233,34 @@ def test_leboncoin_datadome_anti_bot_blocks_without_bypass(monkeypatch: pytest.M
         collect_leboncoin_listings(text="Pikachu")
 
 
+@pytest.mark.parametrize(
+    "price_from,price_to,expected_from,expected_to",
+    [
+        (0, 0, "0.00", "0.00"),
+        (1, 105, "0.01", "1.05"),
+        (5, 499, "0.05", "4.99"),
+        (10_000_000, 999_999_999, "100000.00", "9999999.99"),
+    ],
+)
+def test_price_filter_conversion_is_exact_and_rounded(
+    price_from: int,
+    price_to: int,
+    expected_from: str,
+    expected_to: str,
+) -> None:
+    vinted_params = build_vinted_search_params(
+        search_text="Pikachu", price_from=price_from, price_to=price_to
+    )
+    ebay_params = build_ebay_search_params(
+        search_text="Pikachu", price_from=price_from, price_to=price_to
+    )
+
+    assert vinted_params["price_from"] == expected_from
+    assert vinted_params["price_to"] == expected_to
+    assert ebay_params["_udlo"] == expected_from
+    assert ebay_params["_udhi"] == expected_to
+
+
 def test_ebay_search_params_and_collection() -> None:
     params = build_ebay_search_params(
         search_text="Dracaufeu Holo",

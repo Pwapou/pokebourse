@@ -156,6 +156,12 @@ def test_capture_to_listing_end_to_end(tmp_path: Path) -> None:
                     break
                 time.sleep(0.1)
             assert service_worker is not None, "le service worker de l'extension ne s'est pas réveillé"
+            captured = service_worker.evaluate("async () => (await chrome.storage.local.get('listings')).listings")
+            assert len(captured) == 1
+            assert captured[0]['name'] == ''
+            assert captured[0]['language'] == 'und'
+            assert captured[0]['raw_data']['title'] == 'Carte Pokémon Dracaufeu 4/102 Set de Base'
+
             service_worker.evaluate("""async () => {
                 const [tab] = await chrome.tabs.query({ url: 'https://www.vinted.fr/*' });
                 await chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('popup/popup.html') });

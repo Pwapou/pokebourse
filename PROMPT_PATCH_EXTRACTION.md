@@ -1,5 +1,9 @@
 # Prompt de développement — Renforcement de l'extraction des preuves d'identification
 
+**Revue du 8 novembre 2026 :** ordre de reprise et état transversal dans [TASKING_PROJET.md](TASKING_PROJET.md). Les cases mises à jour décrivent les critères vérifiés dans le code et les tests ; les contrôles manuels ou critères non démontrés restent ouverts.
+
+**État : correctif déterministe implémenté et testé.** Voir `detector.py`, `matcher.py`, `extension/content/content.js`, `tests/test_identification.py`, `tests/test_candidate_number_warning.py` et `tests/test_chrome_extension.py`. Le problème décrit en §1 est le constat de départ. T03 a depuis intégré les observations structurées ; T07 porte les futures hypothèses OCR, sans nouvelle acceptation automatique.
+
 Document de tasking pour agent de code. Date : 2 novembre 2026.
 Références obligatoires avant tout travail : `AGENTS.md` (règles d'or), `docs/IDENTIFICATION_LEXICALE.md`, `TASKING_RECHERCHE_CARTES.md`.
 
@@ -134,13 +138,13 @@ Avant d'écrire le patch, vérifier et rapporter en quelques lignes :
 
 ## 6. Critères d'acceptation
 
-- [ ] `docker compose run --rm app pytest` complet au vert, zéro régression.
+- [x] `docker compose run --rm app pytest` complet au vert, zéro régression.
 - [ ] Tous les cas des matrices 3.3 et 3.4 couverts par des tests nommés explicitement.
-- [ ] `extractCardNumber()` de l'extension alignée + tests extension à jour.
-- [ ] Cas réel « Mentali EX 175 CollectAura 9.5 » traité : preuves extraites, statut honnête (`ambiguous` ou mieux si les indices concordent, jamais un `identified` forcé).
+- [x] `extractCardNumber()` de l'extension alignée + tests extension à jour.
+- [x] Cas réel « Mentali EX 175 CollectAura 9.5 » traité : preuves extraites, statut honnête (`ambiguous` ou mieux si les indices concordent, jamais un `identified` forcé).
 - [ ] Rapport d'étape 0 (point 4) joint à la livraison.
-- [ ] `docs/IDENTIFICATION_LEXICALE.md` mis à jour avec les nouvelles formes reconnues.
+- [x] `docs/IDENTIFICATION_LEXICALE.md` mis à jour avec les nouvelles formes reconnues.
 
 ## 7. Effort estimé
 
-1 à 2 jours de développement, tests inclus.
+Estimation initiale de 1 à 2 jours, conservée comme historique ; le correctif existe. Ne pas la transformer en reste à faire ni en durée mesurée.

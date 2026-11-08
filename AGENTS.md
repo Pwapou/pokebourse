@@ -12,21 +12,28 @@ Avant d'écrire ou de modifier du code, consultez les documents spécialisés du
 | Document | Rôle & Contenu | Quand le consulter ? |
 |---|---|---|
 | [`README.md`](README.md) | **Guide produit & utilisateur** : présentation globale, capture d'écran, visite guidée, installation et CLI. | Pour comprendre la valeur métier, le parcours utilisateur et l'interface web. |
+| [`TASKING_PROJET.md`](TASKING_PROJET.md) | **Suivi consolidé** : état des chantiers, dépendances, critères ouverts et ordre de reprise. | Avant de reprendre un tasking ; à actualiser à chaque livraison. |
 | [`AGENTS.md`](AGENTS.md) | **Ce guide** : règles d'or, architecture interne, conventions, workflow de dev et commandes de test. | **À lire impérativement avant toute session de travail.** |
 | [`SOURCES.md`](SOURCES.md) | **Audit légal et technique des sources** : conditions d'accès (Vinted, Leboncoin, eBay, Wallapop, TCGdex, Cardmarket), respect des CGU, limitations anti-bot, RGPD et solutions de repli. | Dès qu'une modification touche aux collecteurs, au scraping ou aux API externes. |
 | [`SUIVI.md`](SUIVI.md) | **Historique de stabilisation** : audits du pipeline, corrections passées, intégration de TCGdex, Cardmarket, extension Chrome et ML Phase 0. | Pour comprendre l'historique des choix d'architecture et éviter de réintroduire d'anciens bugs. |
 | [`TASKING_INTEGRATION_DESIGN.md`](TASKING_INTEGRATION_DESIGN.md) | **Directives UI Mosaic × Flowbite** : règles de style CSS/HTML, maquettes prototypes historiques (`prototype.html`) et cibles (`prototype-cible.html`). | Pour toute modification d'un template Jinja2 (`app/templates/`) ou du style (`app/static/style.css`). |
 | [`TASKING_SIMPLIFICATION_CIBLE.md`](TASKING_SIMPLIFICATION_CIBLE.md) | **Spécifications simplification & navigation** : parcours « Capturer → Décider → Suivre l'achat », vues `/achats`, `/reglages`, `/gestion`. | Lors de travaux sur la restructuration des pages ou de la navigation. |
 | [`TASKING_RECHERCHE_TENDANCES.md`](TASKING_RECHERCHE_TENDANCES.md) | **Spécifications Recherche avancée & Tendances** : moteur `/search`, recherche externe, métriques `/trends` (avg7/avg30, activité). | Lors de travaux sur la recherche plein texte/attributs ou les tendances de marché. |
+| [`PLAN_RADAR_OPPORTUNITES.md`](PLAN_RADAR_OPPORTUNITES.md) | **Radar partiellement réalisé** : observations/décisions présentes, page, recherches groupées et notifications à compléter. | Pour les décisions d’examen et alertes ; réutiliser les contrats de prix Identification/T09 et T15–T18. |
 | [`PROMPT_PATCH_EXTRACTION.md`](PROMPT_PATCH_EXTRACTION.md) | **Spécifications extraction de preuves renforcée** : numéros isolés sous garde-fous, certificateurs additionnels (`CollectAura`), formats collés. | Lors de travaux sur le détecteur d'identification ou le content script de l'extension. |
 | [`TASKING_RECHERCHE_CARTES.md`](TASKING_RECHERCHE_CARTES.md) | **Spécifications recherche approfondie et confirmations TCGdex** : candidats locaux, recherche ciblée worker, file dédupliquée et révisions. | Lors de travaux sur la réconciliation manuelle ou l'intégration TCGdex. |
-| [`TASKING_IDENTIFICATION_FIABLE.md`](TASKING_IDENTIFICATION_FIABLE.md) | **Plan d'identification de bout en bout à réaliser** : preuves, lots, langues, alias, couverture, OCR, validation humaine, benchmark et vision conditionnelle. | Pour fiabiliser le parcours capture → identification → décision et qualifier ses performances. |
+| [`TASKING_IDENTIFICATION_FIABLE.md`](TASKING_IDENTIFICATION_FIABLE.md) | **Plan actif, acquis et critères restants** : preuves, lots, langues, alias, couverture, OCR, validation humaine, benchmark et vision conditionnelle. | Pour fiabiliser le parcours capture → identification → décision et qualifier ses performances. |
 | [`docs/IDENTIFICATION_LEXICALE.md`](docs/IDENTIFICATION_LEXICALE.md) | **Diagnostic lexical & suggestions orthographiques** : index trigrammes, distance d'édition, vocabulaire TCGdex et limitations. | Lors de travaux sur la recherche lexicale ou les faux négatifs d'identification. |
+| [`docs/identification/T08_CONTROLES_MOTEUR_ACTUEL.md`](docs/identification/T08_CONTROLES_MOTEUR_ACTUEL.md) | **Contrôles moteur actuel & capture** : séparation titre/nom, neutralisation du parasite `n`, isolation prix/identité et langue `und`. | Lors de travaux sur le préremplissage, la saisie manuelle ou la prévisualisation de capture. |
+| [`docs/identification/T19_COLLECTE_OCR.md`](docs/identification/T19_COLLECTE_OCR.md) | **Spécification collecteurs & file OCR** : contrat de collecte, galerie, concurrence app/worker et pipeline d'arrière-plan. | Lors de travaux sur les adaptateurs de collecte ou la file OCR. |
+| [`docs/identification/T03_EVIDENCE.md`](docs/identification/T03_EVIDENCE.md) | **Observations et décision commune** : contrat `identity_evidence`, provenances, observations et diagnostics de conflits. | Lors de travaux sur la décision commune d'identification. |
+| [`docs/identification/T15_SOURCES_PRIX.md`](docs/identification/T15_SOURCES_PRIX.md) | **Matrice des capacités de prix** : offres actives, ventes conclues et cotes agrégées par plateforme. | Lors de travaux sur l'évaluation financière ou le raccordement de sources de prix. |
 | [`docs/ML_PHASE0.md`](docs/ML_PHASE0.md) | **Protocole du pilote d'annotation ML Phase 0** : tirage stratifié, doubles lectures indépendantes et export reproductible. | Lors de travaux sur l'annotation, la labellisation ou la préparation du dataset ML. |
 | [`docs/TCGDEX_SYNC.md`](docs/TCGDEX_SYNC.md) | **Enrichissement TCGdex progressif** : sélection d’extensions, file persistante, pause/reprise, cache et limites de couverture. | Lors de travaux sur la synchronisation du référentiel. |
 | [`MACHINE_LEARNING_DESIGN.md`](MACHINE_LEARNING_DESIGN.md) & [`PROMPT_ML_DESIGN.md`](PROMPT_ML_DESIGN.md) | **Spécifications futures ML** : feuille de route pour le rattachement d'entités, ranking LightGBM, embeddings et vérité terrain. | Lors de travaux sur l'amélioration de l'identification automatique des cartes. |
+| [`docs/identification/PLAN_VALIDATION_LOTS.md`](docs/identification/PLAN_VALIDATION_LOTS.md) & [`tracker.md`](tracker.md) | **Validation et incidents** : critères par lot, preuves, reproduction et revalidation. | Avant de déclarer un lot terminé ou pour suivre un obstacle de validation. |
 | [`extension/README.md`](extension/README.md) | **Spécifications de l'extension Chrome** : Manifest V3, content scripts, service worker, formats JSONL et tests associés. | Pour toute tâche liée au module de capture dans le navigateur. |
-| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 21 migrations séquentielles (de `0001` à `0021`). | Avant toute modification de base de données ou de modèle de données. |
+| [`app/storage/migrations/`](app/storage/migrations/) | **Schéma relationnel SQLite versionné** : 26 migrations séquentielles (de `0001` à `0026` au 8 novembre 2026 ; vérifier le répertoire avant ajout). | Avant toute modification de base de données ou de modèle de données. |
 
 ---
 
@@ -70,6 +77,7 @@ En tant qu'agent de code, vous devez respecter scrupuleusement ces 6 principes f
 - Les montants sont obligatoirement des entiers en centimes : `price_cents`, `shipping_cents`, `min_net_profit_cents`.
 - Les pourcentages et commissions sont en points de base (`bps`) : $1\% = 100\text{ bps}$, $5\% = 500\text{ bps}$, $15,5\% = 1550\text{ bps}$.
 - L'arrondi monétaire appliqué est l'arrondi demi-supérieur (`ROUND_HALF_UP`).
+- Les conversions de devises et paramètres de requêtes collecteurs (Vinted, eBay) utilisent une arithmétique entière exacte (`f"{cents // 100}.{cents % 100:02d}"`), jamais de division flottante (`cents / 100`), avec rejet des centimes négatifs.
 
 ### 📦 Règle 4 : Règle absolue des Lots dans l'identification
 - Si une annonce correspond à un lot, un coffret, un booster ou un paquet en vrac (`is_lot = 1`), **il est formellement interdit de lui attribuer arbitrairement l'identifiant d'une carte unitaire TCGdex**.
@@ -108,15 +116,25 @@ pokebourse/
 │   │   ├── service.py       # Ingestion transactionnelle et déduplication
 │   │   └── browser.py       # Collecteur de secours Crawlee/Playwright (désactivé par défaut)
 │   ├── identification/      # Moteur de réconciliation, diagnostic lexical, OCR & validation ML
+│   │   ├── aliases.py       # Résolution d'alias contrôlés et normalisation de références
 │   │   ├── annotation_pilot.py # Tirage stratifié et gestion du pilote d'annotation Phase 0
 │   │   ├── dataset.py       # Export reproductible du dataset de validation ML (labels.jsonl)
 │   │   ├── detector.py      # Détection regex : numéros (fractions, isolés), extensions, langues, états, lots
 │   │   ├── diagnostics.py   # Diagnostic des annonces non résolues et inventaire du catalogue
+│   │   ├── evidence.py      # Observations et preuves structurées d'identité (identity_evidence)
+│   │   ├── evidence_store.py# Magasin atomique de preuves visuelles (.sqlite.evidence)
 │   │   ├── lexical.py       # Recherche approchée par trigrammes et distance d'édition
 │   │   ├── matcher.py       # Rapprochement avec le catalogue TCGdex et calcul de confiance
 │   │   ├── models.py        # IdentificationResult, CardFeatures, statuts (identified, ambiguous, lot, unidentified)
 │   │   ├── normalization.py # Normalisation de chaînes, accents, casse et numéros
-│   │   ├── ocr.py           # Lecture locale éphémère d'images (Tesseract) et suggestions TCGdex
+│   │   ├── ocr.py           # API OCR historique, cadrage manuel et suggestions
+│   │   ├── ocr_types.py     # Contrats, budgets, échéance et transport du moteur spatial interne
+│   │   ├── ocr_geometry.py  # EXIF, cadrage/homographie et localisation optionnelle
+│   │   ├── ocr_text.py      # Parsing TSV et adaptation au runner borné
+│   │   ├── ocr_numbers.py   # Lectures/hypothèses spatiales et recherche commune
+│   │   ├── ocr_language.py  # Suggestions de langue avec abstention
+│   │   ├── ocr_runner.py    # Processus Tesseract, annulation et sémaphore local
+│   │   ├── ocr_spatial.py   # Orchestration interne sans raccordement HTTP automatique
 │   │   ├── pipeline.py      # Orchestration du pipeline de détection et matching
 │   │   ├── reference_search.py # Recherche plein texte et approchée dans le référentiel officiel
 │   │   ├── research.py      # File d'enrichissement approfondi traitée par le worker
@@ -149,8 +167,8 @@ pokebourse/
 │   │   ├── scheduler.py     # Ordonnancement périodique et verrous de concurrence par plateforme
 │   │   └── service.py       # Logique d'activation, pause, contrôle immédiat
 │   ├── storage/             # Gestion de la persistance SQLite
-│   │   ├── connection.py    # Création des connexions avec WAL et busy_timeout
-│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0021)
+│   │   ├── database.py      # Création des connexions avec WAL et busy_timeout
+│   │   └── migrations/      # Migrations SQL séquentielles (0001 à 0026 au 8 novembre 2026)
 │   ├── templates/           # Vues HTML Jinja2 (Mosaic × Flowbite)
 │   │   ├── base.html        # Layout global : sidebar, topbar, menu « Ajouter des annonces »
 │   │   ├── dashboard.html   # Tableau de bord principal (KPIs, opportunités, imports)
@@ -170,6 +188,7 @@ pokebourse/
 │   │   ├── agents.html      # Supervision en direct des collecteurs et IP publiques
 │   │   ├── agent_detail.html# Détail d'un agent et historique d'incidents
 │   │   ├── backups.html     # Sauvegarde et restauration SQLite
+│   │   ├── tasking.html     # Vue de suivi du projet, plans et incidents en lecture seule
 │   │   ├── annotation_dashboard.html # Tableau de bord du pilote d'annotation ML Phase 0
 │   │   ├── annotation_blocked.html   # Écran d'attente d'un second opérateur
 │   │   ├── identification_diagnostics.html # Diagnostic des annonces non résolues
@@ -185,6 +204,7 @@ pokebourse/
 │   ├── manual_listing.py    # Saisie assistée par URL d'annonce sans téléchargement distant
 │   ├── profitability.py     # Moteur financier (calcul gain net, ROI, cotes de marché, comparables)
 │   ├── purchases.py         # Synthèse des achats, cycle de vie et montants par devise
+│   ├── tasking.py           # Lecture seule des plans Markdown et suivi projet
 │   ├── backups.py           # Logique de sauvegarde SQLite et vérification d'intégrité
 │   ├── cli.py               # Interface CLI Typer (pokemon-arbitrage)
 │   ├── web.py               # Serveur FastAPI et toutes les routes HTTP
@@ -202,7 +222,7 @@ pokebourse/
 ├── scripts/                 # Scripts utilitaires en lecture seule ou de test ponctuel
 │   ├── comparables_report.py # Rapport de contrôle des comparables et preuves de prix
 │   └── manual_collect_test.py # Test ponctuel manuel d'une recherche marketplace
-└── tests/                   # 43 suites de tests automatisés (452 tests, 100% passants)
+└── tests/                   # 63 fichiers test_*.py ; 936 tests passants dans Docker au 8 novembre 2026
 ```
 
 ---
@@ -222,26 +242,29 @@ docker compose run --rm app pytest -v
 
 ### Tester un module spécifique
 ```bash
-# Tester l'extension Chrome et le parcours de prévisualisation
-docker compose run --rm app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v
+# Tester l'extension Chrome, prévisualisation et workflow de capture
+docker compose run --rm app pytest tests/test_chrome_extension.py tests/test_capture_preview.py tests/test_capture_workflow.py -v
 
 # Tester le moteur d'identification, numéros isolés et réconciliation TCGdex
 docker compose run --rm app pytest tests/test_identification.py tests/test_candidate_number_warning.py tests/test_tcgdex_cache.py -v
 
-# Tester la recherche avancée multi-critères et externe
+# Tester la recherche avancée multi-critères, tris financiers et externe
 docker compose run --rm app pytest tests/test_search.py -v
 
-# Tester les tendances de marché et opportunités
+# Tester les tendances de marché, pagination et opportunités
 docker compose run --rm app pytest tests/test_trends.py -v
 
 # Tester la saisie d'annonce manuelle par URL et la prévisualisation locale
 docker compose run --rm app pytest tests/test_manual_listing.py tests/test_listing_preview.py tests/test_page_extract.py -v
 
-# Tester l'OCR local éphémère (Tesseract)
-docker compose run --rm app pytest tests/test_ocr_local.py tests/test_ocr_web.py -v
+# Tester l'OCR local éphémère (Tesseract), cadrage et preuves visuelles
+docker compose run --rm app pytest tests/test_ocr_local.py tests/test_ocr_web.py tests/test_ocr_crop_browser.py tests/test_visual_evidence.py -v
 
 # Tester la simplification de la navigation et les pages cibles (/achats, /reglages, /gestion)
 docker compose run --rm app pytest tests/test_simplification_navigation.py tests/test_simplification_avancee.py -v
+
+# Tester le suivi de projet en lecture seule (/tasking)
+docker compose run --rm app pytest tests/test_tasking.py -v
 
 # Tester la recherche lexicale, les diagnostics et la recherche approfondie
 docker compose run --rm app pytest tests/test_lexical_identification.py tests/test_identification_research.py -v
@@ -261,7 +284,7 @@ docker compose run --rm app pytest tests/test_sellers_directory_and_purchases.py
 # Tester la supervision et les collecteurs (Vinted, Leboncoin, eBay, Wallapop)
 docker compose run --rm app pytest tests/test_supervision.py tests/test_collectors.py -v
 
-# Tester l'idempotence des migrations SQLite (0001 à 0021)
+# Tester l'idempotence des migrations SQLite (inventaire courant : 0001 à 0026)
 docker compose run --rm app pytest tests/test_migrations.py -v
 ```
 
@@ -291,15 +314,15 @@ docker compose run --rm app python -m scripts.comparables_report
 ## 🚀 6. Guide Pas-à-Pas pour vos Développements (Workflows)
 
 ### Cas 1 : Vous devez modifier le schéma SQLite
-1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (actuellement `0021_purchase_sale_price.sql`).
-2. Créez un nouveau fichier `0022_<nom_explicite>.sql`.
+1. Repérez le dernier numéro de migration dans `app/storage/migrations/` (`0026_tcgdex_sync_locale.sql` au 8 novembre 2026 ; vérifier l’état courant).
+2. Créez le numéro suivant disponible (`0027_<nom_explicite>.sql` seulement si `0026` reste le dernier).
 3. Encadrez toujours vos instructions SQL avec :
    ```sql
    BEGIN IMMEDIATE;
    
    -- Vos ALTER TABLE ou CREATE TABLE ici
    
-   INSERT INTO schema_migrations (version) VALUES ('0022_<nom_explicite>.sql');
+   INSERT INTO schema_migrations (version) VALUES ('0027_<nom_explicite>.sql');
    COMMIT;
    ```
 4. Mettez à jour `tests/test_migrations.py` pour inclure le nouveau numéro de migration attendu.
@@ -325,6 +348,12 @@ docker compose run --rm app python -m scripts.comparables_report
 
 ---
 
+### Suivi des erreurs du chantier Identification/OCR
+
+Pour les lots de `TASKING_IDENTIFICATION_FIABLE.md`, consulter [le plan skills/tests/intégrations/validation](docs/identification/PLAN_VALIDATION_LOTS.md). Toute erreur rencontrée ou tout problème d'intégration qui empêche une validation requise doit être créé ou mis à jour dans [`tracker.md`](tracker.md) : ID stable, lot/étape, preuve, reproduction, responsable de la prochaine action et tests de revalidation. Distinguer défaut observé, risque à reproduire et capacité indisponible. Mettre à jour l'entrée avec le correctif et les résultats ; ne pas la clôturer sur la seule modification du code ni présenter un test sauté/non exécuté comme passant. Un incident bloquant empêche la validation du périmètre concerné, sans interrompre les autres travaux indépendants.
+
+---
+
 ## ⚠️ 7. Anti-Patterns & Pièges Fréquents à Éviter
 
 - ❌ **Anti-pattern 1 : `float` pour les prix** :  
@@ -341,6 +370,10 @@ docker compose run --rm app python -m scripts.comparables_report
   Effacerait le volume SQLite `pokemon-data` de l'utilisateur. Préférez toujours `docker compose down`.
 
 ---
+
+## Suivi documentaire à chaque livraison
+
+Mettre à jour [TASKING_PROJET.md](TASKING_PROJET.md), le plan concerné et le bilan daté de [SUIVI.md](SUIVI.md). Vérifier les critères individuellement : code, tests, recette, qualification et disponibilité externe restent distincts. Les anciens numéros de migration et inventaires dans les rapports historiques ne sont pas des instructions courantes. Les défauts et obstacles de validation vont dans [tracker.md](tracker.md), avec mise à jour du tableau de synthèse et du détail sous le même ID.
 
 ## ✅ Checklist Finale avant d'Achever votre Tâche
 

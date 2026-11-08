@@ -1,5 +1,7 @@
 # Recherche lexicale et diagnostic des annonces
 
+**Revue du 8 novembre : baseline lexicale existante**, à mesurer avant toute alternative FTS5/BM25 ou modèle appris. Pour les alias/localisations livrés et la suite OCR, consulter [TASKING_PROJET.md](../TASKING_PROJET.md) et [Identification](../TASKING_IDENTIFICATION_FIABLE.md).
+
 Version `lexical-v1`, 1er novembre 2026. Cette étape améliore la récupération des
 candidats à partir du catalogue local et prépare le diagnostic du pilote ML.
 Aucun modèle supervisé n’est entraîné ou activé.

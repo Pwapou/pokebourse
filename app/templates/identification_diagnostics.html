@@ -18,7 +18,7 @@
 {% if report.catalog.card_count == 0 %}<div class="alert error">Le catalogue local est vide. Complétez-le avant d’évaluer la capacité de recherche.</div>{% endif %}
 <section class="panel" aria-labelledby="scope-title">
     <div class="panel-heading"><h2 id="scope-title">Choisir les annonces à examiner</h2></div>
-    <form method="get" class="review-search">
+    <form method="get" action="/identification/diagnostics" class="review-search">
         <label>Statut<select name="status">
             {% for value, label in [('unidentified', 'Non identifiées'), ('ambiguous', 'À vérifier'), ('all', 'Toutes les non résolues')] %}<option value="{{ value }}" {{ 'selected' if report.status == value else '' }}>{{ label }}</option>{% endfor %}
         </select></label>

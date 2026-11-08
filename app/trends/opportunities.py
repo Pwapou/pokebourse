@@ -14,7 +14,7 @@ from app.profitability import (
     find_price_comparables,
     get_active_fee_profile,
 )
-from app.trends.models import BestOpportunityItem
+from app.trends.models import BestOpportunityItem, OpportunitiesPage
 
 
 def _latest_catalog_comparable_observation(
@@ -73,7 +73,8 @@ def get_best_opportunities(
     rarity: str = "",
     language: str = "",
     limit: int = 20,
-) -> list[BestOpportunityItem]:
+    offset: int = 0,
+) -> OpportunitiesPage:
     """Sélectionne et classe les meilleures opportunités selon le moteur de rentabilité.
 
     Règles absolues :
@@ -82,7 +83,9 @@ def get_best_opportunities(
     - inclus uniquement les annonces actives, cartes unitaires identifiées avec cote disponible ;
     - inclus uniquement les calculs complets avec tous les frais nécessaires renseignés ;
     - exclut les lots, annonces ambiguës, inactives et les cotes expirées ;
-    - tri par gain net décroissant, puis ROI décroissant, puis identifiant stable.
+    - tri par gain net décroissant, puis ROI décroissant, puis identifiant stable ;
+    - le découpage par ``offset`` s'applique après le tri complet : l'ordre est
+      stable d'une page à l'autre et ``total`` couvre toutes les opportunités éligibles.
     """
     now_utc = (now or datetime.now(UTC)).astimezone(UTC)
     profile = get_active_fee_profile(connection)
@@ -220,4 +223,5 @@ def get_best_opportunities(
         ))
 
     candidates.sort(key=lambda t: (t[0], t[1], t[2]))
-    return [c[3] for c in candidates[:limit]]
+    items = [c[3] for c in candidates]
+    return OpportunitiesPage(items=items[offset : offset + limit], total=len(items))

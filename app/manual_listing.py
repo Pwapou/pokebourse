@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from app.catalog import CatalogImportError, CatalogItem, import_jsonl, validate_public_image_url
 from app.collectors.page_extract import extract_html
 from app.collectors.page_fetch import PageFetchError, fetch_listing_image, fetch_listing_page, fetch_policy_for_url
-from app.listing_preview import prefill_identity_fields, preview_listing
+from app.listing_preview import prefill_identity_fields, preview_listing, preview_form
 from app.profitability import ProfitabilityError, parse_euros_to_cents
 from app.storage.database import connect
 from app.identification.evidence import form_evidence
@@ -121,7 +121,7 @@ _FORM_FIELDS = (
     "ocr_names", "ocr_numbers",
     "captured_title", "captured_description", "captured_price", "captured_shipping",
     "captured_currency", "captured_condition", "captured_image_url",
-    "proposed_name", "proposed_set_name", "proposed_card_number", "ocr_status",
+    "proposed_name", "proposed_set_name", "proposed_card_number", "ocr_status", "proposal_source_name", "proposal_source_set_name", "proposal_source_card_number",
 )
 
 # Correspondance champs du formulaire ↔ champs extraits de la page.
@@ -325,10 +325,8 @@ async def prepare_listing(request: Request) -> HTMLResponse:
     if extraction:
         from app.listing_preview import preview_listing
         try:
-            price = parse_euros_to_cents(values["price"], "Prix affiché") if values.get("price") else None
-            shipping = parse_euros_to_cents(values["shipping"], "Port") if values.get("shipping") else None
             with connect(request.app.state.settings.database_path) as connection:
-                preview = preview_listing(connection, {**values, "price_cents": price, "shipping_cents": shipping})
+                preview = preview_form(connection, values)
             prefill_identity_fields(values, preview)
         except (ValueError, ProfitabilityError):
             fetch_notice = (fetch_notice + " Identification ou prix indisponible : vérifiez les champs et relancez l’analyse.").strip()
@@ -345,10 +343,8 @@ async def preview_manual_listing(request: Request) -> HTMLResponse:
     try:
         parsed = parse_listing_url(values["url"])
         values.update({key: parsed[key] for key in ("url", "platform", "platform_label", "external_id")})
-        price = parse_euros_to_cents(values["price"], "Prix affiché") if values["price"] else None
-        shipping = parse_euros_to_cents(values["shipping"], "Port") if values["shipping"] else None
         with connect(request.app.state.settings.database_path) as connection:
-            preview = preview_listing(connection, {**values, "price_cents": price, "shipping_cents": shipping})
+            preview = preview_form(connection, values)
         prefill_identity_fields(values, preview)
         return _render(request, values=values, stage="review", preview=preview)
     except (ValueError, ProfitabilityError) as error:
@@ -365,13 +361,28 @@ async def save_listing(request: Request) -> Response:
     except ValueError as error:
         return _render(request, values={"url": values["url"]}, error=str(error))
     values.update({key: parsed[key] for key in ("url", "platform", "platform_label", "external_id")})
+    preview = None
     try:
+        # Même une soumission finale sans JavaScript garde les candidats quand
+        # les montants doivent être corrigés ; aucune écriture/OCR ici.
+        with connect(request.app.state.settings.database_path) as connection:
+            if connection.execute(
+                "SELECT 1 FROM catalog_items c JOIN sources s ON s.id=c.source_id WHERE s.name=? AND c.external_id=?",
+                (parsed["platform"], parsed["external_id"]),
+            ).fetchone():
+                raise CatalogImportError("Cette annonce existe déjà pour cette plateforme.")
+            preview = preview_form(connection, values)
         if "@" in values["seller"] or re.search(r"(?<!\d)(?:\+?\d[\s.()-]*){9,}(?!\d)", values["seller"]):
             raise ValueError("Indiquez uniquement un pseudonyme public, sans adresse e-mail ni numéro de téléphone.")
         price = parse_euros_to_cents(values["price"], "Prix affiché")
         shipping = parse_euros_to_cents(values["shipping"], "Port") if values["shipping"] else None
         if not re.fullmatch(r"[A-Za-z]{3}", values["currency"]):
             raise ValueError("Indiquez la devise de l’annonce avec son code à trois lettres, par exemple EUR.")
+        values["language"] = values["language"] or "und"
+        if any(check["status"] == "invalid" for check in preview["field_checks"].values()):
+            raise ValueError("Vérifiez les champs d’identité invalides avant l’ajout.")
+        if preview["identification"]["reason_code"] == "contradiction":
+            raise ValueError("Preuves contradictoires : vérifiez les champs avant l’ajout.")
         data = {
             "identity_evidence": form_evidence(values),
             "external_id": parsed["external_id"], "url": parsed["url"], "name": values["name"],
@@ -381,7 +392,8 @@ async def save_listing(request: Request) -> Response:
             "shipping_cents": shipping, "currency": values["currency"].upper(),
             "image_url": values["image_url"] or None,
             "description": values["description"] or None,
-            "raw_data": {"title": values["title"], "ocr_status": values["ocr_status"]},
+            "raw_data": {"title": values["captured_title"] or values["title"],
+                         "edited_title": values["title"], "ocr_status": values["ocr_status"]},
         }
         item = CatalogItem.model_validate(data)
         content = json.dumps(item.model_dump(mode="json", exclude_none=True), ensure_ascii=False).encode("utf-8")
@@ -400,4 +412,4 @@ async def save_listing(request: Request) -> Response:
             message = ("Adresse de l’image invalide : une URL HTTPS publique est requise."
                        if any(issue.get("loc", (None,))[0] == "image_url" for issue in error.errors())
                        else "Vérifiez le nom, l’extension, la langue et les autres champs saisis.")
-        return _render(request, values=values, error=message, stage="review")
+        return _render(request, values=values, error=message, stage="review", preview=preview)

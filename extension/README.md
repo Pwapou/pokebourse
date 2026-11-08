@@ -1,5 +1,7 @@
 # Extension Google Chrome — Pokébourse Capture
 
+**État du développement au 8 novembre :** capture partielle, séparation titre/nom et contrôles du moteur actuel testés ; voir [T08](../docs/identification/T08_CONTROLES_MOTEUR_ACTUEL.md) et [le suivi consolidé](../TASKING_PROJET.md). L'envoi OCR actuel attend encore l'analyse depuis le popup avant ouverture de la prévisualisation ; continuité hors popup, choix de référence avant ajout et nouveau moteur spatial restent T08.2/T09, pas des capacités déjà acquises.
+
 Module Chrome officiel (Manifest V3) permettant de capturer automatiquement ou semi-automatiquement les annonces Pokémon lors de votre navigation réelle (Vinted, Leboncoin, eBay, boutiques TCG, etc.) et de les injecter directement dans Pokébourse.
 
 ---
@@ -58,7 +60,7 @@ Le popup met à disposition 4 modes de transfert :
    - Chaque champ est présenté avec sa provenance : **extrait** de la page, **saisi/corrigé** par vous (ancienne et nouvelle valeur affichées côte à côte), ou **manquant** — jamais inventé.
    - L'identification proposée (détecteur + matcher + référentiel TCGdex local) affiche statut, candidats, score et motif ; ce n'est **pas** une confirmation humaine et ne le devient pas sans action explicite. Un lot ne reçoit jamais arbitrairement l'identité d'une carte unitaire.
    - La rentabilité indicative utilise uniquement les références locales (cotes enregistrées, médiane des comparables, Cardmarket relié de façon fiable) : achat, port (celui de l'annonce prime, y compris à zéro ; celui du profil en repli), coût d'acquisition, revente estimée avec source/nature/date, frais, gain net, marge et ROI. Ce n'est ni un prix temps réel garanti, ni une vente conclue, ni une preuve d'état ou d'authenticité.
-   - Après correction éventuelle (la langue doit être choisie explicitement, jamais déduite), **« Confirmer et ajouter l'annonce »** enregistre via le flux transactionnel existant : déduplication, pseudonyme vendeur limité aux champs publics autorisés, `first_seen_at` préservé en cas de doublon.
+   - Après correction éventuelle (la langue peut rester explicitement **Inconnue**, code `und`, sans défaut français), **« Confirmer et ajouter l'annonce »** enregistre via le flux transactionnel existant : déduplication, pseudonyme vendeur limité aux champs publics autorisés, `first_seen_at` préservé en cas de doublon.
    - **Aucune écriture n'a lieu pendant la prévisualisation.** Si Pokébourse est indisponible, le popup l'indique clairement et vos captures restent enregistrées dans l'extension.
 2. **🚀 Envoyer à Pokébourse** :
    Sélectionnez une annonce. L'extension récupère son image principale si elle est disponible sur un domaine d'images pris en charge, puis la transmet au moteur OCR local. Les indices reconnus alimentent l'identification et restent à vérifier. Un onglet de prévisualisation s'ouvre même si le prix, la devise ou l'image manquent : complétez les champs requis et confirmez pour enregistrer l'annonce.
@@ -110,9 +112,9 @@ avec les références contradictoires dans une rubrique de diagnostic distincte.
 Le contrat JSONL historique reste accepté ; le champ optionnel `identity_evidence`
 est décrit dans [le guide T03](../docs/identification/T03_EVIDENCE.md).
 
-La compatibilité du manifest, des fichiers graphiques et du format d'échange JSONL avec le backend Pokébourse est validée par les tests d'intégration. Le parcours de prévisualisation (transmission des champs capturés, sélection unique, application indisponible) est couvert à la fois côté popup (Playwright) et côté serveur (analyse sans écriture, correction conservée, enregistrement confirmé, doublon) :
+La compatibilité du manifest, des fichiers graphiques et du format d'échange JSONL avec le backend Pokébourse est validée par les tests d'intégration. Le parcours de prévisualisation (transmission des champs capturés, sélection unique, application indisponible) et le cycle complet de capture sont couverts à la fois côté popup (Playwright) et côté serveur (analyse sans écriture, correction conservée, enregistrement confirmé, doublon, contrats W01–W09) :
 ```bash
-docker compose exec app pytest tests/test_chrome_extension.py tests/test_capture_preview.py -v
+docker compose run --rm app pytest tests/test_chrome_extension.py tests/test_capture_preview.py tests/test_capture_workflow.py tests/test_identification_evidence_browser.py -v
 ```
 Tous les tests sont au vert.
 
@@ -123,3 +125,9 @@ Le parcours complet « capture → Envoyer → OCR → prévisualisation → con
 docker compose exec app pytest tests/test_extension_e2e.py -v
 ```
 Ce test ne valide pas le comportement sur une marketplace réelle.
+
+### Contrat titre/identité et contrôles (T08.1)
+
+Le titre vendeur reste dans `raw_data.title`. Les nouvelles captures laissent `name` vide jusqu’à une proposition du référentiel ; le popup affiche toujours le titre. Les anciens `name == title` restent lisibles : la prévisualisation les traite comme un repli, remplaçable par une proposition, tout en conservant l’original. Les exports gardent les champs historiques requis et transmettent explicitement `language: "und"` si elle est inconnue ; les anciens JSONL sans langue conservent leur compatibilité historique.
+
+Les champs proposés depuis le référentiel ou l’OCR restent indicatifs à la réanalyse et à l’ajout. Un prix/port invalide est signalé séparément et ne bloque pas la recherche de carte. Les corrections financières réutilisent les indices OCR déjà transmis. La langue du catalogue ne prouve jamais celle de la carte vendue.

@@ -1,5 +1,9 @@
 # Pokébourse — Plan et tasking : Recherche avancée & Tendances
 
+**Revue du 8 novembre 2026 :** ordre de reprise et état transversal dans [TASKING_PROJET.md](TASKING_PROJET.md). Les cases mises à jour décrivent les critères vérifiés dans le code et les tests ; les contrôles manuels ou critères non démontrés restent ouverts.
+
+**État : lots 1–3 réalisés, testés et recettés ; lot 4 conditionnel.** `app/search/`, `app/trends/`, migration `0020_search_indexes.sql`, `tests/test_search.py` et `tests/test_trends.py` sont présents et vérifiés (diagnostic explicite des métadonnées non chargées, factorisation des clauses SQL communes `build_common_listing_clauses`, profilage `EXPLAIN QUERY PLAN` sur jeu représentatif isolé et recette navigateur aux 5 largeurs 1440/1024/768/390/320 px + clavier). La recherche eBay existante utilise le HTML, pas l'API officielle ; disponibilité réelle à requalifier avec T15. Restant : lot 4 conditionnel aux transactions documentées avec pays (T0.2). La fenêtre d'activité actuelle est de 30 jours ; les choix 7/30 et 1/7 concernent les moyennes de prix.
+
 **Articulation avec le parcours identification → marché :** le [tasking Identification fiable, comparaison de marché et marge](TASKING_IDENTIFICATION_FIABLE.md) ajoute les lots **T14 à T18 / J3**, à réaliser, pour les cartes unitaires non gradées et gradées PSA/PCA. Il pilote la future recherche automatique après enregistrement d'une identité admissible, la confirmation en cas de doute, les comparables et le scénario de marge. Le présent document conserve la recherche externe explicite de `/search` et les métriques de tendances. Réutiliser les mêmes connecteurs et preuves ; ne pas créer deux politiques de comparaison contradictoires. Zone géographique, repli sans prix suffisants, canal de revente et assouplissements de comparabilité restent ouverts dans le registre de décisions du tasking principal.
 
 ## 1. Objectif produit
@@ -63,7 +67,7 @@ Principes non négociables :
 - source et pays lorsque la donnée existe ;
 - prix minimum/maximum pour les annonces ;
 - statut d’identification et inclusion/exclusion des lots ;
-- tri : pertinence, nom, année, prix, nouveauté, gain net ou ROI selon la portée.
+- tri actuel : pertinence, nom, année/numéro pour les références ; pertinence, nom, prix ou date d’import pour les annonces, complétés par gain net décroissant et ROI décroissant (calculés par le moteur de rentabilité, annonces non évaluées en dernier, ordre stable) ; `/catalog` les propose déjà.
 
 #### Règles de résultat
 
@@ -87,7 +91,7 @@ Principes non négociables :
 
 #### Filtres communs
 
-- période : 7 ou 30 jours selon la métrique ;
+- période : moyennes `avg7/avg30` ou `avg1/avg7` pour les prix ; activité sur 30 jours dans la page actuelle ;
 - pays : seulement si renseigné par la source, sinon « Non disponible » ;
 - extension, rareté, langue, état et devise lorsque applicables ;
 - seuil minimal d’observations/produits ;
@@ -137,7 +141,7 @@ app/
 │   ├── search.html
 │   └── trends.html
 └── storage/migrations/
-    └── 0020_*.sql         # Seulement si une persistance nouvelle est nécessaire
+    └── 0020_search_indexes.sql  # Livrée ; ne pas recréer ni modifier cette migration
 ```
 
 - `app/web.py` expose `GET /search`, `GET /trends` et les actions externes explicites.
@@ -153,11 +157,11 @@ app/
 ### Lot 0 — Cadrage technique et sécurité
 
 #### T0.1 — Baseline et contrat des métriques
-- [ ] Exécuter la suite de tests avant développement.
-- [ ] Mesurer le volume des annonces, références et prix pour anticiper les index.
-- [ ] Valider les libellés « prix », « activité des annonces », « ventes conclues ».
-- [ ] Définir la fenêtre glissante en UTC et les seuils minimaux par métrique.
-- [ ] Définir la fraîcheur maximale d’une cote éligible aux meilleures affaires.
+- [x] Exécuter la suite de tests avant développement.
+- [x] Mesurer le volume des annonces, références et prix pour anticiper les index.
+- [x] Valider les libellés « prix », « activité des annonces », « ventes conclues ».
+- [x] Définir la fenêtre glissante en UTC et les seuils minimaux par métrique.
+- [x] Définir la fraîcheur maximale d’une cote éligible aux meilleures affaires.
 
 **Livrable :** règles métier validées et tests initiaux verts.
 
@@ -172,82 +176,83 @@ app/
 ### Lot 1 — Recherche locale avancée
 
 #### T1.1 — Modèle de filtres et normalisation
-- [ ] Créer `SearchFilters` avec bornes, longueurs maximales et listes blanches.
-- [ ] Normaliser langue, devise, état et années sans écraser les valeurs inconnues.
-- [ ] Définir les tris autorisés et la pertinence exacte/approchée.
-- [ ] Refuser les intervalles incohérents (`min > max`) avec un message clair.
+- [x] Créer `SearchFilters` avec bornes, longueurs maximales et listes blanches.
+- [x] Normaliser langue, devise, état et années sans écraser les valeurs inconnues.
+- [x] Définir les tris autorisés et la pertinence exacte/approchée.
+- [x] Refuser les intervalles incohérents (`min > max`) avec un message clair.
 
 **Dépendance :** T0.1.  
 **Tests :** validation, bornes, valeurs vides, paramètres inconnus.
 
 #### T1.2 — Service de recherche du référentiel
-- [ ] Étendre la recherche existante sans casser `search_references`.
-- [ ] Filtrer par nom/numéro/ID, extension, rareté et année via `release_date`.
-- [ ] Ajouter pagination, total, tri et suggestions orthographiques séparées.
-- [ ] Signaler quand la rareté ou l’année n’est pas chargée localement.
+- [x] Étendre la recherche existante sans casser `search_references`.
+- [x] Filtrer par nom/numéro/ID, extension, rareté et année via `release_date`.
+- [x] Ajouter pagination, total, tri et suggestions orthographiques séparées.
+- [x] Vérifier et compléter un diagnostic explicite quand rareté/année ne sont pas chargées ; ne pas confondre affichage vide et preuve d’absence.
 
 **Dépendance :** T1.1.  
 **Tests :** correspondances exactes, fuzzy, filtres combinés, données absentes.
 
 #### T1.3 — Service de recherche des annonces
-- [ ] Factoriser les filtres catalogue réutilisables sans dupliquer la logique métier.
-- [ ] Ajouter état, langue, rareté référencée, année, variante, édition, grade et prix.
-- [ ] Joindre la référence uniquement pour les attributs officiels.
-- [ ] Ajouter tris, pagination, compteur et requêtes paramétrées.
-- [ ] Préserver le comportement actuel de `/catalog` et de son export.
+- [x] Réutiliser le moteur financier pour enrichir les résultats.
+- [x] Revoir la factorisation des filtres catalogue/recherche : clauses communes (`build_common_listing_clauses`) mutualisées entre `/catalog` et `/search` ; filtres avancés propres à `/search` conservés séparément.
+- [x] Ajouter état, langue, rareté référencée, année, variante, édition, grade et prix.
+- [x] Joindre la référence uniquement pour les attributs officiels.
+- [x] Ajouter tris, pagination, compteur et requêtes paramétrées.
+- [x] Préserver le comportement actuel de `/catalog` et de son export.
 
 **Dépendance :** T1.1.  
 **Tests :** combinaisons, lots, annonces non identifiées, SQL injection, pagination.
 
 #### T1.4 — Index SQLite
-- [ ] Profiler les requêtes avec `EXPLAIN QUERY PLAN` sur un volume représentatif.
-- [ ] Ajouter uniquement les index justifiés dans une migration `0020_search_indexes.sql` si nécessaire.
-- [ ] Respecter `BEGIN IMMEDIATE;`, `COMMIT;` et `schema_migrations`.
-- [ ] Mettre à jour les migrations attendues dans les tests.
+- [x] Profiler les requêtes avec `EXPLAIN QUERY PLAN` sur un volume représentatif.
+- [x] Conserver les index livrés dans `0020_search_indexes.sql` ; aucun nouvel index supplémentaire requis au vu des plans et mesures sur jeu représentatif isolé.
+- [x] Respecter `BEGIN IMMEDIATE;`, `COMMIT;` et `schema_migrations`.
+- [x] Mettre à jour les migrations attendues dans les tests.
 
 **Dépendance :** T1.2 et T1.3.  
 **Tests :** idempotence, migration depuis `0019`, non-régression.
 
 #### T1.5 — Routes et interface `/search`
-- [ ] Ajouter la route GET, le template et l’entrée de navigation.
-- [ ] Construire le formulaire complet et les sections de résultats.
-- [ ] Conserver tous les filtres dans l’URL, la pagination et l’export.
-- [ ] Prévoir états vide, aucun résultat, erreur et référentiel incomplet.
-- [ ] Respecter Mosaic × Flowbite, clavier, responsive et absence de dépendances distantes.
+- [x] Ajouter la route GET, le template et l’entrée de navigation.
+- [x] Construire le formulaire complet et les sections de résultats.
+- [x] Conserver tous les filtres dans l’URL, la pagination et l’export.
+- [x] Prévoir états vide, aucun résultat, erreur et référentiel incomplet.
+- [x] Respecter Mosaic × Flowbite, clavier, responsive et absence de dépendances distantes.
 
 **Dépendance :** T1.2 et T1.3.  
 **Tests :** routes, contextes, échappement HTML, 320/390/768/1024/1440 px.
 
 #### T1.6 — Export cohérent
-- [ ] Réutiliser les mêmes filtres que la recherche annonces.
-- [ ] Ajouter les colonnes utiles sans exposer de données vendeur interdites.
-- [ ] Vérifier que le nombre exporté correspond au résultat affiché hors pagination.
+- [x] Réutiliser les mêmes filtres que la recherche annonces.
+- [x] Ajouter les colonnes utiles sans exposer de données vendeur interdites.
+- [x] Vérifier que le nombre exporté correspond au résultat affiché hors pagination.
 
 **Dépendance :** T1.3 et T1.5.
 
 ### Lot 2 — Recherche externe contrôlée
 
 #### T2.1 — Orchestrateur externe
-- [ ] Définir un contrat commun : résultats, source, erreurs, fraîcheur et durée.
-- [ ] Exécuter la recherche uniquement après action explicite.
-- [ ] Isoler les erreurs par source et conserver les résultats locaux.
-- [ ] Appliquer timeouts, limites, backoff et `Retry-After`.
+- [x] Définir un contrat commun : résultats, source, erreurs, fraîcheur et durée.
+- [x] Exécuter la recherche uniquement après action explicite.
+- [x] Isoler les erreurs par source et conserver les résultats locaux.
+- [x] Appliquer timeouts, limites, backoff et `Retry-After`.
 
 **Dépendance :** Lot 1 et audit `SOURCES.md`.
 
 #### T2.2 — Complétion TCGdex
-- [ ] Réutiliser la file persistante et le cache existants.
-- [ ] Ne transmettre que les critères de carte nécessaires.
-- [ ] Rafraîchir les résultats locaux après traitement worker.
-- [ ] Ne jamais faire d’appel TCGdex dans les tests.
+- [x] Réutiliser la file persistante et le cache existants.
+- [x] Ne transmettre que les critères de carte nécessaires.
+- [x] Rafraîchir les résultats locaux après traitement worker.
+- [x] Ne jamais faire d’appel TCGdex dans les tests.
 
 **Dépendance :** T2.1.
 
 #### T2.3 — Import des résultats externes retenus
-- [ ] Dédupliquer via `(source_id, external_id)`.
-- [ ] Préserver `first_seen_at` et actualiser uniquement les champs autorisés.
-- [ ] Enregistrer les observations de prix.
-- [ ] Lancer identification puis rentabilité selon les règles existantes.
+- [x] Dédupliquer via `(source_id, external_id)`.
+- [x] Préserver `first_seen_at` et actualiser uniquement les champs autorisés.
+- [x] Enregistrer les observations de prix.
+- [x] Lancer identification puis rentabilité selon les règles existantes.
 
 **Dépendance :** T2.1.  
 **Tests :** doublons, timestamps, indisponibilité, aucune requête réelle.
@@ -255,38 +260,41 @@ app/
 ### Lot 3 — Tendances et meilleures affaires
 
 #### T3.1 — Service de variations de prix
-- [ ] Calculer les variations 7/30 et 1/7 jours en entiers.
-- [ ] Fournir hausses, baisses, prix, fraîcheur et taille de l’échantillon disponible.
-- [ ] Exclure les comparaisons impossibles et signaler les rattachements partiels.
-- [ ] Paginer et borner les résultats.
+- [x] Calculer les variations 7/30 et 1/7 jours en entiers.
+- [x] Fournir hausses, baisses, prix, fraîcheur et taille de l’échantillon disponible.
+- [x] Exclure les comparaisons impossibles et signaler les rattachements partiels.
+- [x] Borner les classements par `limit`.
+- [x] Paginer les trois classements au-delà de la limite (`page` + `offset` sur listes triées complètes, totaux exacts, filtres conservés dans les liens et ordre stable d'une page à l'autre).
 
 **Dépendance :** T0.1.  
 **Tests :** arrondis, zéro, null, devises, doublons de produits.
 
 #### T3.2 — Service d’activité des annonces sur 30 jours
-- [ ] Compter annonces distinctes et nouvelles annonces par carte identifiée.
-- [ ] Utiliser les observations et `first_seen_at` sans écraser l’historique.
-- [ ] Séparer clairement activité et disparition d’annonce d’une vente conclue.
-- [ ] Ajouter filtres extension/rareté/langue et seuil minimal.
+- [x] Compter annonces distinctes et nouvelles annonces par carte identifiée.
+- [x] Utiliser les observations et `first_seen_at` sans écraser l’historique.
+- [x] Séparer clairement activité et disparition d’annonce d’une vente conclue.
+- [x] Ajouter filtres extension/rareté/langue et seuil minimal.
 
 **Dépendance :** T0.1.  
 **Tests :** ré-ingestion, doublons, fenêtre exacte, lots et ambiguïtés.
 
 #### T3.3 — Classement des meilleures affaires
-- [ ] Réutiliser `enrich_catalog_items`/`evaluate_listing`, sans dupliquer les calculs.
-- [ ] Filtrer annonces actives, identifiées, unitaires et complètes.
-- [ ] Appliquer fraîcheur de cote, devise et seuils du profil de frais.
-- [ ] Trier par gain net puis ROI et fournir les preuves de prix.
+- [x] Réutiliser `enrich_catalog_items`/`evaluate_listing`, sans dupliquer les calculs.
+- [x] Filtrer annonces actives, identifiées, unitaires et complètes.
+- [x] Appliquer fraîcheur de cote, devise et seuils du profil de frais.
+- [x] Trier par gain net puis ROI et fournir les preuves de prix.
 
 **Dépendance :** T0.1.  
 **Tests :** centimes/bps, exclusions, égalités, absence de cote/frais.
 
 #### T3.4 — Page `/trends`
-- [ ] Ajouter filtres, date de calcul et quatre états : chargé, vide, partiel, données insuffisantes.
-- [ ] Afficher variations de prix, activité des annonces et meilleures affaires.
-- [ ] Ajouter liens vers recherche préfiltrée et fiches annonces.
-- [ ] Ne pas afficher de bloc « ventes par pays » sans données réelles.
-- [ ] Ajouter navigation, responsive et accessibilité.
+- [x] Ajouter filtres, date de calcul et quatre états : chargé, vide, partiel, données insuffisantes.
+- [x] Afficher variations de prix, activité des annonces et meilleures affaires.
+- [x] Ajouter liens vers recherche préfiltrée et fiches annonces.
+- [x] Ne pas afficher de bloc « ventes par pays » sans données réelles.
+- [x] Ajouter navigation, libellés et styles responsive locaux.
+- [x] Paginer variations de prix, activité des annonces et meilleures affaires au-delà de la limite, en conservant filtres et ordre stable (navigation par section, totaux affichés).
+- [x] Recetter le clavier et les cinq largeurs de référence sur les deux écrans.
 
 **Dépendance :** T3.1 à T3.3.
 
@@ -312,23 +320,23 @@ app/
 ### Lot 5 — Recette et documentation
 
 #### T5.1 — Tests automatisés
-- [ ] Tests unitaires des filtres, calculs, tris et exclusions.
-- [ ] Tests de migration et d’intégrité SQLite.
-- [ ] Tests des routes, exports, formulaires et états vides.
-- [ ] Mocks systématiques pour toutes les sources externes.
-- [ ] Exécution complète : `docker compose run --rm app pytest`.
+- [x] Tests unitaires des filtres, calculs, tris et exclusions.
+- [x] Tests de migration et d’intégrité SQLite.
+- [x] Tests des routes, exports, formulaires et états vides.
+- [x] Mocks systématiques pour toutes les sources externes.
+- [x] Exécution complète : `docker compose run --rm app pytest`.
 
 #### T5.2 — Recette fonctionnelle et performance
-- [ ] Vérifier recherche simple puis tous les filtres combinés.
-- [ ] Comparer les meilleures affaires avec le moteur de rentabilité existant.
-- [ ] Vérifier l’absence de « ventes » inférées des annonces disparues.
-- [ ] Tester base vide, données partielles, source externe indisponible et cote expirée.
-- [ ] Mesurer les requêtes principales sur volume représentatif.
+- [x] Vérifier recherche simple puis tous les filtres combinés.
+- [x] Comparer les meilleures affaires avec le moteur de rentabilité existant.
+- [x] Vérifier l’absence de « ventes » inférées des annonces disparues.
+- [x] Tester base vide, données partielles, source externe indisponible et cote expirée.
+- [x] Mesurer les requêtes principales sur volume représentatif.
 
 #### T5.3 — Documentation
-- [ ] Mettre à jour `README.md` pour les deux écrans.
-- [ ] Documenter les métriques, limites et sources dans `SOURCES.md`.
-- [ ] Documenter toute migration et toute commande worker ajoutée.
+- [x] Mettre à jour `README.md` pour les deux écrans.
+- [x] Documenter les métriques, limites et sources dans `SOURCES.md`.
+- [x] Documenter toute migration et toute commande worker ajoutée.
 
 ---
 

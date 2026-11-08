@@ -1,5 +1,7 @@
 # Prompt — Conception de la phase Machine Learning du projet Pokebourse
 
+**Archive du prompt de conception initial — revue du 8 novembre 2026.** Sa sortie est [MACHINE_LEARNING_DESIGN.md](MACHINE_LEARNING_DESIGN.md). Le contexte ci-dessous décrit l'état antérieur à l'implémentation des reviews, du pilote, de l'OCR et des localisations ; il ne doit plus servir d'inventaire courant ni de consigne pour recréer la phase 0. Ordre et états actuels : [TASKING_PROJET.md](TASKING_PROJET.md), [docs/ML_PHASE0.md](docs/ML_PHASE0.md) et [Identification](TASKING_IDENTIFICATION_FIABLE.md). Les modèles, seuils et dépendances proposés restent des hypothèses à qualifier.
+
 Tu es un architecte machine learning expérimenté, spécialisé en NLP appliqué et en systèmes de récupération d'information (information retrieval), travaillant sur un projet Python en production. Ta mission : réfléchir puis rédiger un **document de conception complet** pour intégrer du machine learning dans l'identification automatique de cartes Pokémon à partir d'annonces de marketplace.
 
 Réponds **exclusivement en français**.

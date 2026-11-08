@@ -6,6 +6,7 @@ import json
 import sqlite3
 from typing import Any
 
+from app.catalog import build_common_listing_clauses
 from app.catalog_export import CSV_COLUMNS as BASE_CSV_COLUMNS, csv_cell
 from app.identification.matcher import CardMatcher
 from app.identification.normalization import canonical_local_id, normalize_text
@@ -15,6 +16,7 @@ from app.search.models import (
     DEFAULT_CARD_SORT,
     DEFAULT_LISTING_SORT,
     LISTING_SORTS,
+    PROFITABILITY_LISTING_SORTS,
     CardSearchResult,
     CardSearchSummary,
     ListingSearchResult,
@@ -102,9 +104,9 @@ def get_search_filter_options(connection: sqlite3.Connection) -> dict[str, list[
     }
 
 
-def _build_reference_cards_query(
+def _build_reference_cards_base_clauses(
     filters: SearchFilters,
-) -> tuple[str, str, list[Any]]:
+) -> tuple[list[str], list[Any]]:
     where_clauses: list[str] = []
     params: list[Any] = []
 
@@ -127,6 +129,61 @@ def _build_reference_cards_query(
     if filters.set_name:
         where_clauses.append("(c.set_name = ? OR s.name = ? OR s.id = ?)")
         params.extend([filters.set_name, filters.set_name, filters.set_name])
+
+    return where_clauses, params
+
+
+def _format_card_metadata_diagnostic(
+    filters: SearchFilters,
+    missing_rarity_count: int,
+    missing_year_count: int,
+) -> str | None:
+    has_rarity_filter = bool(filters.rarity)
+    has_year_filter = filters.year_min is not None or filters.year_max is not None
+
+    if has_rarity_filter or has_year_filter:
+        parts: list[str] = []
+        if has_rarity_filter and missing_rarity_count > 0:
+            parts.append(
+                f"{missing_rarity_count} carte{'s' if missing_rarity_count > 1 else ''} "
+                f"sans rareté chargée (filtre « {filters.rarity} »)"
+            )
+        if has_year_filter and missing_year_count > 0:
+            parts.append(
+                f"{missing_year_count} carte{'s' if missing_year_count > 1 else ''} "
+                "sans année de sortie chargée"
+            )
+        if parts:
+            return (
+                "Diagnostic métadonnées : "
+                + " et ".join(parts)
+                + " dans le cache local n'ont pas pu être évaluées par ces filtres "
+                "(donnée non chargée ≠ preuve d'absence)."
+            )
+
+    partial_parts: list[str] = []
+    if missing_rarity_count > 0:
+        partial_parts.append(
+            f"{missing_rarity_count} carte{'s' if missing_rarity_count > 1 else ''} sans rareté chargée"
+        )
+    if missing_year_count > 0:
+        partial_parts.append(
+            f"{missing_year_count} carte{'s' if missing_year_count > 1 else ''} sans année de sortie chargée"
+        )
+    if partial_parts:
+        return (
+            "Métadonnées partielles : "
+            + " et ".join(partial_parts)
+            + " dans le cache local (manifeste d'extension importé sans détail complet — "
+            "donnée non chargée ≠ preuve d'absence)."
+        )
+    return None
+
+
+def _build_reference_cards_query(
+    filters: SearchFilters,
+) -> tuple[str, str, list[Any]]:
+    where_clauses, params = _build_reference_cards_base_clauses(filters)
 
     if filters.rarity:
         where_clauses.append("c.rarity = ?")
@@ -182,6 +239,22 @@ def search_reference_cards(
     filters: SearchFilters,
 ) -> CardSearchSummary:
     where_sql, order_sql, params = _build_reference_cards_query(filters)
+    base_clauses, base_params = _build_reference_cards_base_clauses(filters)
+    base_where_sql = f"WHERE {' AND '.join(base_clauses)}" if base_clauses else ""
+
+    diag_row = connection.execute(
+        f"""
+        SELECT
+            COALESCE(SUM(CASE WHEN c.rarity IS NULL OR trim(c.rarity) = '' THEN 1 ELSE 0 END), 0) AS missing_rarity,
+            COALESCE(SUM(CASE WHEN s.release_date IS NULL OR length(trim(s.release_date)) < 4 THEN 1 ELSE 0 END), 0) AS missing_year
+        FROM pokemon_reference_cards c
+        JOIN pokemon_reference_sets s ON s.id = c.set_id
+        {base_where_sql}
+        """,
+        base_params,
+    ).fetchone()
+    missing_rarity_count = int(diag_row["missing_rarity"] or 0)
+    missing_year_count = int(diag_row["missing_year"] or 0)
 
     # Paramètres de comptage : sans les paramètres d'ordonnancement s'ils sont dans ORDER BY
     count_params = params[: -len(filters.q and filters.sort == "relevance" and [1, 2, 3] or [])] if (filters.q and filters.sort == "relevance") else params
@@ -269,6 +342,8 @@ def search_reference_cards(
             }
 
             approx_items: list[CardSearchResult] = []
+            fuzzy_missing_rarity = 0
+            fuzzy_missing_year = 0
             for cand in ordered_candidates:
                 card = ref_cards.get(cand.card_id)
                 if not card:
@@ -285,6 +360,11 @@ def search_reference_cards(
                 if filters.set_name:
                     if card.set_name != filters.set_name and card.set_id != filters.set_name:
                         continue
+
+                if not card.rarity or not str(card.rarity).strip():
+                    fuzzy_missing_rarity += 1
+                if release_year is None:
+                    fuzzy_missing_year += 1
 
                 # Filtre par rareté si demandé
                 if filters.rarity:
@@ -326,6 +406,11 @@ def search_reference_cards(
                     )
                 )
 
+            if missing_rarity_count == 0 and fuzzy_missing_rarity > 0:
+                missing_rarity_count = fuzzy_missing_rarity
+            if missing_year_count == 0 and fuzzy_missing_year > 0:
+                missing_year_count = fuzzy_missing_year
+
             if approx_items:
                 is_approximate = True
                 total = len(approx_items)
@@ -338,6 +423,11 @@ def search_reference_cards(
     current_page = min(max(1, filters.page), total_pages)
     range_start = (current_page - 1) * filters.per_page + 1 if total else 0
     range_end = min((current_page - 1) * filters.per_page + filters.per_page, total)
+    metadata_diagnostic = _format_card_metadata_diagnostic(
+        filters=filters,
+        missing_rarity_count=missing_rarity_count,
+        missing_year_count=missing_year_count,
+    )
 
     return CardSearchSummary(
         items=items,
@@ -348,50 +438,22 @@ def search_reference_cards(
         total_pages=total_pages,
         range_start=range_start,
         range_end=range_end,
+        missing_rarity_count=missing_rarity_count,
+        missing_year_count=missing_year_count,
+        metadata_diagnostic=metadata_diagnostic,
     )
 
 
-def _build_listings_query(
+def _build_listings_non_reference_clauses(
     filters: SearchFilters,
-) -> tuple[str, str, list[Any], list[Any]]:
-    where_clauses: list[str] = []
-    where_params: list[Any] = []
-
-    if filters.q:
-        q_like = f"%{filters.q}%"
-        where_clauses.append(
-            "("
-            "c.name LIKE ? OR c.original_title LIKE ? OR c.card_number LIKE ? "
-            "OR c.set_name LIKE ? OR c.seller LIKE ? OR c.external_id LIKE ? "
-            "OR r.name LIKE ? OR r.tcgdex_id = ?"
-            ")"
-        )
-        where_params.extend([q_like, q_like, q_like, q_like, q_like, q_like, q_like, filters.q])
-
-    if filters.set_name:
-        where_clauses.append("c.set_name = ?")
-        where_params.append(filters.set_name)
-
-    # RÈGLE D'OR : Rareté et Année passent impérativement par reference_card_id
-    if filters.rarity:
-        where_clauses.append("c.reference_card_id IS NOT NULL AND r.rarity = ?")
-        where_params.append(filters.rarity)
-
-    if filters.year_min is not None:
-        where_clauses.append(
-            "c.reference_card_id IS NOT NULL "
-            "AND length(r_set.release_date) >= 4 "
-            "AND CAST(substr(r_set.release_date, 1, 4) AS INTEGER) >= ?"
-        )
-        where_params.append(filters.year_min)
-
-    if filters.year_max is not None:
-        where_clauses.append(
-            "c.reference_card_id IS NOT NULL "
-            "AND length(r_set.release_date) >= 4 "
-            "AND CAST(substr(r_set.release_date, 1, 4) AS INTEGER) <= ?"
-        )
-        where_params.append(filters.year_max)
+) -> tuple[list[str], list[Any]]:
+    where_clauses, where_params = build_common_listing_clauses(
+        query=filters.q,
+        set_name=filters.set_name,
+        source=filters.source,
+        ident_status=filters.ident_status,
+        include_reference_fields=True,
+    )
 
     if filters.condition:
         where_clauses.append("LOWER(c.condition) = LOWER(?)")
@@ -417,12 +479,6 @@ def _build_listings_query(
         where_clauses.append("LOWER(c.grade) = LOWER(?)")
         where_params.append(filters.grade)
 
-    if filters.source in ("vinted", "leboncoin", "ebay", "wallapop"):
-        where_clauses.append("s.name = ?")
-        where_params.append(filters.source)
-    elif filters.source == "manual":
-        where_clauses.append("s.kind = 'manual_jsonl'")
-
     if filters.price_min_cents is not None:
         where_clauses.append("c.price_cents >= ?")
         where_params.append(filters.price_min_cents)
@@ -431,14 +487,87 @@ def _build_listings_query(
         where_clauses.append("c.price_cents <= ?")
         where_params.append(filters.price_max_cents)
 
-    if filters.ident_status and filters.ident_status != "all":
-        where_clauses.append("c.identification_status = ?")
-        where_params.append(filters.ident_status)
-
     if filters.lot_filter == "exclude":
         where_clauses.append("c.is_lot = 0")
     elif filters.lot_filter == "only":
         where_clauses.append("c.is_lot = 1")
+
+    return where_clauses, where_params
+
+
+def _format_listing_metadata_diagnostic(
+    filters: SearchFilters,
+    missing_rarity_count: int,
+    missing_year_count: int,
+) -> str | None:
+    has_rarity_filter = bool(filters.rarity)
+    has_year_filter = filters.year_min is not None or filters.year_max is not None
+
+    if has_rarity_filter or has_year_filter:
+        parts: list[str] = []
+        if has_rarity_filter and missing_rarity_count > 0:
+            parts.append(
+                f"{missing_rarity_count} annonce{'s' if missing_rarity_count > 1 else ''} "
+                f"rattachée{'s' if missing_rarity_count > 1 else ''} à une carte sans rareté chargée"
+            )
+        if has_year_filter and missing_year_count > 0:
+            parts.append(
+                f"{missing_year_count} annonce{'s' if missing_year_count > 1 else ''} "
+                f"rattachée{'s' if missing_year_count > 1 else ''} à une carte sans année de sortie chargée"
+            )
+        if parts:
+            return (
+                "Diagnostic métadonnées : "
+                + " et ".join(parts)
+                + " dans le cache local n'ont pas pu être évaluées par ces filtres "
+                "(donnée non chargée ≠ preuve d'absence)."
+            )
+
+    partial_parts: list[str] = []
+    if missing_rarity_count > 0:
+        partial_parts.append(
+            f"{missing_rarity_count} annonce{'s' if missing_rarity_count > 1 else ''} "
+            f"rattachée{'s' if missing_rarity_count > 1 else ''} à une carte sans rareté chargée"
+        )
+    if missing_year_count > 0:
+        partial_parts.append(
+            f"{missing_year_count} annonce{'s' if missing_year_count > 1 else ''} "
+            f"rattachée{'s' if missing_year_count > 1 else ''} à une carte sans année de sortie chargée"
+        )
+    if partial_parts:
+        return (
+            "Métadonnées partielles : "
+            + " et ".join(partial_parts)
+            + " dans le cache local (donnée non chargée ≠ preuve d'absence)."
+        )
+    return None
+
+
+def _build_listings_query(
+    filters: SearchFilters,
+) -> tuple[str, str, list[Any], list[Any]]:
+    where_clauses, where_params = _build_listings_non_reference_clauses(filters)
+
+    # RÈGLE D'OR : Rareté et Année passent impérativement par reference_card_id
+    if filters.rarity:
+        where_clauses.append("c.reference_card_id IS NOT NULL AND r.rarity = ?")
+        where_params.append(filters.rarity)
+
+    if filters.year_min is not None:
+        where_clauses.append(
+            "c.reference_card_id IS NOT NULL "
+            "AND length(r_set.release_date) >= 4 "
+            "AND CAST(substr(r_set.release_date, 1, 4) AS INTEGER) >= ?"
+        )
+        where_params.append(filters.year_min)
+
+    if filters.year_max is not None:
+        where_clauses.append(
+            "c.reference_card_id IS NOT NULL "
+            "AND length(r_set.release_date) >= 4 "
+            "AND CAST(substr(r_set.release_date, 1, 4) AS INTEGER) <= ?"
+        )
+        where_params.append(filters.year_max)
 
     where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
@@ -464,6 +593,10 @@ def _build_listings_query(
         order_sql = "c.name COLLATE NOCASE ASC, c.id ASC"
     elif sort == "name_desc":
         order_sql = "c.name COLLATE NOCASE DESC, c.id DESC"
+    elif sort in PROFITABILITY_LISTING_SORTS:
+        # Tri réalisé en Python après enrichissement rentabilité : ordre SQL
+        # uniquement stable pour la récupération de toutes les lignes filtrées.
+        order_sql = "c.id ASC"
     else:  # import_desc
         order_sql = "c.imported_at DESC, c.id DESC"
 
@@ -492,8 +625,8 @@ def search_catalog_listings(
     total_pages = max(1, (total + filters.per_page - 1) // filters.per_page)
     current_page = min(filters.page, total_pages)
     offset = (current_page - 1) * filters.per_page
-    rows = connection.execute(
-        f"""
+
+    select_sql = f"""
         SELECT
             c.id, c.external_id, c.name, c.set_name, c.card_number, c.language,
             c.condition, c.variant, c.edition, c.grading_company, c.grade,
@@ -517,16 +650,49 @@ def search_catalog_listings(
         LEFT JOIN pokemon_reference_sets r_set ON r_set.id = r.set_id
         LEFT JOIN seller_profiles sp ON sp.id = c.seller_profile_id
         {where_sql}
-        {order_sql}
-        LIMIT ? OFFSET ?
-        """,
-        [*where_params, *order_params, filters.per_page, offset],
-    ).fetchall()
+    """
 
-    if enrich_profitability and rows:
-        enriched_rows, _ = enrich_catalog_items(connection, rows)
+    is_profitability_sort = enrich_profitability and filters.sort in PROFITABILITY_LISTING_SORTS
+
+    if is_profitability_sort:
+        # Le tri gain net / ROI repose sur l'évaluation complète de la
+        # rentabilité (frais, cote de marché, comparables) : impossible en SQL.
+        # Toutes les annonces filtrées sont évaluées puis triées en Python avec
+        # un ordre stable ; la pagination est appliquée en mémoire ensuite.
+        all_rows = connection.execute(
+            f"{select_sql} ORDER BY c.id ASC",
+            where_params,
+        ).fetchall()
+        if all_rows:
+            enriched_rows, _ = enrich_catalog_items(connection, all_rows)
+        else:
+            enriched_rows = []
+
+        def _profitability_key(row: dict[str, Any]) -> tuple[bool, int, bool, int, int]:
+            net = row.get("net_profit_cents")
+            roi = row.get("roi_bps")
+            # Annonces sans évaluation complète classées en dernier ;
+            # l'identifiant en clé finale garantit un ordre stable total.
+            if filters.sort == "net_profit_desc":
+                return (net is None, -(net or 0), roi is None, -(roi or 0), int(row["id"]))
+            return (roi is None, -(roi or 0), net is None, -(net or 0), int(row["id"]))
+
+        enriched_rows.sort(key=_profitability_key)
+        total = len(enriched_rows)
+        total_pages = max(1, (total + filters.per_page - 1) // filters.per_page)
+        current_page = min(max(1, filters.page), total_pages)
+        offset = (current_page - 1) * filters.per_page
+        enriched_rows = enriched_rows[offset : offset + filters.per_page]
     else:
-        enriched_rows = [dict(r) for r in rows]
+        rows = connection.execute(
+            f"{select_sql} {order_sql} LIMIT ? OFFSET ?",
+            [*where_params, *order_params, filters.per_page, offset],
+        ).fetchall()
+
+        if enrich_profitability and rows:
+            enriched_rows, _ = enrich_catalog_items(connection, rows)
+        else:
+            enriched_rows = [dict(r) for r in rows]
 
     items: list[ListingSearchResult] = []
     for row in enriched_rows:
@@ -582,6 +748,43 @@ def search_catalog_listings(
     range_start = (current_page - 1) * filters.per_page + 1 if total else 0
     range_end = min((current_page - 1) * filters.per_page + filters.per_page, total)
 
+    if filters.rarity or filters.year_min is not None or filters.year_max is not None:
+        base_clauses, base_params = _build_listings_non_reference_clauses(filters)
+        base_clauses_with_ref = [*base_clauses, "c.reference_card_id IS NOT NULL"]
+        base_where_sql = f"WHERE {' AND '.join(base_clauses_with_ref)}"
+        diag_row = connection.execute(
+            f"""
+            SELECT
+                COALESCE(SUM(CASE WHEN r.rarity IS NULL OR trim(r.rarity) = '' THEN 1 ELSE 0 END), 0) AS missing_rarity,
+                COALESCE(SUM(CASE WHEN r_set.release_date IS NULL OR length(trim(r_set.release_date)) < 4 THEN 1 ELSE 0 END), 0) AS missing_year
+            FROM catalog_items c
+            JOIN sources s ON s.id = c.source_id
+            LEFT JOIN pokemon_reference_cards r ON r.id = c.reference_card_id
+            LEFT JOIN pokemon_reference_sets r_set ON r_set.id = r.set_id
+            {base_where_sql}
+            """,
+            base_params,
+        ).fetchone()
+        missing_rarity_count = int(diag_row["missing_rarity"] or 0)
+        missing_year_count = int(diag_row["missing_year"] or 0)
+    else:
+        missing_rarity_count = sum(
+            1
+            for item in items
+            if item.reference_card_id is not None and (not item.ref_rarity or not str(item.ref_rarity).strip())
+        )
+        missing_year_count = sum(
+            1
+            for item in items
+            if item.reference_card_id is not None and item.ref_release_year is None
+        )
+
+    metadata_diagnostic = _format_listing_metadata_diagnostic(
+        filters=filters,
+        missing_rarity_count=missing_rarity_count,
+        missing_year_count=missing_year_count,
+    )
+
     return ListingSearchSummary(
         items=items,
         total=total,
@@ -590,6 +793,9 @@ def search_catalog_listings(
         total_pages=total_pages,
         range_start=range_start,
         range_end=range_end,
+        missing_rarity_count=missing_rarity_count,
+        missing_year_count=missing_year_count,
+        metadata_diagnostic=metadata_diagnostic,
     )
 
 

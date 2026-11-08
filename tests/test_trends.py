@@ -229,10 +229,13 @@ def test_get_price_movements_from_cardmarket_prices(db_connection: sqlite3.Conne
     db_connection.commit()
 
     # Test période 7/30
-    hausses, baisses, total = get_price_movements(db_connection, period="7_30")
+    movements = get_price_movements(db_connection, period="7_30")
+    hausses, baisses, total = movements.hausses, movements.baisses, movements.total_compared
     assert total == 2
     assert len(hausses) == 1
     assert len(baisses) == 1
+    assert movements.hausses_total == 1
+    assert movements.baisses_total == 1
 
     assert hausses[0].product_id == 101
     assert hausses[0].delta_cents == 500
@@ -246,7 +249,9 @@ def test_get_price_movements_from_cardmarket_prices(db_connection: sqlite3.Conne
     assert baisses[0].match_status in ("partiel", "non_lie")
 
     # Test période 1/7 (produit 101: avg1=1600, avg7=1500 -> +100 cents, +667 bps)
-    hausses_1_7, baisses_1_7, total_1_7 = get_price_movements(db_connection, period="1_7")
+    movements_1_7 = get_price_movements(db_connection, period="1_7")
+    hausses_1_7 = movements_1_7.hausses
+    total_1_7 = movements_1_7.total_compared
     assert total_1_7 == 2
     assert len(hausses_1_7) == 1
     assert hausses_1_7[0].product_id == 101
@@ -313,8 +318,9 @@ def test_listing_activity_exact_30_days_window(db_connection: sqlite3.Connection
     db_connection.commit()
 
     activity = get_listing_activity(db_connection, now=now, window_days=30)
-    assert len(activity) == 1
-    pika_stat = activity[0]
+    assert len(activity.items) == 1
+    pika_stat = activity.items[0]
+    assert activity.total == 1
     assert pika_stat.reference_card_id == card_id
     assert pika_stat.card_name == "Pikachu"
     # 2 annonces observées dans les 30 jours (pika-10d et pika-known)
@@ -372,10 +378,10 @@ def test_listing_activity_reingestion_does_not_duplicate_distinct_count(
     db_connection.commit()
 
     activity = get_listing_activity(db_connection, now=now, window_days=30)
-    assert len(activity) == 1
+    assert len(activity.items) == 1
     # Doit rester 1 seule annonce distincte
-    assert activity[0].distinct_listings_count == 1
-    assert activity[0].new_listings_count == 1
+    assert activity.items[0].distinct_listings_count == 1
+    assert activity.items[0].new_listings_count == 1
 
 
 def test_listing_activity_excludes_lots_and_ambiguous(
@@ -432,7 +438,8 @@ def test_listing_activity_excludes_lots_and_ambiguous(
     db_connection.commit()
 
     activity = get_listing_activity(db_connection, now=now, window_days=30)
-    assert len(activity) == 0
+    assert len(activity.items) == 0
+    assert activity.total == 0
 
 
 def test_listing_activity_filters_and_threshold(db_connection: sqlite3.Connection) -> None:
@@ -451,18 +458,19 @@ def test_listing_activity_filters_and_threshold(db_connection: sqlite3.Connectio
 
     # Filtre seuil min_observations=2 -> seul Tortank retenu
     act_threshold = get_listing_activity(db_connection, now=now, min_observations=2)
-    assert len(act_threshold) == 1
-    assert act_threshold[0].card_name == "Tortank"
+    assert len(act_threshold.items) == 1
+    assert act_threshold.items[0].card_name == "Tortank"
+    assert act_threshold.total == 1
 
     # Filtre extension
     act_set = get_listing_activity(db_connection, now=now, set_name="Set B")
-    assert len(act_set) == 1
-    assert act_set[0].card_name == "Florizarre"
+    assert len(act_set.items) == 1
+    assert act_set.items[0].card_name == "Florizarre"
 
     # Filtre langue
     act_lang = get_listing_activity(db_connection, now=now, language="ja")
-    assert len(act_lang) == 1
-    assert act_lang[0].card_name == "Florizarre"
+    assert len(act_lang.items) == 1
+    assert act_lang.items[0].card_name == "Florizarre"
 
 
 # ==============================================================================
@@ -516,8 +524,9 @@ def test_best_opportunities_aligned_with_evaluate_listing(db_connection: sqlite3
     db_connection.commit()
 
     opportunities = get_best_opportunities(db_connection, now=now, max_quote_age_days=30)
-    assert len(opportunities) == 1
-    opp = opportunities[0]
+    assert len(opportunities.items) == 1
+    opp = opportunities.items[0]
+    assert opportunities.total == 1
 
     assert opp.listing_id == listing_id
     assert opp.purchase_price_cents == 1000
@@ -556,14 +565,15 @@ def test_best_opportunities_requires_actual_observation_date(db_connection: sqli
         ))
 
     save_reference()
-    assert get_best_opportunities(db_connection, now=now) == []
+    assert get_best_opportunities(db_connection, now=now).items == []
     save_reference((now - timedelta(days=45)).date())
-    assert get_best_opportunities(db_connection, now=now) == []
+    assert get_best_opportunities(db_connection, now=now).items == []
     save_reference((now - timedelta(days=2)).date())
     opportunities = get_best_opportunities(db_connection, now=now)
-    assert len(opportunities) == 1
-    assert opportunities[0].listing_id == listing_id
-    assert opportunities[0].quote_age_days == 2
+    assert len(opportunities.items) == 1
+    assert opportunities.total == 1
+    assert opportunities.items[0].listing_id == listing_id
+    assert opportunities.items[0].quote_age_days == 2
 
 
 def test_best_opportunities_excludes_ineligible_and_expired(db_connection: sqlite3.Connection) -> None:
@@ -649,7 +659,8 @@ def test_best_opportunities_excludes_ineligible_and_expired(db_connection: sqlit
     db_connection.commit()
 
     opps = get_best_opportunities(db_connection, now=now, max_quote_age_days=30)
-    assert len(opps) == 0
+    assert len(opps.items) == 0
+    assert opps.total == 0
 
 
 def test_best_opportunities_ranking_and_tie_breaking(db_connection: sqlite3.Connection) -> None:
@@ -677,11 +688,12 @@ def test_best_opportunities_ranking_and_tie_breaking(db_connection: sqlite3.Conn
     db_connection.commit()
 
     opps = get_best_opportunities(db_connection, now=now, max_quote_age_days=30)
-    assert len(opps) == 2
+    assert len(opps.items) == 2
+    assert opps.total == 2
     # Tri 1 : gain net décroissant
-    assert opps[0].listing_id == id1
-    assert opps[1].listing_id == id2
-    assert opps[0].net_profit_cents > opps[1].net_profit_cents
+    assert opps.items[0].listing_id == id1
+    assert opps.items[1].listing_id == id2
+    assert opps.items[0].net_profit_cents > opps.items[1].net_profit_cents
 
 
 def test_best_opportunities_excludes_watch_verdict(db_connection: sqlite3.Connection) -> None:
@@ -705,7 +717,7 @@ def test_best_opportunities_excludes_watch_verdict(db_connection: sqlite3.Connec
     )
     db_connection.commit()
 
-    assert get_best_opportunities(db_connection, now=now) == []
+    assert get_best_opportunities(db_connection, now=now).items == []
 
 
 def test_best_opportunities_uses_comparable_dates_for_catalog_median(
@@ -730,7 +742,158 @@ def test_best_opportunities_uses_comparable_dates_for_catalog_median(
         )
     db_connection.commit()
 
-    assert get_best_opportunities(db_connection, now=now, max_quote_age_days=30) == []
+    assert get_best_opportunities(db_connection, now=now, max_quote_age_days=30).items == []
+
+
+# ==============================================================================
+# Pagination des tendances : consultation au-delà du classement limité
+# ==============================================================================
+
+def test_price_movements_pagination_keeps_stable_order(
+    db_connection: sqlite3.Connection,
+) -> None:
+    now_iso = "2026-11-01T10:00:00Z"
+    # 5 hausses aux variations croissantes (avg30 constant à 1000) :
+    # tri attendu par delta_bps décroissant -> produits 204, 203, 202, 201, 200.
+    db_connection.executemany(
+        """
+        INSERT INTO cardmarket_prices (
+            product_id, tcg_dex_id, card_name, expansion_name, language,
+            trend_price_cents, avg1_price_cents, avg7_price_cents, avg30_price_cents,
+            currency, fetched_at, name_base
+        ) VALUES (?, NULL, ?, 'Set Pag', 'en', ?, ?, ?, 1000, 'EUR', ?, ?)
+        """,
+        [
+            (200 + i, f"Pag {i}", 1000 + 100 * (i + 1), 1000 + 100 * (i + 1), 1000 + 100 * (i + 1), now_iso, f"pag {i}")
+            for i in range(5)
+        ],
+    )
+    db_connection.commit()
+
+    full = get_price_movements(db_connection, limit=100)
+    assert full.hausses_total == 5
+    full_order = [item.product_id for item in full.hausses]
+    assert full_order == [204, 203, 202, 201, 200]
+
+    page_1 = get_price_movements(db_connection, limit=2, offset=0)
+    page_2 = get_price_movements(db_connection, limit=2, offset=2)
+    page_3 = get_price_movements(db_connection, limit=2, offset=4)
+
+    assert page_1.hausses_total == 5
+    assert [item.product_id for item in page_1.hausses] == [204, 203]
+    assert [item.product_id for item in page_2.hausses] == [202, 201]
+    assert [item.product_id for item in page_3.hausses] == [200]
+    # Concaténation des pages = ordre complet, sans doublon ni écart.
+    assert (
+        [item.product_id for item in page_1.hausses + page_2.hausses + page_3.hausses]
+        == full_order
+    )
+
+
+def test_listing_activity_pagination_and_total(
+    db_connection: sqlite3.Connection,
+) -> None:
+    now = datetime(2026, 11, 2, 12, 0, 0, tzinfo=UTC)
+    d5 = (now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cards = [
+        insert_ref_card(
+            db_connection,
+            tcgdex_id=f"pag-{n}",
+            local_id=str(n),
+            name=f"Carte {n}",
+            set_id="pag",
+            set_name="Set Pag",
+        )
+        for n in range(3)
+    ]
+    # Carte 0 : 3 annonces, Carte 1 : 2, Carte 2 : 1.
+    for card_index, count in enumerate((3, 2, 1)):
+        for j in range(count):
+            insert_catalog_listing(
+                db_connection,
+                external_id=f"pag-{card_index}-{j}",
+                name=f"Carte {card_index}",
+                set_name="Set Pag",
+                reference_card_id=cards[card_index],
+                first_seen_at=d5,
+                last_seen_at=d5,
+            )
+    db_connection.commit()
+
+    full = get_listing_activity(db_connection, now=now, limit=10)
+    assert full.total == 3
+
+    page_1 = get_listing_activity(db_connection, now=now, limit=2, offset=0)
+    page_2 = get_listing_activity(db_connection, now=now, limit=2, offset=2)
+    assert page_1.total == 3
+    assert page_2.total == 3
+    assert [item.reference_card_id for item in page_1.items] == [cards[0], cards[1]]
+    assert [item.reference_card_id for item in page_2.items] == [cards[2]]
+    assert (
+        [item.reference_card_id for item in page_1.items + page_2.items]
+        == [item.reference_card_id for item in full.items]
+    )
+
+
+def test_best_opportunities_pagination_and_total(
+    db_connection: sqlite3.Connection,
+) -> None:
+    now = datetime(2026, 11, 2, 12, 0, 0, tzinfo=UTC)
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ref_date = now.date()
+
+    cards = [
+        insert_ref_card(
+            db_connection,
+            tcgdex_id=f"opp-pag-{n}",
+            local_id=str(n),
+            name=f"Carte {n}",
+            set_id="opp-pag",
+            set_name="Set Pag",
+        )
+        for n in range(3)
+    ]
+    for n, ref_price in enumerate((3000, 5000, 4000)):
+        upsert_reference(
+            db_connection,
+            ReferenceInput(
+                name=f"Carte {n}",
+                set_name="Set Pag",
+                reference_price_cents=ref_price,
+                observed_at=ref_date,
+            ),
+        )
+    # Gains nets bruts décroissants : Carte 1 (5000-2000) > Carte 2 (4000-1500) > Carte 0 (3000-1000).
+    listing_ids = []
+    for n, buy_price in enumerate((1000, 2000, 1500)):
+        listing_ids.append(
+            insert_catalog_listing(
+                db_connection,
+                external_id=f"opp-pag-{n}",
+                name=f"Carte {n}",
+                set_name="Set Pag",
+                price_cents=buy_price,
+                reference_card_id=cards[n],
+                first_seen_at=now_iso,
+                last_seen_at=now_iso,
+            )
+        )
+    db_connection.commit()
+
+    full = get_best_opportunities(db_connection, now=now, limit=10)
+    assert full.total == 3
+    full_order = [item.listing_id for item in full.items]
+    assert full_order == [listing_ids[1], listing_ids[2], listing_ids[0]]
+
+    page_1 = get_best_opportunities(db_connection, now=now, limit=2, offset=0)
+    page_2 = get_best_opportunities(db_connection, now=now, limit=2, offset=2)
+    assert page_1.total == 3
+    assert [item.listing_id for item in page_1.items] == [listing_ids[1], listing_ids[2]]
+    assert [item.listing_id for item in page_2.items] == [listing_ids[0]]
+    assert (
+        [item.listing_id for item in page_1.items + page_2.items]
+        == full_order
+    )
 
 
 # ==============================================================================
@@ -806,3 +969,50 @@ def test_trends_page_with_data_and_filters(test_client: TestClient, tmp_path: Pa
     # Test avec filtre période 1/7
     resp_1_7 = test_client.get("/trends", params={"period": "1_7"})
     assert resp_1_7.status_code == 200
+
+
+def test_trends_page_pagination_preserves_filters(
+    test_client: TestClient, tmp_path: Path
+) -> None:
+    db_file = tmp_path / "web_trends.db"
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    with connect(db_file) as conn:
+        # 3 hausses aux variations distinctes : tri attendu B (+3000 bps), A (+2000), C (+1000).
+        conn.executemany(
+            """
+            INSERT INTO cardmarket_prices (
+                product_id, card_name, expansion_name, language,
+                avg1_price_cents, avg7_price_cents, avg30_price_cents, currency, fetched_at, name_base
+            ) VALUES (?, ?, 'PagSet', 'en', ?, ?, 1000, 'EUR', ?, ?)
+            """,
+            [
+                (1, "Pag A", 1200, 1200, now_iso, "pag a"),
+                (2, "Pag B", 1300, 1300, now_iso, "pag b"),
+                (3, "Pag C", 1100, 1100, now_iso, "pag c"),
+            ],
+        )
+        conn.commit()
+
+    # Page 1 : première hausse (Pag B) + navigation de pagination présente.
+    resp = test_client.get("/trends", params={"limit": 1})
+    assert resp.status_code == 200
+    assert "Pag B" in resp.text
+    assert 'aria-label="Pages des hausses de prix"' in resp.text
+    assert "page=2" in resp.text
+
+    # Page 2 : la hausse suivante dans l'ordre stable (Pag A), sans Pag B.
+    resp_page_2 = test_client.get("/trends", params={"limit": 1, "page": 2})
+    assert resp_page_2.status_code == 200
+    assert "Pag A" in resp_page_2.text
+    assert "Pag B" not in resp_page_2.text
+
+    # Les liens de pagination conservent les filtres actifs.
+    resp_filtered = test_client.get(
+        "/trends", params={"limit": 1, "set_name": "PagSet"}
+    )
+    assert resp_filtered.status_code == 200
+    assert "Pag B" in resp_filtered.text
+    assert 'aria-label="Pages des hausses de prix"' in resp_filtered.text
+    assert "set_name=PagSet" in resp_filtered.text
+    assert "page=2" in resp_filtered.text

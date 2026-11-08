@@ -127,6 +127,15 @@ class CardMatcher:
         confidence = min(best.confidence, 79) if isolated_number else best.confidence
         return IdentificationResult("ambiguous", confidence, reason, features, candidates=candidates[:50], missing_fields=missing, uncertain_fields=uncertain + ["confirmation_numéro"])
 
+    def retrieve_candidates(self, features: ExtractedFeatures) -> list[CandidateMatch]:
+        """Récupération publique et bornée pour les hypothèses OCR (T07).
+
+        Réutilise le classement commun sans repli lexical ni écriture ; la décision
+        d'acceptation reste à la décision commune et aucune identité effective n'est
+        publiée par une branche OCR.
+        """
+        return self._find_and_score_candidates(features)
+
     def _find_and_score_candidates(self, features: ExtractedFeatures, suggestions: list[NameSuggestion] | None = None) -> list[CandidateMatch]:
         """Classe les preuves sans éliminer un numéro exact à cause d'un nom mal lu."""
         wanted = normalize_text(features.name)
@@ -135,6 +144,10 @@ class CardMatcher:
             for name, card_ids in self._name_ids.items():
                 if wanted == name or wanted in name or name in wanted:
                     ids.update(card_ids)
+        if features.set_name and not wanted and not features.local_id:
+            ids.update(row["id"] for row in self.cache.connection.execute(
+                "SELECT id FROM pokemon_reference_cards WHERE normalized_set_name=? LIMIT 200",
+                (normalize_text(features.set_name),)))
         if features.local_id:
             ids.update(self._number_ids.get(canonical_local_id(features.local_id), ()))
         fuzzy = {normalize_text(suggestion.name): suggestion for suggestion in suggestions or []}

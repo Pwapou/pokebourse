@@ -11,6 +11,7 @@ from dataclasses import asdict
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.identification.detector import extract_features
@@ -119,12 +120,30 @@ def _targeted_images(image: bytes) -> list[tuple[bytes, int]]:
         return prepared
 
 
-def analyze_image(connection: sqlite3.Connection, content: bytes) -> dict[str, Any]:
+def _crop_image(image: bytes, selection: tuple[int, int, int, int, int, int, int]) -> bytes:
+    """Recadre dans le repère EXIF orienté, puis applique une rotation horaire."""
+    x, y, width, height, image_width, image_height, rotation = selection
+    with Image.open(io.BytesIO(image)) as source:
+        if (source.width, source.height) != (image_width, image_height):
+            raise ValueError("Dimensions de la photo incohérentes. Sélectionnez à nouveau la photo.")
+        if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > source.width or y + height > source.height:
+            raise ValueError("La sélection doit être non vide et contenue dans la photo.")
+        if rotation not in (0, 90, 180, 270):
+            raise ValueError("Rotation invalide.")
+        cropped = source.crop((x, y, x + width, y + height)).rotate(-rotation, expand=True)
+        output = io.BytesIO()
+        cropped.save(output, format="PNG")
+        return output.getvalue()
+
+
+def analyze_image(connection: sqlite3.Connection, content: bytes, selection: tuple[int, int, int, int, int, int, int] | None = None) -> dict[str, Any]:
     """Lance un OCR complet puis, si nécessaire, deux lectures ciblées au maximum."""
     if not _OCR_SLOTS.acquire(blocking=False):
         raise RuntimeError("Deux analyses OCR sont déjà en cours. Réessayez dans un instant.")
     try:
         image = _prepare_image(content)
+        if selection is not None:
+            image = _crop_image(image, selection)
         text = _run_tesseract(image)
         result = extract_suggestions(connection, text)
         recognized = result["recognized"]
@@ -161,10 +180,24 @@ def analyze_image(connection: sqlite3.Connection, content: bytes) -> dict[str, A
         _OCR_SLOTS.release()
 
 
+@router.post("/ocr/preview")
+def ocr_preview(file: UploadFile = File(...)) -> Response:
+    """Retourne la photo orientée de manière éphémère pour choisir une région."""
+    try:
+        image = _prepare_image(file.file.read(MAX_IMAGE_BYTES + 1))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return Response(image, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
 @router.post("/ocr/suggestions")
 def ocr_suggestions(
     request: Request, file: UploadFile = File(...), listing_id: int | None = Form(default=None, gt=0),
     title: str = Form(default="", max_length=500),
+    crop_x: int | None = Form(default=None), crop_y: int | None = Form(default=None),
+    crop_width: int | None = Form(default=None), crop_height: int | None = Form(default=None),
+    image_width: int | None = Form(default=None), image_height: int | None = Form(default=None),
+    crop_rotation: int | None = Form(default=None),
 ) -> dict[str, Any]:
     """Analyse une photo transmise explicitement sans écrire de données ni confirmer de carte."""
     with connect(request.app.state.settings.database_path) as connection:
@@ -181,6 +214,11 @@ def ocr_suggestions(
             return {"status": "lot", "recognized": {"names": [], "numbers": []}, "candidates": [], "message": "Cette annonce est un lot ou un produit scellé : aucune carte unitaire n'est proposée."}
         content = file.file.read(MAX_IMAGE_BYTES + 1)
         try:
+            parts = (crop_x, crop_y, crop_width, crop_height, image_width, image_height, crop_rotation)
+            if any(part is not None for part in parts):
+                if any(part is None for part in parts):
+                    raise ValueError("Sélection incomplète.")
+                return analyze_image(connection, content, parts)  # type: ignore[arg-type]
             return analyze_image(connection, content)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error

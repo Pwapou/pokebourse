@@ -77,6 +77,7 @@ from app.identification.resolution import (
     revoke_confirmation,
 )
 from app.gestion import gestion_page_data
+from app.tasking import tasking_data
 from app.validation_history import get_validation_run, list_validation_runs, validation_image_path
 from app.monitoring.models import WatchInput, WatchNotFoundError, WatchValidationError
 from app.purchases import purchases_page_data
@@ -704,6 +705,7 @@ def trends_page(
     min_observations: int = Query(default=1, ge=1, le=1000),
     max_quote_age_days: int = Query(default=30, ge=1, le=365),
     limit: int = Query(default=20, ge=1, le=100),
+    page: int = Query(default=1, ge=1, le=100_000),
 ) -> HTMLResponse:
     filters = TrendsFilters(
         period=period,
@@ -713,6 +715,7 @@ def trends_page(
         min_observations=min_observations,
         max_quote_age_days=max_quote_age_days,
         limit=limit,
+        page=page,
     )
     with connect(settings_from(request).database_path) as connection:
         trends_data = get_trends_page_data(connection, filters)
@@ -1702,6 +1705,12 @@ def update_purchase(
     if not updated:
         return HTMLResponse("Achat introuvable.", status_code=404)
     return RedirectResponse(f"/achats?notice={quote('Achat mis à jour.')}", status_code=303)
+
+
+@app.get("/tasking", response_class=HTMLResponse)
+def tasking_page(request: Request) -> HTMLResponse:
+    """Afficher les plans et l’état Git disponibles en lecture seule."""
+    return templates.TemplateResponse(request=request, name="tasking.html", context={"page": "tasking", **tasking_data()})
 
 
 @app.get("/gestion", response_class=HTMLResponse)

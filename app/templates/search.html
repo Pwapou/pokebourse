@@ -7,7 +7,7 @@
 {% set ident_status_labels = {"all": "Tous statuts", "identified": "Identifiée", "ambiguous": "À vérifier", "lot": "Lot / Coffret", "unidentified": "Non identifiée"} %}
 {% set lot_filter_labels = {"all": "Tout inclure", "exclude": "Exclure les lots", "only": "Lots uniquement"} %}
 {% set card_sort_labels = {"relevance": "Pertinence", "name_asc": "Nom (A → Z)", "name_desc": "Nom (Z → A)", "release_desc": "Sortie récente", "release_asc": "Sortie ancienne", "local_id_asc": "Numéro de carte"} %}
-{% set listing_sort_labels = {"relevance": "Pertinence", "import_desc": "Import récent", "import_asc": "Import ancien", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "name_asc": "Nom (A → Z)", "name_desc": "Nom (Z → A)"} %}
+{% set listing_sort_labels = {"relevance": "Pertinence", "import_desc": "Import récent", "import_asc": "Import ancien", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "name_asc": "Nom (A → Z)", "name_desc": "Nom (Z → A)", "net_profit_desc": "Gain net (↓)", "roi_desc": "ROI (↓)"} %}
 
 <section class="page-heading">
     <div>
@@ -349,6 +349,13 @@
         </div>
         {% endif %}
 
+        {% if results.cards.metadata_diagnostic %}
+        <div class="alert alert-info metadata-diagnostic-banner" role="status">
+            <strong>Référentiel incomplet :</strong> {{ results.cards.metadata_diagnostic }}
+            <a class="text-link" href="/tcgdex">Compléter la synchronisation TCGdex</a>
+        </div>
+        {% endif %}
+
         {% if results.cards.items %}
         <div class="ref-cards-grid" role="list" aria-label="Cartes Pokémon de référence">
             {% for card in results.cards.items %}
@@ -372,13 +379,13 @@
                         {% if card.rarity %}
                         <span class="ref-tag accent">{{ card.rarity }}</span>
                         {% else %}
-                        <span class="ref-tag" title="Rareté non renseignée dans le cache">Rareté : —</span>
+                        <span class="ref-tag" title="Rareté non chargée dans le cache local (donnée absente ≠ preuve d’absence)">Rareté non chargée</span>
                         {% endif %}
 
                         {% if card.release_year %}
                         <span class="ref-tag">{{ card.release_year }}</span>
                         {% else %}
-                        <span class="ref-tag" title="Année de sortie non renseignée">Année : —</span>
+                        <span class="ref-tag" title="Année de sortie non chargée dans le cache local (donnée absente ≠ preuve d’absence)">Année non chargée</span>
                         {% endif %}
 
                         {% if card.hp %}
@@ -426,6 +433,9 @@
         {% else %}
         <div class="empty-state compact">
             <p>Aucune carte du référentiel ne correspond à ces critères.</p>
+            {% if results.cards.metadata_diagnostic %}
+            <p class="table-note">{{ results.cards.metadata_diagnostic }}</p>
+            {% endif %}
         </div>
         {% endif %}
     </section>
@@ -438,6 +448,13 @@
             <h2>Annonces observées</h2>
             <span class="table-note">{{ results.listings.total }} annonce{{ 's' if results.listings.total != 1 else '' }} trouvée{{ 's' if results.listings.total != 1 else '' }}</span>
         </div>
+
+        {% if results.listings.metadata_diagnostic %}
+        <div class="alert alert-info metadata-diagnostic-banner" role="status">
+            <strong>Référentiel incomplet :</strong> {{ results.listings.metadata_diagnostic }}
+            <a class="text-link" href="/tcgdex">Compléter la synchronisation TCGdex</a>
+        </div>
+        {% endif %}
 
         {% if results.listings.items %}
         <div class="product-list" role="list" aria-label="Annonces trouvées">
@@ -468,9 +485,13 @@
 
                             {% if item.ref_rarity %}
                                 <span class="ref-tag" title="Rareté officielle">{{ item.ref_rarity }}</span>
+                            {% elif item.reference_card_id %}
+                                <span class="ref-tag" title="Rareté officielle non chargée dans le cache local (donnée absente ≠ preuve d’absence)">Rareté non chargée</span>
                             {% endif %}
                             {% if item.ref_release_year %}
                                 <span class="ref-tag" title="Année de sortie officielle">{{ item.ref_release_year }}</span>
+                            {% elif item.reference_card_id %}
+                                <span class="ref-tag" title="Année de sortie officielle non chargée dans le cache local (donnée absente ≠ preuve d’absence)">Année non chargée</span>
                             {% endif %}
                         </span>
                     </div>
@@ -478,7 +499,7 @@
                 <div>
                     <span class="cell-label">ÉTAT / LANGUE</span>
                     {% if item.condition %}<b class="cell-value">{{ item.condition }}</b>{% else %}<span class="cell-value unknown">État inconnu</span>{% endif %}
-                    <span class="cell-sub">{{ item.language|upper }}{% if item.grading_company %} · {{ item.grading_company }} {{ item.grade or '' }}{% endif %}</span>
+                    <span class="cell-sub">{{ "Inconnue" if item.language == "und" else item.language|upper }}{% if item.grading_company %} · {{ item.grading_company }} {{ item.grade or '' }}{% endif %}</span>
                 </div>
                 <div>
                     <span class="cell-label">PRIX D'ACHAT</span>

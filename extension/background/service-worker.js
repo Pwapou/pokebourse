@@ -60,11 +60,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // Une capture partielle peut être complétée dans la prévisualisation.
           const hasValidPrice =
             item && (item.price_cents == null || (Number.isInteger(item.price_cents) && item.price_cents >= 0));
+          const hasTitle =
+            (typeof item?.raw_data?.title === "string" && item.raw_data.title.trim()) ||
+            (typeof item?.name === "string" && item.name.trim());
           if (
             !item ||
-            typeof item.name !== "string" ||
-            !item.name.trim() ||
-            !item.set_name ||
+            !hasTitle ||
             !hasValidPrice ||
             !item.url
           )

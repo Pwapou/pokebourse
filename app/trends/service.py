@@ -10,6 +10,8 @@ from typing import Literal
 from app.cardmarket import daily as cardmarket_daily
 from app.trends.models import (
     ListingActivityItem,
+    ListingActivityPage,
+    PriceMovementsPage,
     PriceVariation,
     TrendsFilters,
     TrendsPageData,
@@ -53,8 +55,13 @@ def get_price_movements(
     period: Literal["7_30", "1_7"] = "7_30",
     set_name: str = "",
     limit: int = 20,
-) -> tuple[list[PriceVariation], list[PriceVariation], int]:
-    """Retourne (hausses, baisses, total_comparaisons) d'après cardmarket_prices."""
+    offset: int = 0,
+) -> PriceMovementsPage:
+    """Retourne une page (hausses, baisses, totaux) d'après cardmarket_prices.
+
+    Le tri est calculé sur la liste complète avant découpage : la pagination
+    par ``offset`` conserve donc un ordre stable d'une page à l'autre.
+    """
     if period == "1_7":
         curr_col = "avg1_price_cents"
         ref_col = "avg7_price_cents"
@@ -151,7 +158,13 @@ def get_price_movements(
     baisses.sort(key=lambda x: (x.delta_bps, x.delta_cents, x.product_id))
 
     total_compared = len(hausses) + len(baisses)
-    return hausses[:limit], baisses[:limit], total_compared
+    return PriceMovementsPage(
+        hausses=hausses[offset : offset + limit],
+        baisses=baisses[offset : offset + limit],
+        total_compared=total_compared,
+        hausses_total=len(hausses),
+        baisses_total=len(baisses),
+    )
 
 
 def get_listing_activity(
@@ -164,7 +177,8 @@ def get_listing_activity(
     language: str = "",
     min_observations: int = 1,
     limit: int = 20,
-) -> list[ListingActivityItem]:
+    offset: int = 0,
+) -> ListingActivityPage:
     """Calcule l'activité des annonces sur une fenêtre glissante UTC de 30 jours.
 
     Métriques calculées par carte unitaire identifiée :
@@ -176,7 +190,9 @@ def get_listing_activity(
     - libellé métier obligatoire : « Activité des annonces » ;
     - interdiction formelle de présenter ces métriques comme des « ventes » ;
     - exclusion des lots et des annonces ambiguës ;
-    - la réingestion d'une annonce déjà existante n'augmente pas distinct_listings_count.
+    - la réingestion d'une annonce déjà existante n'augmente pas distinct_listings_count ;
+    - le découpage par ``offset`` s'applique après le tri SQL : l'ordre est
+      stable d'une page à l'autre et ``total`` couvre toutes les cartes éligibles.
     """
     now_utc = (now or datetime.now(UTC)).astimezone(UTC)
     window_start = (now_utc - timedelta(days=window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -233,15 +249,24 @@ def get_listing_activity(
         sql += " AND c.language = ?"
         params.append(language)
 
-    sql += """
+    group_sql = """
         GROUP BY c.reference_card_id, r.tcgdex_id, r.name, r.set_name, r.local_id, r.rarity, r.image_url, c.currency
         HAVING COUNT(DISTINCT c.id) >= ?
-        ORDER BY distinct_listings_count DESC, new_listings_count DESC, card_name ASC, c.reference_card_id ASC
-        LIMIT ?
     """
-    params.extend([min_observations, limit])
+    total = connection.execute(
+        f"SELECT COUNT(*) FROM ({sql} {group_sql})",
+        [*params, min_observations],
+    ).fetchone()[0]
 
-    rows = connection.execute(sql, params).fetchall()
+    rows = connection.execute(
+        f"""
+        {sql}
+        {group_sql}
+        ORDER BY distinct_listings_count DESC, new_listings_count DESC, card_name ASC, c.reference_card_id ASC
+        LIMIT ? OFFSET ?
+        """,
+        [*params, min_observations, limit, offset],
+    ).fetchall()
     items: list[ListingActivityItem] = []
     for row in rows:
         items.append(
@@ -261,7 +286,7 @@ def get_listing_activity(
                 currency=str(row["currency"] or "EUR"),
             )
         )
-    return items
+    return ListingActivityPage(items=items, total=int(total))
 
 
 def get_trends_page_data(
@@ -285,15 +310,18 @@ def get_trends_page_data(
 
     # T3.1 : variations de prix
     period_lit: Literal["7_30", "1_7"] = "1_7" if filters.period == "1_7" else "7_30"
-    hausses, baisses, total_compared = get_price_movements(
+    limit = filters.limit
+    offset = (filters.page - 1) * limit
+    movements = get_price_movements(
         connection,
         period=period_lit,
         set_name=filters.set_name,
-        limit=filters.limit,
+        limit=limit,
+        offset=offset,
     )
 
     # T3.2 : activité des annonces sur 30 jours
-    listing_activity = get_listing_activity(
+    activity_page = get_listing_activity(
         connection,
         now=moment,
         window_days=30,
@@ -301,18 +329,20 @@ def get_trends_page_data(
         rarity=filters.rarity,
         language=filters.language,
         min_observations=filters.min_observations,
-        limit=filters.limit,
+        limit=limit,
+        offset=offset,
     )
 
     # T3.3 : meilleures affaires
-    opportunities = get_best_opportunities(
+    opportunities_page = get_best_opportunities(
         connection,
         now=moment,
         max_quote_age_days=filters.max_quote_age_days,
         set_name=filters.set_name,
         rarity=filters.rarity,
         language=filters.language,
-        limit=filters.limit,
+        limit=limit,
+        offset=offset,
     )
 
     # Listes pour les sélecteurs de filtres
@@ -357,11 +387,16 @@ def get_trends_page_data(
         computed_at=computed_at,
         last_cardmarket_sync_at=last_cardmarket_sync_at,
         filters=filters,
-        hausses=hausses,
-        baisses=baisses,
-        total_price_compared=total_compared,
-        listing_activity=listing_activity,
-        best_opportunities=opportunities,
+        page=filters.page,
+        hausses=movements.hausses,
+        baisses=movements.baisses,
+        total_price_compared=movements.total_compared,
+        hausses_total=movements.hausses_total,
+        baisses_total=movements.baisses_total,
+        listing_activity=activity_page.items,
+        activity_total=activity_page.total,
+        best_opportunities=opportunities_page.items,
+        opportunities_total=opportunities_page.total,
         available_sets=available_sets,
         available_rarities=available_rarities,
         available_languages=available_languages,

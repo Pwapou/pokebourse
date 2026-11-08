@@ -1,5 +1,7 @@
 # Suivi de stabilisation — Pokébourse
 
+**État courant au 8 novembre 2026 :** [TASKING_PROJET.md](TASKING_PROJET.md). Ce fichier est un **journal chronologique** : les constats, nombres de tests, accès et volumes de chaque section valent à leur date. Les sections anciennes n'annulent pas les livraisons ultérieures. Le dernier bilan transversal est en §32.
+
 Date du contrôle initial : 2026-11-01  
 Date de la révision TCGdex & Identification : 2026-11-01
 
@@ -270,7 +272,7 @@ La migration 0019 ajoute les décisions locales, les observations économiques e
   - Déclenchement uniquement sur action explicite via le paramètre `external=1`.
   - Résilience locale totale : les résultats locaux s'affichent même en cas de coupure réseau ou d'indisponibilité externe.
   - TCGdex : enfilage des demandes de complétion dans `identification_searches` avec déduplication stricte des critères pour traitement ordonné par le worker.
-  - eBay : requêtes bornées avec connecteur officiel, backoff exponentiel et quotas.
+  - eBay : requêtes bornées via le connecteur HTML de recherche, pas l’API officielle ; disponibilité d’accès à distinguer des tests simulés (précision documentaire du 8 novembre, voir T15).
   - Vinted et Leboncoin : signalées avec statut explicite « Non disponible » et motif (respect des CGU et protections anti-bot documentées dans `SOURCES.md`).
   - Importation contrôlée en un clic (`POST /search/external/import`) avec déduplication `(source_id, external_id)`, préservation inviolable de `first_seen_at` et enregistrement de l'historique dans `listing_observations`.
 - **Validation** : 31 tests automatisés dédiés dans `tests/test_search.py`.
@@ -510,3 +512,128 @@ La migration 0019 ajoute les décisions locales, les observations économiques e
   HTTP réelles sur base temporaire (conservation, affichage, réactivation).
 - Artefacts lourds de validation exclus du dépôt (snapshot figé 8 Mo et photos
   de campagne 1,8 Mo, non requis par les tests) ; `.gitignore` mis à jour.
+
+---
+
+## 28. Remise à jour transversale du tasking — 8 novembre 2026
+
+**Périmètre :** audit documentaire du commit `a904eca` et de l'arbre partagé non committé. Les correctifs T08 et le suivi `/tasking` présents avant cette intervention sont préservés ; aucun changement applicatif, dépendance, migration, accès distant ou déploiement ajouté par cet audit. La base opérationnelle et les volumes utilisateur ne sont pas consultés ou modifiés.
+
+**Point d'entrée :** [TASKING_PROJET.md](TASKING_PROJET.md) relie les plans, leurs preuves, dépendances et prochaines actions. Les checklists historiques sont réconciliées avec les modules/tests, sans cocher les recettes exhaustives ni les qualifications absentes.
+
+| Décalage constaté | Mise à jour et conséquence |
+|---|---|
+| Achats encore annoncés inexistants dans la charte, navigation/recherche entièrement décochées | Socle intégré reconnu ; `/achats`, `sale_price_cents`, réglages, gestion, recherche et tendances conservés. Assistant à trois questions, tri financier/diagnostic/factorisation `/search`, pagination des tendances, performance et recette exhaustive restent ouverts |
+| Schéma à 21 migrations et suite à 452 tests dans les points d'entrée | Guide/README actualisés : 26 migrations, 57 fichiers de tests ; les chiffres anciens restent historiques dans ce journal et les rapports figés |
+| Radar présenté comme entièrement à créer | Migration `0019`, repository, événements/décisions et retrait des achats des preuves de vente reconnus. Page `/radar`, regroupement de recherches, historique de cotes, notifications et attribution restent ouverts |
+| Identification ne résumant que T02/T03 malgré les livraisons suivantes | T00/T04/T05/T08.1 et contrôles T08.3 actuels repositionnés ; alias « gempack 2 », nouveau moteur T06/T07, choix avant ajout et recette globale toujours ouverts |
+| T15 décrit comme livré puis entièrement décoché | Audit documentaire coché sur son périmètre du 3 novembre ; accès réel et D1–D6 toujours ouverts, aucune nouvelle preuve réseau |
+| Dépendances ambiguës T01↔T04 et T08↔T09 | Outillage/annotations distingués ; contrats de persistance préparés avant intégration commune. J1 assisté distinct de J2 qualifié ; T13 transversal, T11 conditionnel |
+| Plusieurs contrats de prix potentiellement concurrents | Radar/P4–P5 réutilisent Identification/T09 et T15–T18 ; recherche externe générale reste explicite, futur marché automatique seulement après ajout admissible |
+| Prompt ML décrivant des défauts déjà corrigés et schéma conceptuel ancien | Prompt classé archive, conception ML reliée au pilote réel et à T01/T10 ; pas de modèle ni nouveau schéma dupliqué. Plancher de promotion aligné sur T10 |
+| Guides déclarant `image`/`both` refusés, absence d'inventaire et timeout OCR global | Phase 0 reliée aux preuves durables T04 et à l'inventaire livré ; timeout courant documenté par appel Tesseract, budget global/concurrence agrégée toujours T06/T19 |
+
+**Validation automatisée sur l'état applicatif inspecté :**
+
+```bash
+docker compose run --rm app pytest -ra
+```
+
+Résultat : **834 passed, 1 warning in 38.38s**, code 0, **zéro échec et zéro skip**. L'avertissement de dépréciation Starlette/TestClient/httpx était déjà connu. Tests de migrations, sauvegardes, imports, identification, navigateur/extension et suivi inclus ; données de test temporaires et échanges externes simulés. Les seules modifications après ce passage concernent la documentation.
+
+**Contrôles documentaires :** **220 liens locaux/ancres sur 29 documents**, existence des fichiers de preuve référencés, correspondance exacte des **30 IDs** T00–T19/sous-lots avec le plan de validation (T13 inclus), **18 IDs d'incidents** concordants entre synthèse et détail sans doublon, séquence/transactions/enregistrement des **26 migrations**, inventaire des **57 fichiers de tests**, puis `git diff --check`. Les liens externes ne sont pas consultés. Les chemins de skills sont des ressources d'environnement, pas des dépendances du dépôt.
+
+**Limites conservées :** aucun gain OCR, annotation humaine, accès aux ventes/gradées, recette exhaustive aux cinq largeurs, couverture du catalogue courant ou déploiement n'est déduit de la suite verte. TRK-002/004/005/007/008/009/100/101 restent ouverts selon leur état. Les erreurs initiales et résultats corrigés de la reprise T08 restent dans [tracker.md](tracker.md).
+
+**Reprise :** fixtures/annotations T01 puis T06/T07 + T08.2/T09 ; T19 après moteur commun, avec T19.1/TRK-101 possibles sur fixtures indépendantes. Préparer T15/décisions et contrats J3 sans attendre T11. Le radar UI peut avancer indépendamment ; ses alertes attendent des preuves de prix admissibles. Chaque livraison doit désormais mettre à jour le suivi consolidé, le plan concerné et les preuves datées.
+
+**Intégration du suivi en lecture seule :** `tasking_data()` exécuté dans Docker charge **7 plans**, dont TASKING_PROJET et ses 12 actions, et **18 incidents uniques**, sans ouvrir la base. Le nouveau suivi est ainsi pris en compte par la page `/tasking` existante sans changement applicatif.
+
+---
+
+## 29. Correction TRK-101 — Conversion monétaire exacte des filtres collecteurs (8 novembre 2026)
+
+**Périmètre :** [vinted.py](app/collectors/vinted.py) et [ebay.py](app/collectors/ebay.py), fonction `_euros_from_cents()` utilisée par `build_vinted_search_params()` et `build_ebay_search_params()`.
+
+**Correctif :** remplacement de la division flottante `cents / 100` par une conversion entière exacte `f"{cents // 100}.{cents % 100:02d}"`, avec rejet explicite des centimes négatifs. Le format reste compatible avec les adaptateurs (`"10.00"`, `"0.05"`). Cas limites ajoutés dans [tests/test_collectors.py](tests/test_collectors.py) : zéro, centimes non ronds et grandes bornes, sans réseau.
+
+**Validation automatisée :**
+
+```bash
+docker compose run --rm app pytest tests/test_collectors.py -v
+docker compose run --rm app pytest
+```
+
+Résultat : **14 passed** sur les collecteurs, puis suite complète **840 passed, 1 warning in 37.09s**, code 0, zéro échec et zéro skip. Une première passe complète a montré un échec isolé et non reproductible du test de retry `test_exponential_backoff_recovers_from_temporary_error` (timing), passant seul puis en suite ; sans lien avec ce correctif.
+
+**Suivi documentaire :** [tracker.md](tracker.md) — TRK-101 passé `résolu` avec preuve, correctif et résultats datés. TASKING_PROJET.md inchangé (l'action COL-01 couvre aussi T19, toujours ouverte). TRK-100 reste ouvert et indépendant.
+
+---
+
+## 30. Stabilisation générale : cadrage OCR (T06.1), tris financiers `/search`, pagination `/trends`, suivi `/tasking` et contrat de capture T08 (8 novembre 2026)
+
+**Périmètre :**
+- **Cadrage manuel OCR & repère EXIF (T06.1)** : route éphémère `POST /ocr/preview` retournant l'image orientée sans EXIF, sélection rectangulaire `(crop_x, crop_y, crop_width, crop_height)` avec validation serveur des bornes dans `_crop_image()`, rotation par quarts de tour (90° horaire), UI interactive canvas dans `app/static/ocr.js` et intégration dans la fiche unitaire `catalog_detail.html`. Couverture automatisée : `tests/test_ocr_local.py` et `tests/test_ocr_crop_browser.py`.
+- **Tris financiers dans `/search`** : intégration des tris `net_profit_desc` (Gain net décroissant) et `roi_desc` (ROI décroissant) dans `app/search/models.py` et `app/search/service.py`. Évaluation complète de la rentabilité en Python sur les annonces filtrées avec clé de tri stable (annonces sans calcul reléguées en fin, bris d'égalité par identifiant stable) et application de la pagination en mémoire.
+- **Pagination et décomptes stables dans `/trends`** : paramètre `page` et modèles `PriceMovementsPage`, `ListingActivityPage`, `OpportunitiesPage` avec totaux fidèles (`hausses_total`, `baisses_total`, `activity_total`, `opportunities_total`). L'offset s'applique après le tri SQL ; pagination stable intégrée dans `app/templates/trends.html`.
+- **Suivi de projet en lecture seule (`/tasking`)** : module `app/tasking.py` et template `app/templates/tasking.html` reliés à la route `GET /tasking`. Analyse des plans Markdown (`TASKING_*.md`, `PLAN_*.md`), extraction des dépendances et synthèse des incidents `tracker.md` sans ouverture de base de données ni écriture. Couverture dans `tests/test_tasking.py`.
+- **Contrôles du moteur d'identification actuel et workflow de capture (T08.1 / T08.3)** : titre vendeur isolé dans `raw_data.title`, nom canonique `name` laissé vide à l'extraction pour laisser place aux propositions du référentiel, langue inconnue explicite (`und`), déconnexion des erreurs de saisie financière et de l'identification (un montant mal saisi n'interrompt pas la recherche de carte), élimination du parasite `n` sur les numéros de carte, et tests de bout en bout dans `tests/test_capture_workflow.py`.
+
+**Validation de la suite complète :**
+- `58 fichiers` de tests automatisés.
+- **860 tests passants, 0 échec, 0 sauté**, 1 avertissement de dépréciation Starlette/TestClient connu.
+- **26 migrations SQLite** (`0001` à `0026_tcgdex_sync_locale.sql`) vérifiées avec idempotence stricte.
+
+---
+
+## 31. Clôture des lots autonomes Recherche/Tendances, Catalogue responsive, Extracteurs Chrome et Inventaire UI — 8 novembre 2026
+
+**Périmètre traité :**
+1. **Recherche — diagnostic des métadonnées manquantes (`TASKING_RECHERCHE_TENDANCES.md`, `T1.2`)** :
+   - Ajout de `missing_rarity_count`, `missing_year_count` et `metadata_diagnostic` sur `CardSearchSummary` et `ListingSearchSummary` dans [models.py](app/search/models.py) et [service.py](app/search/service.py) (chemins SQL exact et repli approché).
+   - Lorsqu'un filtre `rarity` ou `year_min`/`year_max` est actif et que des cartes ou annonces identifiées correspondantes ont une rareté ou une date de sortie non chargée (`NULL` ou vide dans le cache local), le diagnostic indique explicitement le nombre d'éléments exclus par métadonnée non chargée et invite à enrichir les fiches détaillées via `/tcgdex`, sans présenter une donnée non chargée comme une preuve d'absence.
+   - Dans [search.html](app/templates/search.html), affichage d'une bannière `.metadata-diagnostic-banner` et de badges explicites `Rareté non chargée` / `Année non chargée` (au lieu de `Rareté : —` / `Année : —`).
+2. **Recherche — factorisation des filtres SQL catalogue et recherche (`TASKING_RECHERCHE_TENDANCES.md`, `T1.3`)** :
+   - Extraction de `build_common_listing_clauses(query, set_name, source, ident_status, *, include_reference_fields=False)` dans [catalog.py](app/catalog.py), réutilisée par `_catalog_filters()` dans `app/catalog.py` et par `_build_listings_query()` / `_build_listings_non_reference_clauses()` dans [service.py](app/search/service.py).
+   - Les filtres avancés propres à `/search` (année, rareté officielle, langue, état, variante, édition, gradation, bornes de prix et mode de filtre des lots) restent isolés dans `app/search/service.py` pour préserver le contrat de `/catalog`.
+3. **Recherche & Tendances — profilage `EXPLAIN QUERY PLAN` et mesures sur volume représentatif (`T0.1`, `T1.4`, `T5.2`)** :
+   - Jeu de données représentatif isolé (20 extensions, 2 000 cartes de référence, 4 000 annonces, 2 000 cotes Cardmarket, 8 000 observations d'annonces) testé dans `test_search_and_trends_explain_query_plan_and_representative_volume` ([tests/test_search.py](tests/test_search.py)).
+   - Plans vérifiés :
+     - `search_reference_cards` : `SEARCH c USING INDEX pokemon_ref_cards_rarity_index (rarity=?) | SEARCH s USING INDEX sqlite_autoindex_pokemon_reference_sets_1 (id=?) | USE TEMP B-TREE FOR ORDER BY` (**0,63 ms**).
+     - `search_catalog_listings` : `SEARCH c USING INDEX catalog_items_is_lot_index (is_lot=?) | SEARCH r USING INTEGER PRIMARY KEY (rowid=?) | SEARCH s USING INTEGER PRIMARY KEY (rowid=?) | USE TEMP B-TREE FOR ORDER BY` (**30,91 ms**).
+     - `get_search_filter_options` : **1,20 ms**.
+     - `get_price_movements` (2 000 cotes) : **10,37 ms**.
+     - `get_listing_activity` (8 000 observations, `SCAN listing_observations USING INDEX listing_observations_listing_index`) : **8,52 ms**.
+     - `get_best_opportunities` (4 000 annonces) : **105,02 ms**.
+     - Temps cumulé des 6 requêtes principales : **156,65 ms**. Les index livrés par `0002`, `0011`, `0013` et `0020_search_indexes.sql` couvrent déjà les accès ; aucun index ni migration supplémentaire n'est nécessaire.
+4. **Recette responsive (5 largeurs) et clavier sur `/catalog`, `/search` et `/trends` (`TASKING_RECHERCHE_TENDANCES.md` `T1.5`/`T3.4`, `TASKING_INTEGRATION_DESIGN.md` `T2`/`T6`, `TRK-102`)** :
+   - Correction dans [style.css](app/static/style.css) et [trends.html](app/templates/trends.html) des causes de débordement horizontal à `320`/`390` px (`.stack` avec `grid-template-columns: minmax(0, 1fr)`, grilles auto-fit bornées par `min(100%, ...)`, menu `.add-menu` borné à `calc(100vw - 32px)`, `.decision-wrap` remis en flux sous `900` px) et ajout de `class="optional-1100"` sur la 6e cellule (`ROI`) des meilleures affaires de `/trends` à `1024` px.
+   - Vérification automatisée sous Playwright/Chromium hors-ligne aux 5 largeurs (`1440`, `1024`, `768`, `390`, `320` px) dans `test_responsive_and_keyboard_qa_for_catalog_search_and_trends` : `scrollWidth <= innerWidth`, absence de chevauchement `.product-identity` / `.decision-wrap`, ouverture/fermeture du menu mobile `#menu-button` avec `Escape`, et focus clavier.
+5. **Extension Chrome — tests directs des extracteurs (`TASKING_SIMPLIFICATION_CIBLE.md`, `T2.4`)** :
+   - Export de `normalizePlainText`, `escapeRegExp` et `hasPotentialCardName` dans [content.js](extension/content/content.js) et ajout de `test_extension_text_helpers_and_set_extractor` dans [tests/test_chrome_extension.py](tests/test_chrome_extension.py) couvrant directement les accents, apostrophes typographiques, métacaractères regex, mots génériques seuls vs noms plausibles, et la détection d'extension (`151` exact vs faux positifs `1510`, `2151`, `151/165`, `151€`).
+6. **Inventaire des actions de l'interface (`TASKING_INTEGRATION_DESIGN.md`, `T5`)** :
+   - Audit complet des 26 templates `app/templates/*.html` : aucun bouton décoratif sans comportement ni lien `href="#"`. Normalisation de l'attribut `action` explicite sur les formulaires GET de `annotation_dashboard.html`, `identification_diagnostics.html` et `tcgdex_sync.html`, et test de non-régression `test_ui_actions_inventory_has_no_decorative_noop_buttons`.
+
+**Validation exécutée :**
+- Tests ciblés : `docker compose run --rm app pytest tests/test_search.py tests/test_trends.py tests/test_chrome_extension.py -v` → **93 passed**.
+- Suite complète : `docker compose run --rm app pytest -ra` → **867 passed, 1 warning in 38.35s**, code 0, zéro échec et zéro skip.
+
+---
+
+## 32. Consolidation des développements et des deux branches OCR — 8 novembre 2026
+
+**Socle préservé :** les changements précédemment non committés de `main` ont été enregistrés dans `codex/consolidation-main-20261108` (`0a07d7b`) : capture/T08, cadrage manuel, conversion monétaire exacte, recherche, tendances, responsive et suivi `/tasking`. Les documents et comptes rendus historiques restent inchangés dans leurs sections datées.
+
+**Intégration OCR :** `codex/ocr-parallele` (`4d0746d`) est conservé pour les contrats/types, la géométrie et localisation optionnelle, le TSV, les hypothèses, la langue, la récupération commune et l’enveloppe interne. De `codex/ocr-p2` (`862a0d7`), le runner renforcé et ses tests de processus/annulation/saturation sont réutilisés avec le `Deadline` commun. Les autres variantes p2 ne sont pas empilées : elles doublonnent le pipeline retenu avec des contrats incompatibles. Les précisions documentaires locales p2 (`2b48633`) étaient déjà présentes dans le socle et ne créent pas un second changement. Détail : [intégration OCR](docs/identification/T06_T07_INTEGRATION_JOB3.md).
+
+**Réconciliation :** les corrections T08 du socle et `retrieve_candidates()` coexistent dans `matcher.py`, sans choix « ours/theirs » global. Les statuts T06/T07 restent partiels : absence de raccordement HTTP/T03/T08.2 complet, de choix de photo dans la capture, de concurrence app/worker, de file T19 et de décision atomique. TRK-200/201/203/204 sont intégrés au tracker ; TRK-202 reste dédupliqué dans TRK-009 et TRK-205 n’est pas rouvert pour une capacité interne déjà couverte.
+
+**Validation exécutée dans Docker, sur bases temporaires et images simulées/synthétiques :**
+
+- Variantes avant sélection : `ocr-parallele` **59 passed**, `ocr-p2` **77 passed**, zéro skip.
+- OCR intégré : `docker compose run --rm app pytest tests/test_ocr_geometry.py tests/test_ocr_hypotheses.py tests/test_ocr_languages.py tests/test_ocr_spatial.py tests/test_ocr_limits.py tests/test_ocr_local.py tests/test_ocr_web.py tests/test_ocr_crop_browser.py -ra` → **86 passed**, zéro skip.
+- Capture Chrome/MV3, prévisualisation, reviews, migrations, sauvegarde/restauration, preuves visuelles, recherche, tendances et suivi : **359 passed**, zéro skip. Les scénarios Playwright/Chromium couvrent les interactions, le clavier, les largeurs mobiles/desktop et l’extension réellement chargée selon les harnais existants.
+- `docker compose run --rm app pytest -ra` → **936 passed, 1 warning in 45.18s**, code 0, zéro échec et zéro skip. Avertissement de dépréciation Starlette/TestClient/httpx existant.
+- Deux corrections d’intégration documentées au tracker : retrait des imports/tests spatiaux p2 doublons et restauration du message historique de sortie OCR excessive. Aucune migration publiée, dépendance, base utilisateur ou photo de validation ajoutée.
+
+**Limites :** les tests mockés et Tesseract sur image synthétique ne mesurent pas un gain de précision sur photographies marketplace. Aucun benchmark apparié annoté nouveau, accès externe, déploiement ou parcours T08.2/T09 complet n’est déclaré livré. TRK-002/004/005/007/008/009/017/100/200/203/204 restent ouverts selon leur périmètre ; TRK-201 est validé pour le contrôle `/proc`.

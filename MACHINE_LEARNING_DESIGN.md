@@ -1,5 +1,7 @@
 # Pokébourse — Conception de la phase Machine Learning
 
+**Revue du 8 novembre 2026 : conception ML, pas moteur livré.** Le [suivi consolidé](TASKING_PROJET.md) et [Identification/T01–T11](TASKING_IDENTIFICATION_FIABLE.md) donnent l'état courant. Originaux, reviews, résolution, export, lexique, preuves visuelles et localisations existent déjà. Les annotations indépendantes et la qualification restent ouvertes ; aucun ranker, embedding ni modèle visuel n'est déclaré disponible. Les exemples de tables ci-dessous sont conceptuels : ne pas les appliquer comme une migration supplémentaire dupliquant le schéma existant.
+
 1. Construire d’abord une vérité terrain humaine, historisée et résistante aux nouvelles collectes.
 2. Traiter l’identification comme un rattachement d’entités : recherche de candidats, classement, puis abstention possible.
 3. Mesurer séparément la couverture du catalogue, le rappel des candidats et la qualité de la décision finale.
@@ -17,22 +19,20 @@ Le développement du premier lot textuel de phase 0 est suivi séparément dans 
 
 ## A. Cadrage et préalable indispensable
 
-### A.1. Ce que le projet permet réellement aujourd’hui
+### A.1. État courant et prérequis restant ouverts
 
-L’examen de `app/identification/{detector,matcher,models}.py`, `app/tcgdex/cache.py`, `app/collectors/service.py`, `app/catalog.py` et des migrations confirme le pipeline décrit, avec plusieurs conséquences pratiques :
-
-| Constat dans le code | Conséquence pour la conception |
+| État vérifié au 8 novembre | Conséquence pour la conception |
 |---|---|
-| `0008_create_pokemon_reference_catalog.sql` ajoute les quatre statuts, `reference_card_id`, le score entier et la raison | Préserver ces contrats ; ajouter une provenance distincte pour les validations |
-| `0006_create_listing_watches.sql` conserve `original_title`, `raw_data` et une `image_url` | Extraire une description explicite de `description`/`body` ; ne pas entraîner sur tout le JSON |
-| L’ingestion et `reidentify_catalog_item()` réécrivent l’identification | Une validation humaine doit avoir priorité sur les propositions automatiques |
-| La recherche par nom tronque à 20 résultats, ordonnés par identifiant interne | Le bon résultat peut manquer ; un reranker seul ne peut pas le retrouver |
-| Le client TCGdex cible `/v2/fr` ; la table possède un `tcgdex_id` unique sans langue | Le multilingue n’est pas couvert par le seul choix d’un modèle multilingue |
-| Le détecteur utilise `language=language or "fr"` | Conserver une langue inconnue ; distinguer observation, hypothèse et validation |
-| `sync_set()` importe surtout les résumés de cartes | Vérifier puis compléter les attributs nécessaires via les détails, hors identification |
-| La rentabilité utilise les attributs du catalogue, sans filtrage systématique par identification | Prévoir un contrôle d’éligibilité avant de présenter une opportunité comme confirmée |
+| Quatre statuts et score entier conservés ; observations/versionnement T03 depuis `0022` | Réutiliser les contrats ; le score historique n'est pas une probabilité |
+| Originaux/snapshots, reviews et résolution communes, pilote/export (`0012`–`0014`) | Ne pas recréer la boucle humaine ; constituer les labels et respecter les révisions |
+| Vocabulaire issu du catalogue, trigrammes et distance d'édition, candidats classés puis bornés | Mesurer la baseline actuelle ; l'ancien plafond arbitraire à 20 résultats n'est plus le diagnostic courant |
+| Alias/localisations et sync par locale (`0024`–`0026`) | Isoler les localisations ; une locale chargée ne qualifie pas le matching ou les prix de cette langue |
+| Détecteur sans français implicite ; `und` pour captures, défaut historique maintenu pour anciens JSONL | Distinguer observation de langue et défaut de stockage ; ne pas entraîner sur une langue supposée |
+| Preuves visuelles explicites, intégrité/sauvegarde/purge (`0023`) | Rattacher les images durables ; les campagnes séparées ne deviennent pas automatiquement des labels visuels |
+| Inventaire figé et rejeu T00/T01, pas de vérité terrain humaine complète | Les volumes/rapports datés ne mesurent pas une précision actuelle ; T01/T10 restent ouverts |
+| Contrôle d'admissibilité métier complet et nouveau workflow OCR/choix avant ajout encore à intégrer | Réutiliser Identification/T08–T09, puis T14–T18 pour le marché ; conserver les formules financières |
 
-Le volume du catalogue, la complétude des descriptions et le débit d’annonces restent à inventorier. Les 15 000 à 40 000 cartes sont une cible, pas une mesure locale.
+Le catalogue de la sauvegarde du 3 novembre est inventorié dans [STATUS_T00_T01.md](validation/ocr/evaluation/STATUS_T00_T01.md). Les 15 000 à 40 000 cartes citées dans le prompt initial n'étaient pas une mesure locale ; aucun inventaire de base opérationnelle n'a été refait par cette revue.
 
 Le ML ne résout ni un catalogue absent, ni un texte sans discriminant. Sans labels, une amélioration reste invérifiable : commencer par des exemples fiables et des mesures.
 
@@ -52,13 +52,13 @@ Conserver **FastAPI, SQLite, le worker Python et Docker sur CPU**. Ces adaptatio
 | Avant le déploiement | Calcul hors transaction SQLite, artefacts locaux versionnés, modes observation/ML et repli mesuré | Latence mesurée, validation humaine prioritaire et retour arrière vérifié |
 | Avant exploitation des résultats | Contrôle d’éligibilité entre identité effective et rentabilité | Une identité acceptée ne suffit pas si les attributs nécessaires à la comparaison restent inconnus |
 
-**Premier lot à implémenter :** données originales et inconnues, migration additive, formulaire de correction, préservation des validations, puis export des 300 premières annotations. Ce lot apporte une valeur propre même si aucun modèle n’est ensuite déployé. Les tests de non-régression associés sont précisés en G. Les autres lignes deviennent des jalons successifs, sans refonte préalable de toute l’application.
+**Prochaine étape :** utiliser les outils déjà livrés pour constituer les annotations indépendantes et le diagnostic T01/T10, tout en développant T06/T07/T08.2/T09 selon le plan actif. Les 300 annotations ne sont pas acquises par l’existence du pilote. Ce lot apporte une valeur propre même si aucun modèle n’est ensuite déployé. Les tests de non-régression associés sont précisés en G. Les autres lignes deviennent des jalons successifs, sans refonte préalable de toute l’application.
 
 ### A.2. Unité de validation et interface minimale
 
 Une validation confirme le **rattachement à une entrée TCGdex donnée**, sur une version précise des données observées. Elle ne certifie ni authenticité, ni état, ni édition, ni prix. Une variante reverse ou une première édition peut partager l’entrée de référence : ces attributs restent séparés, explicitement inconnus lorsqu’ils ne sont pas vérifiables.
 
-Ajouter à `catalog_detail.html` : texte original et description utile, photo disponible, cinq candidats avec nom/extension/numéro/identifiant, recherche libre dans tout TCGdex et actions « Confirmer », « Choisir une autre carte », « Lot », « Hors périmètre », « Carte absente du catalogue », « Preuves insuffisantes ». La recherche complète est indispensable pour corriger un défaut de récupération. Une correction peut ensuite être révisée ou retirée, avec historique.
+Le parcours de fiche déjà livré fournit texte original et description utile, photo disponible, cinq candidats avec nom/extension/numéro/identifiant, recherche libre dans tout TCGdex et actions « Confirmer », « Choisir une autre carte », « Lot », « Hors périmètre », « Carte absente du catalogue », « Preuves insuffisantes ». La recherche complète est indispensable pour corriger un défaut de récupération. Une correction peut ensuite être révisée ou retirée, avec historique.
 
 Conserver les quatre statuts publics. Un objet hors périmètre ou absent du catalogue reste `unidentified` ; une hésitation entre candidats reste `ambiguous`. Distinguer « carte absente » et « impossible à déterminer » dans les motifs humains.
 
@@ -68,7 +68,7 @@ Demander si la décision repose sur le texte, la photo ou les deux, et si le tex
 
 ### A.3. Schéma SQLite proposé
 
-Des tables associées conservent annotations indépendantes, décisions effectives, révisions et preuves observées. Les migrations `0009_create_seller_profiles.sql` et `0010_create_purchases_and_seller_stats.sql` existent déjà : utiliser la prochaine disponible, actuellement `0011`, à revérifier au moment de l’implémentation. Schéma de conception :
+Des tables associées conservent annotations indépendantes, décisions effectives, révisions et preuves observées. Les tables de production sont déjà définies par `0012`, `0013`, `0014`, puis étendues par `0022`–`0026`. Utiliser leurs contrats actuels ; pour toute donnée réellement nouvelle, vérifier le dernier numéro disponible (`0026` à cette revue). Le schéma ci-dessous illustre la conception initiale, pas une migration prête à exécuter :
 
 ```sql
 CREATE TABLE listing_identification_snapshots (
@@ -125,9 +125,9 @@ Une `annotation` est une lecture indépendante ; elle ne remplace jamais la déc
 
 L’empreinte couvre titre, description, preuves visuelles et version de normalisation, sans prix ni `last_seen_at`. Une collecte identique conserve la validation ; un contenu modifié demande réexamen. Une preuve photographique nécessite `image_evidence_ref` vers un fichier durable ou un manifeste d’images et son empreinte : une URL distante seule ne suffit pas. Sauvegarder ces preuves avec les données et définir leur rétention ; une preuve devenue indisponible est signalée dans les exports. Une modification du normaliseur impose une réconciliation explicite des snapshots, sans effacement de l’historique.
 
-La priorité de résolution est : validation humaine applicable, décision automatique admissible, abstention. L’ingestion et la réidentification doivent passer par cette résolution commune ; leurs mises à jour actuelles ne doivent plus écraser une correction. Vérifier de nouveau le snapshot au moment d’enregistrer, pour détecter une modification concurrente.
+La priorité de résolution est : validation humaine applicable, décision automatique admissible, abstention. L’ingestion et la réidentification doivent passer par cette résolution commune ; préserver la priorité humaine déjà implémentée et tester toute extension des preuves. Vérifier de nouveau le snapshot au moment d’enregistrer, pour détecter une modification concurrente.
 
-Suivre `migration_runner.py` : fichier SQL ordonné, `BEGIN IMMEDIATE`, insertion du nom dans `schema_migrations`, `COMMIT`. Ne pas modifier les migrations existantes `0001` à `0010`. `ON DELETE SET NULL` préserve la suppression actuelle d’un lot d’import sans bloquer sur les snapshots ; prévoir une purge explicite des données d’apprentissage et une rétention limitée. Tester création, mise à niveau, réapplication, intégrité des clés, restauration et concurrence avec le worker. `validated_by` provient d’une identité opérateur fiable ; en usage local mono-utilisateur, définir un identifiant local stable, sans prétendre disposer d’un système de comptes existant.
+Suivre `migration_runner.py` : fichier SQL ordonné, `BEGIN IMMEDIATE`, insertion du nom dans `schema_migrations`, `COMMIT`. Ne modifier aucune migration déjà publiée ; vérifier le répertoire courant. `ON DELETE SET NULL` préserve la suppression actuelle d’un lot d’import sans bloquer sur les snapshots ; prévoir une purge explicite des données d’apprentissage et une rétention limitée. Tester création, mise à niveau, réapplication, intégrité des clés, restauration et concurrence avec le worker. `validated_by` provient d’une identité opérateur fiable ; en usage local mono-utilisateur, définir un identifiant local stable, sans prétendre disposer d’un système de comptes existant.
 
 ### A.4. Quantité et qualité attendues
 
@@ -200,7 +200,7 @@ Chaque livraison possède un manifeste : snapshots, groupes, partitions, emprein
 
 ### C.3. Auto-labellisation contrôlée
 
-Le score règles ≥ 90 n’est qu’un filtre de présélection. Le code actuel peut accepter un ex æquo dès 90 ; il faut donc vérifier l’unicité et la marge, indépendamment du score. Exiger plusieurs indices concordants, aucune contradiction fiable et aucune détection de lot. Nom plus numéro local seuls ne prouvent pas nécessairement l’extension.
+Le score règles ≥ 90 n’est qu’un filtre de présélection. Un ex æquo reste ambigu dans le moteur courant ; conserver le contrôle d’unicité et de marge, indépendamment du score. Exiger plusieurs indices concordants, aucune contradiction fiable et aucune détection de lot. Nom plus numéro local seuls ne prouvent pas nécessairement l’extension.
 
 Auditer aléatoirement chaque cohorte admissible et appliquer le seuil statistique de A.4. Distinguer `human` et `rule_pseudo` dans les exports ; ne jamais renseigner `validated_by` avec le moteur. Commencer avec un poids de 0,2 et au plus un exemple faible par exemple humain dans le train. Comparer avec/sans labels faibles et sans feature « score règles » pour détecter la simple imitation. Tout désaccord avec une validation humaine exclut le pseudo-label. Aucune récursion automatique modèle → pseudo-labels → même modèle avant un protocole spécifique validé.
 
@@ -226,7 +226,7 @@ Ordre expérimental recommandé : score déterministe amélioré, régression lo
 
 Générer noms et extensions depuis TCGdex, complétés par une table d’alias contrôlée. Séparer nom complet et suffixes significatifs ; traiter `EX`, `ex`, `GX`, `V`, `VMAX` selon leur contexte. Normaliser symétriquement annonces et catalogue. Aujourd’hui, normaliser le paramètre tout en cherchant dans `LOWER(name)` laisse notamment un décalage sur les accents ; `local_id LIKE '%4'` peut aussi récupérer `14` ou `104`. Une égalité canonique et des alias corrigent ces problèmes sans ML.
 
-Ajouter un index inversé SQLite FTS5, tokenizer `unicode61`, BM25 pondérant nom/extension, et une recherche approximative `rapidfuzz.distance.Levenshtein` ou `rapidfuzz.process.extract`. FTS5 n’apporte pas seul la tolérance aux fautes ; RapidFuzz intervient sur un lexique borné. SQLite trie les meilleurs scores BM25 vers les valeurs les plus petites. Vérifier FTS5 dans l’image ; sinon utiliser un index en mémoire pour ce petit catalogue. [FTS5/BM25](https://www.sqlite.org/fts5.html), [RapidFuzz](https://rapidfuzz.github.io/RapidFuzz/).
+La baseline livrée utilise un index de trigrammes et une distance d’édition Python bornée. Comparer une variante SQLite FTS5/BM25 et/ou RapidFuzz seulement si T01/T10 montrent un gain utile ; ces bibliothèques et index ne sont pas actuellement livrés. FTS5 n’apporte pas seul la tolérance aux fautes ; RapidFuzz intervient sur un lexique borné. SQLite trie les meilleurs scores BM25 vers les valeurs les plus petites. Vérifier FTS5 dans l’image ; sinon utiliser un index en mémoire pour ce petit catalogue. [FTS5/BM25](https://www.sqlite.org/fts5.html), [RapidFuzz](https://rapidfuzz.github.io/RapidFuzz/).
 
 Conserver la cascade actuelle comme source prioritaire, puis unir ses résultats à la recherche lexicale, même lorsqu’elle a trouvé quelques candidats. Dédupliquer par identité et réserver une place aux correspondances structurées fortes. Tester `K = 20, 50, 100` ; retenir le plus petit atteignant le rappel cible. Exploiter le dénominateur extrait via les effectifs officiels disponibles, comme indice contextualisé, sans élimination systématique lorsque promos et séries spéciales rendent la comparaison incertaine.
 
@@ -277,7 +277,7 @@ Collecteurs → snapshot des preuves → extraction par règles → lot/scellé 
 
 Dans `app/identification/`, distinguer extraction, récupération, ranking, décision, résolution humaine et audit. Réserver `app/ml/` aux features, entraînements et artefacts. Injecter le service dans l’ingestion et la réidentification sans recharger chaque modèle.
 
-Créer une table additive `identification_runs` : snapshot, versions du catalogue/récupérateur/modèle/politique, candidats et preuves structurées, scores bruts, probabilité éventuelle, décision, latences et motif de repli. Conserver ces détails en JSON validé et indexer snapshot/date. Les candidats actuels n’étant pas persistés, ce journal est nécessaire pour expliquer une décision passée.
+Créer une table additive `identification_runs` : snapshot, versions du catalogue/récupérateur/modèle/politique, candidats et preuves structurées, scores bruts, probabilité éventuelle, décision, latences et motif de repli. Conserver ces détails en JSON validé et indexer snapshot/date. Les snapshots et tirages conservent déjà des candidats/versions ; le journal exhaustif de chaque exécution ML reste à concevoir en réutilisant ces contrats, sans en déduire qu’il est déjà livré.
 
 Aujourd’hui, l’identification s’exécute dans le bloc transactionnel d’ingestion. Déplacer calcul et inférence avant les écritures, puis enregistrer en transaction courte en vérifiant l’empreinte courante. Ne pas conserver un verrou SQLite pendant des centaines de millisecondes de calcul. Garder WAL et `busy_timeout` existants.
 
@@ -337,7 +337,7 @@ Prévoir un audit complémentaire aléatoire des décisions acceptées par le pi
 
 Autoriser une première automatisation ML par segment si :
 
-1. Précision d’acceptation observée ≥ 99,5 %, avec borne inférieure unilatérale à 95 % ≥ 99 % ; seuil plus strict de A.4 pour produire des pseudo-labels à grande échelle.
+1. Appliquer le plancher du chantier actif Identification/T10 : borne inférieure unilatérale à 95 % de la précision ≥ 99,5 % sur le périmètre qualifié. L’ancien critère de conception à 99 % de borne ne suffit pas pour une nouvelle acceptation OCR/vision. A.4 conserve le garde-fou des pseudo-labels.
 2. Rappel candidats@50 ≥ 98 % sur le périmètre couvert, avec analyse des échecs et incertitude publiée.
 3. Gain d’au moins 5 points de taux d’identification correcte, ou baisse relative d’escalade ≥ 15 %, à précision comparable. Choisir le critère principal avant le test ; exiger une borne inférieure de l’intervalle à 95 % du gain strictement positive, obtenue par bootstrap apparié par groupe. Fixer également la tolérance de différence de précision avant l’évaluation ; chaque système reste soumis au plancher de sécurité. Les seuils de gain sont des valeurs de départ à confirmer selon le temps humain et le coût d’exploitation, puis à verrouiller avant le test.
 4. Aucun segment suffisamment documenté ne passe sous le plancher de précision ; les segments peu documentés restent soumis à validation.

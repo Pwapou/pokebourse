@@ -191,8 +191,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="item-checkbox" data-id="${escapeHtml(itemKey)}" ${isSelected ? "checked" : ""} title="Sélectionner pour l'envoi">
           ${thumbHtml}
           <div class="listing-details">
-            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="listing-title" title="${escapeHtml(item.name)}">
-              ${escapeHtml(item.name)}
+            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="listing-title" title="${escapeHtml(item.raw_data?.title || item.name || "Carte non identifiée")}">
+              ${escapeHtml(item.raw_data?.title || item.name || "Carte non identifiée")}
             </a>
             <span class="listing-meta">${escapeHtml(item.set_name || "Non identifiée")}${item.card_number ? " · N° " + escapeHtml(item.card_number) : ""}</span>
             <div class="listing-bottom">
@@ -377,6 +377,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           name: item.name || "Carte non identifiée",
           set_name: item.set_name || "Non identifiée",
           card_number: item.card_number || null,
+          language: item.language || "und",
           price_cents: item.price_cents,
           currency: item.currency.toUpperCase(),
           seller: item.seller || null,
@@ -536,6 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       title: String(item.raw_data?.title || ""),
       description: String(item.description || item.raw_data?.description || ""),
       name: String(item.name || ""),
+      language: String(item.language || "und"),
       set_name: item.set_name && item.set_name !== "Non identifiée" ? String(item.set_name) : "",
       card_number: String(item.card_number || ""),
       condition: String(item.condition || ""),

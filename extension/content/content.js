@@ -178,7 +178,7 @@
       return `${fracMatch[1]}/${fracMatch[2]}`;
     }
 
-    const prefixMatch = Array.from(text.matchAll(/(?:#|n°|no\.?|num[ée]ro)\s*([A-Za-z0-9]{1,4})\b/gi)).find((match) => !isSerial(match));
+    const prefixMatch = Array.from(text.matchAll(/(?<!\w)(?:#|n°|no\.?|num[ée]ro)\s*((?=[A-Za-z0-9]{0,4}\d)[A-Za-z0-9]{1,5})\b/gi)).find((match) => !isSerial(match));
     if (prefixMatch) {
       return prefixMatch[1];
     }
@@ -332,7 +332,8 @@
 
       return [{
         external_id: externalId,
-        name: title,
+        name: "",
+        language: "und",
         set_name: extractSetName(fullContext),
         card_number: extractCardNumber(fullContext),
         price_cents: priceCents,
@@ -379,7 +380,8 @@
 
       return [{
         external_id: externalId,
-        name: title,
+        name: "",
+        language: "und",
         set_name: extractSetName(fullContext),
         card_number: extractCardNumber(fullContext),
         price_cents: priceCents,
@@ -471,7 +473,8 @@
 
     return [{
       external_id: cleanId,
-      name: title,
+      name: "",
+        language: "und",
       set_name: extractSetName(fullContext),
       card_number: extractCardNumber(fullContext),
       price_cents: priceCents,
@@ -521,7 +524,7 @@
         <div class="pokebourse-toast-icon">⚡</div>
         <div class="pokebourse-toast-body">
           <span class="pokebourse-toast-title">Pokébourse Capture</span>
-          <span class="pokebourse-toast-desc">${escapeHtml(listing.name.slice(0, 42))} · <b>${priceFormatted}</b></span>
+          <span class="pokebourse-toast-desc">${escapeHtml((listing.raw_data?.title || listing.name || "Carte non identifiée").slice(0, 42))} · <b>${priceFormatted}</b></span>
         </div>
       </div>
     `;
@@ -594,6 +597,9 @@
 
   if (typeof module === "object" && module && module.exports) {
     module.exports = {
+      normalizePlainText,
+      escapeRegExp,
+      hasPotentialCardName,
       extractCardNumber,
       isLotContext,
       extractSetName,

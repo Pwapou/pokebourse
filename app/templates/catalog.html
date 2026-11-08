@@ -57,7 +57,7 @@
             <div>
                 <span class="cell-label">ÉTAT / LANGUE</span>
                 {% if item.condition %}<b class="cell-value">{{ item.condition }}</b>{% else %}<span class="cell-value unknown">État inconnu</span>{% endif %}
-                <span class="cell-sub">{{ item.language|upper }}{% if item.grading_company %} · {{ item.grading_company }} {{ item.grade or '' }}{% endif %}</span>
+                <span class="cell-sub">{{ "Inconnue" if item.language == "und" else item.language|upper }}{% if item.grading_company %} · {{ item.grading_company }} {{ item.grade or '' }}{% endif %}</span>
             </div>
             <div>
                 <span class="cell-label">ACHAT</span>

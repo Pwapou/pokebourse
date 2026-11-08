@@ -1,6 +1,6 @@
 # Phase 0 ML — validation et pilote textuel
 
-État au 1er novembre 2026. Référence : [MACHINE_LEARNING_DESIGN.md](../MACHINE_LEARNING_DESIGN.md), sections A et G.
+Protocole initial du 1er novembre 2026 ; état réconcilié le 8 novembre. Outils livrés, campagne humaine et qualification non terminées. [Suivi consolidé](../TASKING_PROJET.md). Référence : [MACHINE_LEARNING_DESIGN.md](../MACHINE_LEARNING_DESIGN.md), sections A et G.
 
 ## Livré
 
@@ -56,7 +56,7 @@ Les probabilités portent sur chaque vague et sa population enregistrée. Les ca
 
 1. Redémarrer l’application sur le code courant selon le workflow habituel du projet pour appliquer les migrations. Les vérifications de développement utilisent des bases temporaires et ne migrent pas la base réelle.
 2. Ouvrir une fiche et choisir **Valider ou corriger l’identité**.
-3. Lire les observations, rechercher la référence, choisir le résultat et confirmer si le texte seul suffit. Un résultat `matched` exige une référence locale et un texte déclaré suffisant.
+3. Lire les observations, rechercher la référence, choisir le résultat et confirmer si le texte seul suffit. Un résultat `matched` exige une référence locale et des preuves déclarées suffisantes selon la base de lecture ; une lecture `image` ou `both` exige une preuve durable présente et vérifiée.
 4. Choisir **Décision sur l’annonce** pour appliquer une correction, **Annotation indépendante** pour conserver une lecture, ou **Arbitrage d’annotations** en renseignant leurs identifiants. Un retrait est une décision de résultat **Validation retirée** sans carte choisie.
 5. Ne renseigner langue, variante, édition ou état que si le texte permet de les vérifier. Ces valeurs ne deviennent pas automatiquement des critères de rentabilité confirmés.
 6. Exporter le jeu pilote ; conserver l’export original comme un artefact de travail versionné.
@@ -71,15 +71,19 @@ Le premier enregistrement `manifest` contient la version de schéma `identity-pi
 
 Les champs vendeur, URLs, JSON brut, commentaires et identité directe de l’opérateur ne sont pas exportés. Les contacts explicites (emails, téléphones français et liens) sont masqués dans les copies textuelles d’apprentissage. Ce masquage ne détecte pas tous les renseignements personnels possibles dans du texte libre : contrôler les données avant de partager un jeu. Les originaux opérationnels restent distincts. `reviewer_key` pseudonymise l’opérateur pour comparer les lectures ; `group_key` relie les mêmes annonces source/identifiant sans exporter cet identifiant.
 
-La suppression d’un import détache ses snapshots ; elle n’efface pas leur audit. Les lignes correspondantes sont exclues du train. Sauvegardes SQLite et restauration existantes incluent ces tables. Une procédure dédiée de purge et une durée de rétention restent à définir avant accumulation à grande échelle.
+La suppression d’un import détache ses snapshots ; elle n’efface pas leur audit. Les lignes correspondantes sont exclues du train. Sauvegardes et restauration incluent ces tables ; les preuves T04 nécessitent aussi le sidecar `.sqlite.evidence`. Purge/rétention du magasin visuel existent ; la politique de conservation des annotations et textes d’apprentissage reste à définir avant accumulation à grande échelle.
+
+## Compléments T03/T04/T05 déjà livrés
+
+- T03 (`0022`) conserve provenance/versions et distingue propositions et confirmations.
+- T04 (`0023`) autorise `image` et `both` avec preuve durable présente, empreinte, intégrité, sauvegarde/restauration et purge ; `eligible_for_visual_training` et `needs_reexamination` complètent l'export. L'OCR simple reste éphémère.
+- T05 (`0024`–`0026`) isole les localisations, alias contrôlés et files par locale. Diagnostic de couverture et inventaire en lecture seule présents ; aucune qualification globale des langues n'en découle.
 
 ## Restant avant de clore la phase 0
-
-- Archiver les images avec empreintes durables, sauvegarde et rétention avant d’autoriser `image` ou `both`. Le service refuse ces provenances pour ce pilote.
 - Constituer les **300 annotations humaines**, dont **20 % en double lecture**, puis mesurer l’accord et la suffisance du texte. Aucun de ces volumes n’est acquis par le développement.
 - Ajouter un audit aléatoire représentatif distinct du pilote stratifié, et définir les segments et effectifs à qualifier avant toute automatisation.
-- Produire le diagnostic texte/photos/catalogue prévu en A.5. Les catalogues sont figés pour les labels, mais l’inventaire de couverture reste à développer.
-- Définir et implémenter la purge des données d’apprentissage et la politique de conservation des preuves.
+- Produire le diagnostic texte/photos/catalogue prévu en A.5. Les catalogues peuvent être figés et l’outil d’inventaire de couverture existe ; le diagnostic de justesse exige encore les annotations indépendantes et les photos rattachées.
+- Définir et implémenter la purge des annotations/textes d’apprentissage ; arrêter la politique de rétention, en réutilisant la purge technique des preuves visuelles déjà livrée.
 - Traiter les quasi-doublons et republications interplateformes avant de partitionner. `group_key` ne résout que l’identité exacte de la source.
 - Finaliser l’éligibilité métier à la rentabilité à partir des attributs vérifiés. Le moteur financier existant n’est pas requalifié par ce lot.
 

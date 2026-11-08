@@ -131,15 +131,21 @@ def form_evidence(values: Mapping[str, Any], captured: Mapping[str, Any] | None 
     observations = []
     for field in ("title", "description", *IDENTITY_FIELDS):
         value = values.get(field)
-        if not isinstance(value, str) or not value.strip():
-            continue
         original = captured.get(field) or values.get(f"captured_{field}")
+        if not isinstance(value, str) or not value.strip():
+            if original:
+                source = field if field in {"title", "description"} else "structured"
+                if field == "name" and original == (captured.get("title") or values.get("captured_title") or values.get("title")):
+                    source = "prefill"
+                observations.append({"field": field, "value": original, "source": source})
+            continue
         proposed = values.get(f"proposed_{field}")
-        source = "prefill" if proposed == value else "structured" if original == value else "manual"
+        legacy_title = field == "name" and value == (captured.get("title") or values.get("captured_title") or values.get("title"))
+        source = "prefill" if proposed == value or legacy_title else "structured" if original == value else "manual"
         observations.append({"field": field, "value": value, "source": source})
         if original and original != value:
             observations.append({"field": field, "value": original,
-                                 "source": field if field in {"title", "description"} else "structured"})
+                                 "source": field if field in {"title", "description"} else "prefill" if field == "name" and original == (captured.get("title") or values.get("captured_title") or values.get("title")) else "structured"})
     for field, key in (("name", "ocr_names"), ("card_number", "ocr_numbers")):
         hints = values.get(key, ())
         if isinstance(hints, str):
