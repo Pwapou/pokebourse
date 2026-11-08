@@ -127,6 +127,15 @@ class CardMatcher:
         confidence = min(best.confidence, 79) if isolated_number else best.confidence
         return IdentificationResult("ambiguous", confidence, reason, features, candidates=candidates[:50], missing_fields=missing, uncertain_fields=uncertain + ["confirmation_numéro"])
 
+    def retrieve_candidates(self, features: ExtractedFeatures) -> list[CandidateMatch]:
+        """Récupération publique et bornée pour les hypothèses OCR (T07).
+
+        Réutilise le classement commun sans repli lexical ni écriture ; la décision
+        d'acceptation reste à la décision commune et aucune identité effective n'est
+        publiée par une branche OCR.
+        """
+        return self._find_and_score_candidates(features)
+
     def _find_and_score_candidates(self, features: ExtractedFeatures, suggestions: list[NameSuggestion] | None = None) -> list[CandidateMatch]:
         """Classe les preuves sans éliminer un numéro exact à cause d'un nom mal lu."""
         wanted = normalize_text(features.name)
