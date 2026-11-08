@@ -64,7 +64,7 @@ _PROMO_NUMBER_PATTERN = re.compile(
 )
 
 _PREFIX_NUMBER_PATTERN = re.compile(
-    r"(?:#|n°|no\.?|num[ée]ro)\s*(?P<num>[A-Za-z0-9]{1,4})\b",
+    r"(?<!\w)(?:#|n°|no\.?|num[ée]ro)\s*(?P<num>(?=[A-Za-z0-9]{0,4}\d)[A-Za-z0-9]{1,5})\b",
     re.IGNORECASE,
 )
 

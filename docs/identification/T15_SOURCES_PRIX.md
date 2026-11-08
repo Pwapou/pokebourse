@@ -1,5 +1,7 @@
 # T15 — Capacités réelles des sources de prix
 
+**Relecture du 8 novembre :** matrice documentaire conservée avec ses observations du 3 novembre, sans nouvelle vérification réseau, de configuration privée ni de base opérationnelle. Les effectifs et disponibilités ci-dessous ne sont pas des mesures actuelles. D1–D6 et l’accès réel requis pour J3 restent ouverts ; [suivi consolidé](../../TASKING_PROJET.md).
+
 Date de vérification : **3 novembre 2026**. Lot documentaire de `TASKING_IDENTIFICATION_FIABLE.md` : établir la matrice offres actives / ventes conclues / cotes agrégées en distinguant **capacité théorique** (ce qu'une source pourrait fournir selon sa documentation officielle) et **accès réellement configuré sur cette installation** (ce que le code et la configuration actuels obtiennent réellement). Aucune souscription, aucun achat, aucun accès automatique nouveau n'a été déclenché par ce lot ; aucun secret n'est reproduit ici.
 
 Méthode : lecture du code (`app/collectors/`, `app/search/external.py`, `app/cardmarket/`, `app/profitability.py`, `app/purchases.py`, `app/config.py`, `compose.yaml`), de la base locale en lecture seule (compteurs uniquement) et de SOURCES.md. Réseau : aucune requête d'essai vers une marketplace ; les références officielles citées dans le tasking (Browse API, Marketplace Insights, fichiers Cardmarket) restent à revalider avant tout engagement d'implémentation.

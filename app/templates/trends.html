@@ -2,6 +2,19 @@
 {% block title %}Tendances · Pokébourse{% endblock %}
 {% block breadcrumb %}Tendances{% endblock %}
 {% block content %}
+{% macro pagination_nav(total, current_page, label) %}
+{% if total > trends.filters.limit %}
+{% set total_pages = ((total / trends.filters.limit)|round(0, 'ceil'))|int %}
+{% set window_start = [current_page - 2, 1]|max %}{% set window_end = [current_page + 2, total_pages]|min %}
+<nav class="pagination" style="margin-top:12px;" aria-label="{{ label }}">
+    {% if current_page > 1 %}<a class="page-link" href="/trends?period={{ trends.filters.period }}&amp;set_name={{ trends.filters.set_name|urlencode }}&amp;rarity={{ trends.filters.rarity|urlencode }}&amp;language={{ trends.filters.language|urlencode }}&amp;min_observations={{ trends.filters.min_observations }}&amp;max_quote_age_days={{ trends.filters.max_quote_age_days }}&amp;limit={{ trends.filters.limit }}&amp;page={{ current_page - 1 }}">← Précédent</a>{% else %}<span class="page-link disabled" aria-disabled="true">← Précédent</span>{% endif %}
+    {% if window_start > 1 %}<a class="page-link" href="/trends?period={{ trends.filters.period }}&amp;set_name={{ trends.filters.set_name|urlencode }}&amp;rarity={{ trends.filters.rarity|urlencode }}&amp;language={{ trends.filters.language|urlencode }}&amp;min_observations={{ trends.filters.min_observations }}&amp;max_quote_age_days={{ trends.filters.max_quote_age_days }}&amp;limit={{ trends.filters.limit }}&amp;page=1">1</a>{% if window_start > 2 %}<span class="page-ellipsis">…</span>{% endif %}{% endif %}
+    {% for p in range(window_start, window_end + 1) %}{% if p == current_page %}<span class="page-link current" aria-current="page">{{ p }}</span>{% else %}<a class="page-link" href="/trends?period={{ trends.filters.period }}&amp;set_name={{ trends.filters.set_name|urlencode }}&amp;rarity={{ trends.filters.rarity|urlencode }}&amp;language={{ trends.filters.language|urlencode }}&amp;min_observations={{ trends.filters.min_observations }}&amp;max_quote_age_days={{ trends.filters.max_quote_age_days }}&amp;limit={{ trends.filters.limit }}&amp;page={{ p }}">{{ p }}</a>{% endif %}{% endfor %}
+    {% if window_end < total_pages %}{% if window_end < total_pages - 1 %}<span class="page-ellipsis">…</span>{% endif %}<a class="page-link" href="/trends?period={{ trends.filters.period }}&amp;set_name={{ trends.filters.set_name|urlencode }}&amp;rarity={{ trends.filters.rarity|urlencode }}&amp;language={{ trends.filters.language|urlencode }}&amp;min_observations={{ trends.filters.min_observations }}&amp;max_quote_age_days={{ trends.filters.max_quote_age_days }}&amp;limit={{ trends.filters.limit }}&amp;page={{ total_pages }}">{{ total_pages }}</a>{% endif %}
+    {% if current_page < total_pages %}<a class="page-link" href="/trends?period={{ trends.filters.period }}&amp;set_name={{ trends.filters.set_name|urlencode }}&amp;rarity={{ trends.filters.rarity|urlencode }}&amp;language={{ trends.filters.language|urlencode }}&amp;min_observations={{ trends.filters.min_observations }}&amp;max_quote_age_days={{ trends.filters.max_quote_age_days }}&amp;limit={{ trends.filters.limit }}&amp;page={{ current_page + 1 }}">Suivant →</a>{% else %}<span class="page-link disabled" aria-disabled="true">Suivant →</span>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
 <section class="page-heading">
     <div>
         <span class="eyebrow">TENDANCES DE MARCHÉ</span>
@@ -39,32 +52,32 @@
             <span>HAUSSES DE PRIX</span>
             <span class="stat-icon" aria-hidden="true">↗</span>
         </div>
-        <strong>{{ trends.hausses|length }}</strong>
-        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}</small>
+        <strong>{{ trends.hausses_total }}</strong>
+        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}{% if trends.hausses_total > trends.filters.limit %} · page {{ trends.page }}{% endif %}</small>
     </div>
     <div class="stat-card">
         <div class="stat-top">
             <span>BAISSES DE PRIX</span>
             <span class="stat-icon amber" aria-hidden="true">↘</span>
         </div>
-        <strong>{{ trends.baisses|length }}</strong>
-        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}</small>
+        <strong>{{ trends.baisses_total }}</strong>
+        <small>{{ 'Moyenne 7j vs 30j' if trends.filters.period == '7_30' else 'Moyenne 1j vs 7j' }}{% if trends.baisses_total > trends.filters.limit %} · page {{ trends.page }}{% endif %}</small>
     </div>
     <div class="stat-card">
         <div class="stat-top">
             <span>ACTIVITÉ DES ANNONCES</span>
             <span class="stat-icon blue" aria-hidden="true">▤</span>
         </div>
-        <strong>{{ trends.listing_activity|length }}</strong>
-        <small>Cartes unitaires actives (30 jours glissants)</small>
+        <strong>{{ trends.activity_total }}</strong>
+        <small>Cartes unitaires actives (30 jours glissants){% if trends.activity_total > trends.filters.limit %} · page {{ trends.page }}{% endif %}</small>
     </div>
     <div class="stat-card accent">
         <div class="stat-top">
             <span>MEILLEURES AFFAIRES</span>
             <span class="stat-icon" aria-hidden="true">★</span>
         </div>
-        <strong>{{ trends.best_opportunities|length }}</strong>
-        <small>Opportunités avec cote fraîche et calcul complet</small>
+        <strong>{{ trends.opportunities_total }}</strong>
+        <small>Opportunités avec cote fraîche et calcul complet{% if trends.opportunities_total > trends.filters.limit %} · page {{ trends.page }}{% endif %}</small>
     </div>
 </section>
 
@@ -197,8 +210,9 @@
                     </tbody>
                 </table>
             </div>
+            {{ pagination_nav(trends.hausses_total, trends.page, 'Pages des hausses de prix') }}
             {% else %}
-            <p style="font-size:11px; color:var(--muted); margin:0;">Aucune hausse de prix enregistrée sur cette sélection.</p>
+            <p style="font-size:11px; color:var(--muted); margin:0;">{% if trends.hausses_total > 0 %}Fin des résultats : aucune hausse sur cette page.{% else %}Aucune hausse de prix enregistrée sur cette sélection.{% endif %}</p>
             {% endif %}
         </div>
 
@@ -256,8 +270,9 @@
                     </tbody>
                 </table>
             </div>
+            {{ pagination_nav(trends.baisses_total, trends.page, 'Pages des baisses de prix') }}
             {% else %}
-            <p style="font-size:11px; color:var(--muted); margin:0;">Aucune baisse de prix enregistrée sur cette sélection.</p>
+            <p style="font-size:11px; color:var(--muted); margin:0;">{% if trends.baisses_total > 0 %}Fin des résultats : aucune baisse sur cette page.{% else %}Aucune baisse de prix enregistrée sur cette sélection.{% endif %}</p>
             {% endif %}
         </div>
     </div>
@@ -336,11 +351,17 @@
             </tbody>
         </table>
     </div>
+    {{ pagination_nav(trends.activity_total, trends.page, "Pages de l'activité des annonces") }}
     <p class="table-note">Ces métriques reflètent la fréquence de mise en ligne d'annonces pour ces cartes, et ne doivent pas être assimilées à des volumes de transactions clôturées.</p>
     {% else %}
     <div class="empty-state compact">
+        {% if trends.activity_total > 0 %}
+        <h3>Fin des résultats d'activité</h3>
+        <p>Aucune carte supplémentaire sur cette page. Les {{ trends.activity_total }} cartes actives sont consultables page par page.</p>
+        {% else %}
         <h3>Aucune annonce observée sur les 30 derniers jours</h3>
         <p>Les annonces importées ou capturées dans les 30 derniers jours apparaîtront ici avec leur fréquence d'apparition.</p>
+        {% endif %}
     </div>
     {% endif %}
 </section>
@@ -396,7 +417,7 @@
                 <span class="cell-label">GAIN NET</span>
                 <b class="cell-value profit-figure positive">{{ opp.net_profit_cents|signed_money(opp.currency) }}</b>
             </div>
-            <div>
+            <div class="optional-1100">
                 <span class="cell-label">ROI</span>
                 <b class="cell-value roi-figure positive">{{ opp.roi_bps|bps_percent(True) }}</b>
             </div>
@@ -407,11 +428,17 @@
         </article>
         {% endfor %}
     </div>
+    {{ pagination_nav(trends.opportunities_total, trends.page, 'Pages des meilleures affaires') }}
     <p class="table-note">Classement par gain net décroissant puis ROI décroissant. Exclut les annonces inactives, les lots, les données incomplètes, les cotes de plus de {{ trends.filters.max_quote_age_days }} jours et les références sans date d’observation.</p>
     {% else %}
     <div class="empty-state compact">
+        {% if trends.opportunities_total > 0 %}
+        <h3>Fin des résultats d'opportunités</h3>
+        <p>Aucune opportunité supplémentaire sur cette page. Les {{ trends.opportunities_total }} opportunités actives sont consultables page par page.</p>
+        {% else %}
         <h3>Aucune opportunité active ne satisfait actuellement les critères</h3>
         <p>Les annonces doivent être actives, unitaires, identifiées, assorties d'une cote fraîche (&le; {{ trends.filters.max_quote_age_days }}j) et dégager un gain net positif avec l'ensemble des frais calculés.</p>
+        {% endif %}
         <a class="text-link" href="/catalog">Consulter l'ensemble du catalogue →</a>
     </div>
     {% endif %}

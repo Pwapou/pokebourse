@@ -1,5 +1,7 @@
 # Enrichissement progressif du référentiel TCGdex
 
+**Revue du 8 novembre 2026 : fonctionnalité réalisée et testée**, migrations `0018` et `0026` (locale). Le stockage des cartes distingue `(tcgdex_id, reference_language)` depuis `0024`. Les anciennes demandes françaises conservent leur clé ; la sync permet des locales utiles à la demande, sans qualifier automatiquement leur identification ni leurs prix. Ordre de reprise : [TASKING_PROJET.md](../TASKING_PROJET.md).
+
 La page **Référentiel TCGdex** (`/tcgdex`) permet de choisir les extensions utiles aux annonces à identifier. Les extensions explicitement mentionnées dans les observations non résolues sont présentées en premier, parmi les 1 000 observations récentes analysées. Le filtre recherche uniquement dans le cache local ; un identifiant connu peut aussi être saisi directement.
 
 ## Ce qui est chargé

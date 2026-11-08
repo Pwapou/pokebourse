@@ -3,6 +3,9 @@
 from app.trends.models import (
     BestOpportunityItem,
     ListingActivityItem,
+    ListingActivityPage,
+    OpportunitiesPage,
+    PriceMovementsPage,
     PriceVariation,
     TrendsFilters,
     TrendsPageData,
@@ -18,6 +21,9 @@ from app.trends.service import (
 __all__ = [
     "BestOpportunityItem",
     "ListingActivityItem",
+    "ListingActivityPage",
+    "OpportunitiesPage",
+    "PriceMovementsPage",
     "PriceVariation",
     "TrendsFilters",
     "TrendsPageData",

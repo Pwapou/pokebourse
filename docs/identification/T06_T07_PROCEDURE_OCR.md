@@ -1,10 +1,20 @@
 # Procédure T06/T07 — Cadrage, OCR spatial et hypothèses de numéro
 
+**État réconcilié au 8 novembre :** cette procédure reste à implémenter pour le moteur spatial. T08.1 et les contrôles du moteur actuel sont depuis livrés/testés : réutiliser [leur contrat et le relais](T08_CONTROLES_MOTEUR_ACTUEL.md), sans refaire ces correctifs. Ordre global : [TASKING_PROJET.md](../../TASKING_PROJET.md).
+
 Date : **3 novembre 2026**. Statut : **spécification à implémenter**, sans changement du moteur livré ni résultat de précision acquis. Ce document précise les lots [T06/T07 du tasking](../../TASKING_IDENTIFICATION_FIABLE.md#t06--repérerredresser-la-carte-et-conserver-la-position-des-textes). Les valeurs de réglage ci-dessous constituent un point de départ expérimental versionné, pas des seuils de fiabilité démontrés.
+
+Complément du **8 novembre 2026** : inclure la suggestion de langue étayée par la photo et la projection des références vers les champs de capture, selon [le cas de recette §1.3](../../TASKING_IDENTIFICATION_FIABLE.md#13-résultat-attendu-sur-une-capture-au-titre-imprécis) et T08.1/T08.2. Le correctif titre/nom peut être livré avant le moteur spatial ; le parcours OCR n'est terminé qu'après raccordement à l'interface. Aucun code nouveau n'est livré par ce complément.
 
 ## 1. Résultat attendu et point de départ
 
-Parcours cible : **photo → orientation EXIF → sélection de la carte → redressement → textes positionnés → lectures/hypothèses de numéro → candidats TCGdex → vérification humaine si nécessaire**. Une étape infructueuse laisse une voie manuelle disponible. Une carte reconnue dans une photo de lot n'autorise jamais une identité unitaire pour l'annonce.
+Parcours cible : **photo → orientation EXIF → sélection de la carte → redressement → textes positionnés et indices de langue → lectures/hypothèses de numéro → candidats TCGdex → champs canoniques proposés → confirmation de référence/attributs → enregistrement cohérent**. Une étape infructueuse laisse une voie manuelle disponible. Une carte reconnue dans une photo de lot n'autorise jamais une identité unitaire pour l'annonce. La comparaison directe d'images reste T11 ; l'acquisition d'offres/prix reste T16/T17.
+
+Le [workflow d'exécution W01 à W11](../../TASKING_IDENTIFICATION_FIABLE.md#41-workflow-dexécution-de-la-capture-aux-comparaisons) fixe l'ordre global, les déclencheurs et les effets de bord ; ses [règles de reprise](../../TASKING_IDENTIFICATION_FIABLE.md#42-reprises-branches-derreur-et-absence-de-boucles) précisent les retours. Cette procédure détaille surtout W03 à W07. La recherche locale de référence précède le préremplissage canonique ; une correction de champ relance la recherche locale avec les lectures encore valides, un changement de photo/cadrage relance l'OCR. Aucune boucle d'auto-confirmation ni recherche marketplace dans la prévisualisation ; les estimations indicatives locales gardent les restrictions T09.
+
+La [revue d'adéquation du workflow](../../TASKING_IDENTIFICATION_FIABLE.md#43-revue-dadéquation-au-besoin--8-novembre-2026) précise les écarts restant à implémenter : erreurs financières non bloquantes pour l'identification, reprise sans popup, résolution humaine d'un titre faux et conservation du choix jusqu'à l'ajout. Les prescriptions de §8 ci-dessous doivent respecter ces branches, sans promouvoir l'OCR en confirmation automatique.
+
+L'entrée [collecteurs et workers T19](T19_COLLECTE_OCR.md) doit réutiliser ces composants pour les annonces des veilles : ingestion préalable puis travail OCR en file, publication contrôlée par empreinte/révision, pas de calcul long dans l'ingestion. La limite de concurrence se vérifie sur app et worker ensemble. Le job OCR parallèle livre les modules indépendants ; le job 3 adapte réellement collecte/extension/ordonnanceur et valide les deux entrées.
 
 Le code courant fournit déjà :
 
@@ -28,11 +38,13 @@ Les noms suivants sont proposés pour l'implémentation, ils ne désignent pas d
 | C — Texte positionné | `ocr_text.py`, `ocr.py` | Parsing TSV, lignes/fragments et reprojection |
 | D — Redressement automatique | `ocr_geometry.py`, dépendance expérimentale si nécessaire | Détection de quadrilatères, homographie, refus/repli |
 | E — Hypothèses et recherche | `ocr_numbers.py`, `matcher.py`, `decision.py`, `evidence.py` | Alternatives groupées, union des candidats, mêmes règles de décision |
-| F — Transport et recette | `manual_listing.py`, `capture_preview.py`, formulaires, pilote T04 | Provenance conservée dans tous les parcours, benchmark apparié |
+| F — Transport et recette | `manual_listing.py`, `capture_preview.py`, formulaires, extension, pilote T04 | Nom/extension/numéro proposés, langue étayée à confirmer, choix de référence utilisable avant ajout, recette §1.3 et benchmark apparié |
 
 Interfaces internes proposées (types définis en §3) : `prepare_image(content: bytes) -> PreparedImage`, `select_regions(image: PreparedImage, selection: CropSelection | None, config: OcrConfig) -> tuple[CardRegion, ...]`, `rectify_region(image: PreparedImage, region: CardRegion) -> RectifiedCard`, `parse_tsv(payload: str, context: OcrPassContext) -> tuple[OcrToken, ...]`, puis `generate_number_hypotheses(...)` et récupération commune. Passer configuration/échéance explicitement aux traitements ; les fonctions géométriques et de parsing ne dépendent ni d'une requête HTTP ni d'une connexion SQLite.
 
 Implémenter B/C avant D : le cadrage humain fournit une référence pour séparer les échecs de localisation des échecs de lecture. Ne pas marquer T06/T07 terminés après les seules étapes A/B.
+
+En parallèle, réaliser T08.1 avec le matcher actuel : `name: title` est un repli de capture, pas une identité canonique. La nouvelle projection peut remplacer ce repli tout en conservant le titre capturé et sa provenance ; elle ne remplace jamais silencieusement une correction humaine. Livrer C/E avec F pour démontrer que les lectures améliorées deviennent utilisables dans le formulaire et sur la fiche.
 
 ### Dépendances et mode expérimental
 
@@ -50,18 +62,20 @@ Définir des dataclasses immuables pour l'interne et une validation Pydantic str
 | `CardRegion` | `region_id`, `object_id`, `kind` (`card`, `label`, `unknown`), quatre coins dans la photo orientée, méthode (`manual`, `auto`, `full_image`), motifs/qualité géométrique |
 | `RectifiedCard` | image redressée, dimensions, `photo_to_card` et inverse `card_to_photo` (matrices 3 × 3), rotation supplémentaire explicite |
 | `OcrToken` | identifiant de passe/fragment, texte brut, boîte dans la passe, boîte normalisée, quadrilatère reprojeté dans la photo, groupe page/bloc/paragraphe/ligne, score technique optionnel |
-| `OcrReading` | `reading_id`, `object_id`, fragments sources, texte brut assemblé, rôle supposé (`name`, `number`, `unknown`), opérations géométriques, version |
+| `OcrReading` | `reading_id`, `object_id`, fragments sources, texte brut assemblé, rôle supposé (`name`, `number`, `language`, `unknown`), opérations géométriques, version |
 | `NumberHypothesis` | identifiant, `reading_id`/groupe alternatif, valeur proposée, préfixe/numérateur/dénominateur/suffixe optionnels, opérations, rang, origine(s), état de recherche catalogue |
+| `LanguageHypothesis` | langue candidate ou abstention, fragments discriminants du même objet, méthode/version, motif et éventuel conflit ; aucune confirmation implicite |
 | `OcrAnalysis` | versions schéma/pipeline/paramètres, régions, seules lectures utiles, hypothèses, diagnostics, durées et troncatures ; aucune autorité humaine |
 
 Les coordonnées géométriques doivent être finies et bornées ; rejeter `NaN`, infinis, matrices singulières, listes excessives et références de fragments absentes. Les IDs d'objet sont locaux à l'analyse, pas une conclusion sur les objets vendus.
 
 ### Extension compatible de `/ocr/suggestions`
 
-Conserver `status`, `recognized`, `candidates`, `message` et les valeurs actuelles de statut. Ajouter des champs optionnels `analysis_version`, `geometry`, `ocr_evidence`, `diagnostics`, `timings`. Un résultat partiel porte un diagnostic, sans inventer un nouveau statut obligatoire pour les anciens clients.
+Conserver `status`, `recognized`, `candidates`, `message` et les valeurs actuelles de statut. Ajouter des champs optionnels `analysis_version`, `geometry`, `ocr_evidence`, `language_hypotheses`, `diagnostics`, `timings`. Un résultat partiel porte un diagnostic, sans inventer un nouveau statut obligatoire pour les anciens clients.
 
 - `recognized.names` et `recognized.numbers` restent des lectures originales utiles, au plus six de chaque. **Ne jamais y projeter une réparation comme si elle avait été lue.** Des lectures originales différentes restent concurrentes.
-- `ocr_evidence` est une enveloppe versionnée et bornée de lectures/hypothèses ; elle contient seulement les fragments nécessaires au nom/numéro. Ne retourner ni TSV complet ni textes de fond, contacts ou métadonnées EXIF.
+- `ocr_evidence` est une enveloppe versionnée et bornée de lectures/hypothèses ; elle contient seulement les fragments nécessaires au nom/numéro et à l'indice de langue. Ne retourner ni TSV complet ni textes de fond, contacts ou métadonnées EXIF.
+- `language_hypotheses` est optionnel, limité aux langues effectivement évaluées, au plus trois propositions et six fragments utiles par proposition dans les plafonds globaux. Il expose une suggestion, pas la langue confirmée. Étendre explicitement le champ OCR `language`, aujourd'hui refusé par `validate_observations()`, avec code validé, fragments justificatifs et provenance indicative ; adapter décision et formulaires ensemble. Les langues alternatives restent groupées et ne deviennent pas des déclarations simultanées dans `decision._conflicts()` ; un désaccord réel avec une langue déclarée reste visible. Aucun score Tesseract n'est une probabilité de langue.
 - Exposer « lu », « hypothèse » et opérations dans l'UI, pas seulement une liste de numéros corrigés. Les scores restent techniques.
 - Pour les anciens clients sans enveloppe, garder le comportement T03 ; l'absence de géométrie reste une provenance inconnue, jamais une boîte fabriquée.
 - Pour les nouveaux clients, adapter explicitement les schémas/formulaires/adaptateurs avant transport. Ne pas glisser des champs spatiaux dans `ObservationInput`, qui les refuse actuellement, sans faire évoluer son contrat.
@@ -69,6 +83,8 @@ Conserver `status`, `recognized`, `candidates`, `message` et les valeurs actuell
 Entrées de cadrage proposées : `crop` rectangle ou `quad` de quatre coins, rotation choisie parmi 0/90/180/270, dimensions du repère orienté et version du contrat ; rectangle et quadrilatère sont exclusifs. Le serveur valide contre les dimensions réellement décodées et reconstruit les transformations : aucune matrice fournie par le navigateur n'est une preuve fiable.
 
 ## 4. Orientation et recadrage manuel
+
+**Avancement du 8 novembre 2026 :** la fiche annonce propose un rectangle manuel sur prévisualisation éphémère orientée, saisie numérique et rotations de 90°, transmis à l'OCR existant. La prévisualisation de capture, le choix des photos, le parcours spatial complet et les mesures restent à réaliser (TRK-017) ; le chemin existant sans sélection reste la baseline.
 
 1. Réutiliser les contrôles de `_prepare_image()`, appliquer `ImageOps.exif_transpose()` **une fois** et produire un RGB sans métadonnées. Calculer une référence stable des pixels/dimensions préparés ; pour T04, conserver séparément l'empreinte des octets exacts archivés. Une empreinte seule ne prouve pas leur conservation.
 2. Présenter au navigateur une prévisualisation locale dans le même repère orienté. Préférer les pixels préparés par le serveur pour éviter les différences d'orientation implicite des navigateurs. Transport éphémère borné, sans URL publique, fichier temporaire durable ni cache persistant.
@@ -154,6 +170,12 @@ Un numéro peut être un token unique ou plusieurs tokens. Dans une même régio
 
 Ne pas relier des régions ou objets distincts. Les passes différentes du même objet peuvent compléter nom/numéro mais restent corrélées. Extraire les noms avec le vocabulaire/normalisation existants ; déclasser les libellés génériques (`PV`, `HP`, `Dresseur`, etc.) sans supprimer un nom réel du catalogue. Ne pas rejeter tous les noms de moins de quatre lettres : `Mew` est un cas à tester.
 
+### 6.4 Indices de langue de l'exemplaire
+
+Réutiliser les fragments de texte de la carte, hors étiquette et fond, pour tester une méthode locale versionnée fondée sur des expressions discriminantes. La sélection de langues `fra+eng` dans Tesseract ne détecte pas la langue de l'exemplaire. Le nom seul et la localisation TCGdex ne la prouvent pas non plus. Texte trop court, ambigu ou contradictoire : abstention ; aucun modèle ni appel externe implicite.
+
+Conserver seulement les fragments nécessaires à l'explication et appliquer les plafonds de §3/§9. Une suggestion française peut aider à explorer les références françaises, mais ne supprime pas les autres candidats ni ne certifie la version. Garder la proposition séparée de la langue déclarée/confirmée et exposer les désaccords. Tester sur labels indépendants français/anglais, noms communs, bruit et conflits, puis documenter les langues effectivement qualifiées.
+
 ## 7. Produire et classer plusieurs hypothèses de numéro
 
 Fonction proposée : `generate_number_hypotheses(readings, catalog_vocabulary, config)`. Elle ne modifie ni titre/description ni lecture originale.
@@ -204,6 +226,45 @@ Conserver une enveloppe minimale bornée via `manual_listing.py`, `capture_previ
 
 Versionner extracteur/configuration géométrique, parsing et hypothèses. Ajouter les champs optionnels sans modifier les empreintes historiques quand ils sont absents. Une preuve nouvelle/modifiée exige les règles de réexamen T03 ; aucun remplacement automatique d'une confirmation humaine. Si la persistance impose un changement relationnel, inspecter le dernier numéro réel puis créer une migration additive selon AGENTS ; ne pas réserver un numéro depuis ce document.
 
+### 8.4 Projeter les références dans le formulaire de capture
+
+Réutiliser les candidats et la décision commune pour proposer identifiant/localisation, nom canonique, extension et numéro disponible, sans branche de confirmation spécifique à l'OCR. L'absence d'extension dans le titre n'empêche pas la recherche nom/numéro ; une extension provenant du catalogue reste une propriété de candidat, pas une mention observée. Ne pas confondre dénominateur imprimé et effectif total générique.
+
+Filtrer avant préremplissage les valeurs sans structure reconnue ni attestation de catalogue, dont le fragment `n` du cas §1.3. Conserver ce fragment au diagnostic ; ne pas supprimer les préfixes/numéros alphanumériques légitimes. Un numéro valide ne prouve pas une identité et une référence unique dans un cache partiel reste insuffisante.
+
+Dans T08.2, permettre le choix/confirmation de la référence dans la prévisualisation, la confirmation distincte de la langue proposée et l'enregistrement final avec la même identité. Revalider côté serveur preuves, révision et référence ; aucun write pendant la prévisualisation. Ne pas exiger de recopier les champs du candidat ni de confirmer une annonce incorrecte pour accéder au choix de référence. Une proposition sans candidat admissible garde les champs non résolus et la saisie manuelle accessible.
+
+Le choix préparé avant ajout reste transitoire : `save_review()` exige actuellement un `item_id`. Adapter l'orchestration finale pour revalider les preuves et créer/résoudre l'annonce puis appliquer sa décision dans une unité atomique ; ne pas traiter la simple réimportation des champs comme conservation d'une confirmation. Conserver les limites T04 lorsqu'une décision s'appuie sur une photo éphémère non archivée, sans créer de preuve durable ni de label visuel reproductible fictif.
+
+### 8.5 Revalider après préremplissage et avant utilisation
+
+Appliquer T08.3 après préremplissage/saisie, avant recherche locale, puis avant confirmation et dans la transaction finale d'enregistrement. Réutiliser normalisation, recherche et décision communes ; le serveur ne fait confiance ni aux badges ni à un ID ou statut de validation transmis par le client. Conserver valeurs brutes, provenance et diagnostic par champ.
+
+| Champ | Contrôle et conséquence pour la recherche |
+|---|---|
+| Nom | Distinguer titre recopié, nom canonique, alias et approximation ; préserver suffixes. Nom non résolu : repli lexical borné, sans preuve exacte fabriquée. |
+| Extension | Résoudre les noms/alias du référentiel ; inconnue : recherche nom/numéro possible. Une extension proposée depuis un candidat n'est pas une observation indépendante. |
+| Numéro | Vérifier structure complète et compatibilité avec les références, préfixes/suffixes et dénominateur attesté. Bruit comme `n` sans attestation : diagnostic et exclusion des filtres exacts, pas de suppression de la valeur brute. |
+| Langue | Valider le code et distinguer inconnue, déclarée, proposée et confirmée. Une suggestion peut orienter l'exploration, sans exclusion définitive des autres locales ; locale du candidat et langue de l'exemplaire restent distinctes. |
+| Ensemble des champs / ID | Vérifier la compatibilité avec la même référence/version et les observations ; champs valides isolément mais contradictoires : diagnostic et candidats accessibles, confirmation/valorisation bloquées pour cette combinaison. |
+
+Afficher les critères réellement utilisés/écartés et leurs raisons ; ne pas imposer tous les champs remplis pour chercher une carte. Un filtre invalide ou inconnu peut être écarté de la récupération locale, mais une contradiction avec une preuve explicite reste attachée aux candidats et à la décision. Aucune répétition illimitée de requêtes pour forcer un résultat.
+
+Séparer erreurs d'identité et erreurs financières : le parsing du prix/port ne doit pas interrompre OCR/recherche TCGdex, et une correction financière ne modifie pas les preuves d'identité. Un conflit explicite continue de bloquer l'acceptation automatique ; une résolution humaine motivée peut retenir une référence du diagnostic en qualifiant l'observation vendeur erronée, sans modifier son texte brut ni prétendre que les preuves concordaient. Revalider ce choix et les attributs propres à l'exemplaire ; aucune résolution d'un conflit ne prouve l'état/la finition/la langue.
+
+Ne pas transformer la projection d'un candidat en preuves supplémentaires le confirmant : une réanalyse après préremplissage conserve son caractère indicatif. Une modification significative applique les règles d'empreinte/révision T03 pour invalider choix et résultats inapplicables. Vérifier après sauvegarde que fiche et critères T16 réutilisent l'identité effective revalidée. Tester aussi les soumissions directes sans JavaScript, les champs individuellement valides mais incompatibles et la recherche partielle avec champ absent/invalide.
+
+### 8.6 Rendre la vérification utilisable dans le parcours de capture
+
+Les exigences T08.2/T13 suivantes font partie de la livraison commune :
+
+- **Avancement fidèle :** distinguer « annonce capturée », « photo analysée », « carte proposée », « identité confirmée » ; ne franchir une étape qu'après résultat effectif. Garder séparés progression/échec et statuts métier d'identification.
+- **Continuité et effort utilisateur :** après envoi, ouvrir rapidement la prévisualisation/progression et enchaîner analyse/recherche/préremplissage sans recopie ni clic de recherche supplémentaire. Définir un propriétaire d'exécution et de retour de résultat indépendant du maintien du popup ouvert ; capture et corrections récupérables, images éphémères non prétendues archivées. Les confirmations J1 restent explicites ; enregistrer une identité/langue inconnue n'impose pas une fausse référence ou un défaut français.
+- **Photo exploitable :** privilégier la vue détaillée déjà accessible dans la capture, permettre le choix d'une autre vue ou un téléversement local et le recadrage avant réanalyse. Conserver `image_url` historique et prévoir un contrat optionnel borné pour les vues supplémentaires ; ne pas inventer d'URL haute résolution. Analyser une photo choisie à la fois, dans les budgets existants. Rattacher résultats et sélection à `image_ref`/requête/région ; changer de vue invalide les résultats devenus inapplicables, sans fusion d'objets différents.
+- **Vérification côte à côte :** montrer photo/région analysée et image de référence avec agrandissement accessible et détails discriminants. Signaler les images manquantes et conserver le choix textuel ; illustration proche ne confirme ni version, ni finition, ni authenticité. Cette aide humaine ne dépend pas de T11.
+- **Diagnostic avec action :** proposer recadrage/autre photo pour lecture insuffisante, enrichissement T05 pour couverture manquante établie, comparaison/choix pour versions proches, correction pour conflit et saisie/réessai pour moteur indisponible. Sans cause établie, indiquer les preuves insuffisantes ; aucun diagnostic d'absence de catalogue déduit du seul résultat vide.
+- **Identité et comparabilité séparées :** réutiliser T09/T17 pour afficher les attributs nécessaires manquants (langue, édition, finition, état, gradation selon le périmètre retenu) et l'indisponibilité des sources adaptées. Une identité confirmée peut rester non valorisable ; n'inventer aucun attribut pour rendre les prix comparables.
+
 ## 9. Budgets, isolation et erreurs
 
 Configuration initiale à figer dans les rapports : deux analyses simultanées, 8 Mo/12 millions de pixels en entrée, six appels OCR, 24 lectures/12 hypothèses de recherche, 36 combinaisons, 20 suggestions. Ajouter des plafonds de sortie TSV de 2 Mio par passe et 4 096 mots par analyse ; signaler/refuser la troncature avant de chercher une identité.
@@ -231,6 +292,8 @@ Ne journaliser ni photo ni TSV/texte brut ; limiter les logs aux versions, temps
 
 ## 10. Tests et comparaison avant activation
 
+Appliquer les fiches [T06](PLAN_VALIDATION_LOTS.md#t06), [T07](PLAN_VALIDATION_LOTS.md#t07) et [T08](PLAN_VALIDATION_LOTS.md#t08) du plan de validation : skill UI seulement pour les interactions/rendus concernés, pytest et mesures photographiques locales pour le moteur. Tout échec ou obstacle d'intégration rejoint [tracker.md](../../tracker.md), y compris test obligatoire sauté ou gain non démontré. Ne pas confondre commande prévue, test exécuté et comportement validé.
+
 Les tests sont hermétiques, dans Docker, sur bases temporaires. Tester des comportements et erreurs plausibles ; les mocks seuls ne mesurent pas une amélioration de reconnaissance.
 
 | Groupe | Vérifications nécessaires |
@@ -241,6 +304,12 @@ Les tests sont hermétiques, dans Docker, sur bases temporaires. Tester des comp
 | Noms/numéros | `Mew`, suffixe `ex`, préfixes promos, Unicode, zéros initiaux, secrets, insertion négative ; aucune correction destructrice du préfixe ou du titre |
 | Alternatives | Premier numéro erroné puis bon ; deux variantes d'un groupe sans fausse contradiction ; désaccord original/titre visible même si réparation concordante ; cache partiel et candidat absent |
 | Décision/transport | Ancien JSONL inchangé, formulaire nouveau/ancien, provenance conservée, limites validées côté serveur, lot sans suggestion unitaire, OCR seul sans identité effective, décision humaine applicable préservée |
+| Capture utilisable | Cas §1.3 avec fixture photo/catalogue annotée ; titre conservé, nom canonique et extension proposés, `20/82` sans `n` parasite, choix de référence avant ajout, même identité sur la fiche ; anciens `name == title` et corrections humaines testés |
+| Vérification utilisateur | Statuts d'avancement fidèles, mauvaise photo principale puis sélection/recadrage, photo inclinée avec titre faux, versions proches et image de référence manquante ; affichage côte à côte ou repli textuel, diagnostic avec action, identité distincte de l'admissibilité des prix |
+| Orchestration W01–W11 | Recherche de référence avant projection canonique ; correction textuelle réutilisant les indices OCR valides ; changement de photo relançant la lecture ; pas de boucle de préremplissage, pas d'écriture d'annonce avant ajout final ni job de marché avant commit admissible |
+| Adéquation au besoin | Prix invalide sans blocage d'identification, popup fermé pendant OCR, résolution motivée d'un titre faux, sélection conservée atomiquement à l'ajout, langue inconnue sans défaut français et reprise d'enrichissement sans perte du formulaire |
+| Contrôles après préremplissage | Champs incompatibles malgré leur validité individuelle, ID divergent, critères partiels visibles, soumission sans JavaScript et changement après sélection ; aucune auto-confirmation par recopie des propriétés du candidat |
+| Langue | Fragments français/anglais, nom commun à plusieurs langues, texte trop court, site/catalogue d'une autre locale et conflits ; proposition expliquée ou abstention, aucune confirmation par simple préremplissage |
 | Limites | Six passes toutes rotations comprises ; sortie pipe excessive ; délai global/annulation et processus récoltés ; sémaphore libéré après erreur ; aucun write/seed/réparation d'index ni appel distant |
 | Confidentialité | Aucun contact/texte OCR complet dans réponse/logs/stockage courant ; conservation seulement dans le mode T04 |
 
@@ -264,6 +333,10 @@ Comparer à catalogue/labels figés : **baseline actuelle → cadrage manuel + T
 Publier pour chaque variante : couverture de localisation et refus, lecture exacte nom/numéro, présence du bon numéro dans les hypothèses, rappel top-3 de la bonne référence, nouvelles erreurs de suggestion, précision/couverture des décisions admissibles, faux rattachements de lots, latence p50/p95 et mémoire sur machine décrite. Compter images absentes, plafonds, cas non pris en charge et catalogue incomplet séparément. Conserver groupes de doublons/partitions T01/T10 ; aucun réglage sur le test indépendant.
 
 Conditions minimales : cas de recette passants, pas de nouvelle acceptation automatique OCR ni régression des garde-fous, temps et mémoire bornés, gain/limites documentés sur cas annotés. Un résultat négatif conserve manuel/baseline et documente la raison ; une hausse des statuts `identified` ne vaut pas amélioration. L'activation automatique exige un gain démontré ; les critères d'acceptation automatique restent ceux de T10.
+
+La livraison commune T06/T07/T08.2 exige aussi la recette de capture §1.3, de l'analyse jusqu'à la fiche enregistrée, avec réseau marketplace simulé et aucune écriture avant confirmation finale. Les captures d'écran reçues documentent l'erreur ; préparer une fixture autorisée avec annotation indépendante et distinguer leur rejeu de celui de la photo originale. Mesurer séparément qualité de lecture, rappel des références, suggestion de langue et exactitude des champs affichés/enregistrés ; une API OCR correcte seule ne valide pas le parcours. La propagation aux comparaisons de marché est testée en T16/T17 avec les critères structurés de l'identité effective, pas le titre vendeur.
+
+Inclure les variantes T13/§8.6 dans cette recette : titre faux, photo inclinée, mauvaise photo principale, référence absente et versions proches. Vérifier pour chacune l'étape effectivement atteinte, la photo analysée, les champs/provenances, l'action de résolution et les limites de comparabilité. Les fixtures photo locales autorisées et annotées vérifient la lecture réelle ; les mocks restent utiles pour erreurs/transport mais ne démontrent pas le gain OCR.
 
 Livrer avec chaque étape : fichiers et versions, tests exécutés, rapport avant/après disponible ou limite d'annotation, réglages, mode de retour au chemin historique. Garder la stratégie `legacy`/`spatial` explicite et versionnée dans la configuration ; ne pas faire passer silencieusement le chemin historique pour la nouvelle méthode. Toute nouvelle option exposée doit être documentée dans README au moment de son implémentation.
 

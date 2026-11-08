@@ -7,7 +7,7 @@
     <div>
         <span class="eyebrow">DÉTAIL DE L’ANNONCE</span>
         <h1>{{ item.name }}</h1>
-        <p>{{ item.set_name }}{% if item.card_number %} · N° {{ item.card_number }}{% endif %} · {{ item.language|upper }}{% if item.condition %} · {{ item.condition }}{% endif %}</p>
+        <p>{{ item.set_name }}{% if item.card_number %} · N° {{ item.card_number }}{% endif %} · {{ "Inconnue" if item.language == "und" else item.language|upper }}{% if item.condition %} · {{ item.condition }}{% endif %}</p>
         {% if item.original_title and item.original_title != item.name %}
         <p class="cell-sub" style="margin-top: 4px;">Titre collecté : « {{ item.original_title }} »</p>
         {% endif %}
@@ -286,7 +286,7 @@
                         <div class="detail-row"><dt>État</dt><dd>{% if item.condition %}{{ item.condition }}{% else %}<span class="unknown">Non renseigné</span>{% endif %}</dd></div>
                         <div class="detail-row"><dt>Variante / édition</dt><dd>{% if item.variant or item.edition %}{{ item.variant or '' }}{% if item.edition %} · {{ item.edition }}{% endif %}{% else %}<span class="unknown">Non renseignée</span>{% endif %}</dd></div>
                         <div class="detail-row"><dt>Certification</dt><dd>{% if item.grading_company %}{{ item.grading_company }} {{ item.grade or '' }}{% if item.certification_number %} · n° {{ item.certification_number }}{% endif %}{% else %}<span class="unknown">Non renseignée</span>{% endif %}</dd></div>
-                        <div class="detail-row"><dt>Langue</dt><dd>{{ item.language|upper }}</dd></div>
+                        <div class="detail-row"><dt>Langue</dt><dd>{{ "Inconnue" if item.language == "und" else item.language|upper }}</dd></div>
                         <div class="detail-row"><dt>Identifiant externe</dt><dd>{{ item.external_id }}</dd></div>
                         <div class="detail-row"><dt>Source</dt><dd>{{ item.source_name }}</dd></div>
                         <div class="detail-row"><dt>Lot d’import</dt><dd><a class="text-link" href="/imports/{{ item.import_batch_id }}">#{{ item.import_batch_id }}</a></dd></div>
@@ -334,6 +334,19 @@
                           data-listing-id="{{ item.id }}" data-evidence-hash="{{ identification.evidence_hash }}" data-revision="{{ identification.revision }}">
                         <label for="ocr-photo">Photo de la carte (JPEG, PNG ou WebP)</label>
                         <input id="ocr-photo" name="file" type="file" accept="image/jpeg,image/png,image/webp" required>
+                        <div id="ocr-crop" hidden>
+                            <p class="cell-sub">Tracez un rectangle autour d’une seule carte, ou indiquez ses coordonnées en pixels dans la photo orientée.</p>
+                            <canvas id="ocr-canvas" style="display:block;max-width:100%;height:auto;touch-action:none;cursor:crosshair" aria-label="Photo orientée ; utilisez les champs suivants pour sélectionner la carte au clavier"></canvas>
+                            <label><input id="ocr-crop-enabled" type="checkbox"> Recadrer avant la lecture</label>
+                            <div class="ocr-crop-fields">
+                                <label>Gauche <input name="crop_x" type="number" min="0" step="1" value="0"></label>
+                                <label>Haut <input name="crop_y" type="number" min="0" step="1" value="0"></label>
+                                <label>Largeur <input name="crop_width" type="number" min="1" step="1"></label>
+                                <label>Hauteur <input name="crop_height" type="number" min="1" step="1"></label>
+                                <label>Rotation horaire <select name="crop_rotation"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></label>
+                                <input name="image_width" type="hidden"><input name="image_height" type="hidden">
+                            </div>
+                        </div>
                         <button class="button secondary" type="submit">Analyser la photo</button>
                     </form>
                     <p id="ocr-status" role="status" aria-live="polite"></p>

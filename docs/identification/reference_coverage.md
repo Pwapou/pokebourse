@@ -1,5 +1,7 @@
 # Diagnostic de couverture du référentiel TCGdex local
 
+**État au 8 novembre :** outil d’inventaire livré, utilisé en T00/T05. Le socle alias/localisations de T05 a depuis été implémenté (`0024`–`0026`) ; ce rapport reste un diagnostic en lecture seule et ne valide pas l’alias « gempack 2 » ni la couverture globale. Voir [le suivi](../../TASKING_PROJET.md).
+
 Lot préparatoire à **T05** de `TASKING_IDENTIFICATION_FIABLE.md` : distinguer un
 problème de **couverture du catalogue** d'un problème **d'identification**.
 Ce document décrit l'outil `scripts/reference_coverage_report.py`, son usage

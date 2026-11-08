@@ -1,8 +1,15 @@
 import sqlite3
+from datetime import date
 from pathlib import Path
 from typing import Any
 import pytest
 
+from app.profitability import (
+    FeeProfileUpdate,
+    ReferenceInput,
+    update_active_fee_profile,
+    upsert_reference,
+)
 from app.search.models import (
     CARD_SORTS,
     DEFAULT_CARD_SORT,
@@ -879,4 +886,750 @@ def test_web_external_import_error_is_visible(
         assert "Échec de l’import externe" in response.text
         assert "Seules les annonces eBay" in response.text
 
+
+
+# ==============================================================================
+# Tris financiers (gain net / ROI) sur les annonces — exigence §3.1
+# ==============================================================================
+
+def _setup_profitability_listings(conn: sqlite3.Connection) -> tuple[int, int]:
+    """Crée deux annonces identifiées aux profils de rentabilité croisés.
+
+    Carte Roi : achat 1000, revente 2000 -> gain net faible, ROI élevé.
+    Carte Gain Fort : achat 9000, revente 12000 -> gain net élevé, ROI faible.
+    """
+    update_active_fee_profile(
+        conn,
+        FeeProfileUpdate(
+            buyer_shipping_cents=0,
+            platform_fee_bps=500,
+            seller_fixed_fee_cents=0,
+            shipping_packaging_cents=200,
+            min_net_profit_cents=100,
+            min_roi_bps=500,
+            min_catalog_samples=2,
+        ),
+    )
+    observed = date(2026, 11, 2)
+    conn.execute(
+        "INSERT INTO pokemon_reference_sets (id, name, release_date) VALUES ('sortset', 'Set Tri', '2020-01-01')"
+    )
+    roi_card_id = conn.execute(
+        """
+        INSERT INTO pokemon_reference_cards (tcgdex_id, local_id, name, set_id, set_name, rarity)
+        VALUES ('tri-roi', '1', 'Carte Roi', 'sortset', 'Set Tri', 'Rare')
+        """
+    ).lastrowid
+    gain_card_id = conn.execute(
+        """
+        INSERT INTO pokemon_reference_cards (tcgdex_id, local_id, name, set_id, set_name, rarity)
+        VALUES ('tri-gain', '2', 'Carte Gain Fort', 'sortset', 'Set Tri', 'Rare')
+        """
+    ).lastrowid
+    upsert_reference(
+        conn,
+        ReferenceInput(
+            name="Carte Roi",
+            set_name="Set Tri",
+            card_number="1",
+            language="fr",
+            condition="Near Mint",
+            reference_price_cents=2000,
+            observed_at=observed,
+        ),
+    )
+    upsert_reference(
+        conn,
+        ReferenceInput(
+            name="Carte Gain Fort",
+            set_name="Set Tri",
+            card_number="2",
+            language="fr",
+            condition="Near Mint",
+            reference_price_cents=12000,
+            observed_at=observed,
+        ),
+    )
+    conn.execute(
+        """
+        INSERT INTO catalog_items (
+            id, source_id, import_batch_id, external_id, name, set_name, card_number, language,
+            condition, price_cents, currency, identification_status, reference_card_id, is_lot, is_active
+        ) VALUES (5, 1, 1, 'tri-roi', 'Carte Roi', 'Set Tri', '1', 'fr',
+                  'Near Mint', 1000, 'EUR', 'identified', ?, 0, 1)
+        """,
+        (roi_card_id,),
+    )
+    conn.execute(
+        """
+        INSERT INTO catalog_items (
+            id, source_id, import_batch_id, external_id, name, set_name, card_number, language,
+            condition, price_cents, currency, identification_status, reference_card_id, is_lot, is_active
+        ) VALUES (6, 1, 1, 'tri-gain', 'Carte Gain Fort', 'Set Tri', '2', 'fr',
+                  'Near Mint', 9000, 'EUR', 'identified', ?, 0, 1)
+        """,
+        (gain_card_id,),
+    )
+    conn.commit()
+    return 5, 6
+
+
+def test_search_filters_accepts_profitability_sorts() -> None:
+    assert "net_profit_desc" in LISTING_SORTS
+    assert "roi_desc" in LISTING_SORTS
+    filters = SearchFilters(scope="listings", sort="net_profit_desc")
+    assert filters.sort == "net_profit_desc"
+    filters_roi = SearchFilters(scope="listings", sort="roi_desc")
+    assert filters_roi.sort == "roi_desc"
+
+
+def test_search_listings_sort_net_profit_desc(memory_db: sqlite3.Connection) -> None:
+    roi_id, gain_id = _setup_profitability_listings(memory_db)
+
+    filters = SearchFilters(scope="listings", sort="net_profit_desc", per_page=100)
+    result = search_catalog_listings(memory_db, filters)
+
+    by_id = {item.id: item for item in result.items}
+    assert by_id[gain_id].net_profit_cents is not None
+    assert by_id[roi_id].net_profit_cents is not None
+    # Gain net de « Carte Gain Fort » supérieur à celui de « Carte Roi ».
+    assert by_id[gain_id].net_profit_cents > by_id[roi_id].net_profit_cents
+
+    evaluated = [item for item in result.items if item.net_profit_cents is not None]
+    evaluated_ids = [item.id for item in evaluated]
+    assert evaluated_ids.index(gain_id) < evaluated_ids.index(roi_id)
+    # Les annonces sans évaluation complète sont classées en dernier.
+    first_unevaluated = next(
+        (i for i, item in enumerate(result.items) if item.net_profit_cents is None),
+        None,
+    )
+    if first_unevaluated is not None:
+        assert all(
+            item.net_profit_cents is not None for item in result.items[:first_unevaluated]
+        )
+    assert result.total == len(result.items)
+
+
+def test_search_listings_sort_roi_desc(memory_db: sqlite3.Connection) -> None:
+    roi_id, gain_id = _setup_profitability_listings(memory_db)
+
+    filters = SearchFilters(scope="listings", sort="roi_desc", per_page=100)
+    result = search_catalog_listings(memory_db, filters)
+
+    by_id = {item.id: item for item in result.items}
+    assert by_id[roi_id].roi_bps is not None
+    assert by_id[gain_id].roi_bps is not None
+    # ROI de « Carte Roi » supérieur à celui de « Carte Gain Fort ».
+    assert by_id[roi_id].roi_bps > by_id[gain_id].roi_bps
+
+    evaluated = [item.id for item in result.items if item.roi_bps is not None]
+    assert evaluated.index(roi_id) < evaluated.index(gain_id)
+    assert result.total == len(result.items)
+
+
+def test_search_listings_profitability_sort_paginates_in_memory(
+    memory_db: sqlite3.Connection,
+) -> None:
+    roi_id, gain_id = _setup_profitability_listings(memory_db)
+
+    page_1 = search_catalog_listings(
+        memory_db, SearchFilters(scope="listings", sort="net_profit_desc", per_page=1, page=1)
+    )
+    page_2 = search_catalog_listings(
+        memory_db, SearchFilters(scope="listings", sort="net_profit_desc", per_page=1, page=2)
+    )
+
+    # Page 1 = meilleur gain net, page 2 = second ; ordre stable et total complet.
+    assert page_1.total == 6
+    assert page_1.items[0].id == gain_id
+    assert page_2.items[0].id == roi_id
+    full = search_catalog_listings(
+        memory_db, SearchFilters(scope="listings", sort="net_profit_desc", per_page=100)
+    )
+    assert full.total == 6
+    assert [item.id for item in full.items[:2]] == [gain_id, roi_id]
+
+
+def test_search_missing_metadata_diagnostic_never_claims_absence(
+    memory_db: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T1.2 : diagnostic explicite quand rareté ou année ne sont pas chargées."""
+    from fastapi.testclient import TestClient
+    from app.web import app
+
+    memory_db.execute(
+        "INSERT INTO pokemon_reference_sets (id, name, release_date) VALUES ('partialset', 'Extension Manifeste', NULL)"
+    )
+    partial_card_id = memory_db.execute(
+        """
+        INSERT INTO pokemon_reference_cards (
+            tcgdex_id, local_id, canonical_local_id, name, normalized_name, set_id, set_name, rarity
+        ) VALUES ('partialset-99', '099', '99', 'Rayquaza ex', 'rayquaza ex', 'partialset', 'Extension Manifeste', NULL)
+        """
+    ).lastrowid
+    memory_db.execute(
+        """
+        INSERT INTO catalog_items (
+            source_id, import_batch_id, external_id, name, set_name, card_number, language,
+            condition, price_cents, currency, identification_status, reference_card_id, is_lot
+        ) VALUES (1, 1, 'v-partial-99', 'Rayquaza ex 099', 'Extension Manifeste', '099', 'fr',
+                  'Near Mint', 4500, 'EUR', 'identified', ?, 0)
+        """,
+        (partial_card_id,),
+    )
+    memory_db.commit()
+
+    # 1. Sans filtre rareté/année : la carte apparaît avec le diagnostic de métadonnées partielles
+    unfiltered = search_reference_cards(
+        memory_db, SearchFilters(q="Rayquaza ex", set_name="Extension Manifeste")
+    )
+    assert unfiltered.total == 1
+    assert unfiltered.missing_rarity_count == 1
+    assert unfiltered.missing_year_count == 1
+    assert unfiltered.metadata_diagnostic is not None
+    assert "sans rareté chargée" in unfiltered.metadata_diagnostic
+    assert "sans année de sortie chargée" in unfiltered.metadata_diagnostic
+    assert "donnée non chargée ≠ preuve d'absence" in unfiltered.metadata_diagnostic
+
+    # 2. Avec filtre rareté actif : total=0 mais le diagnostic signale que la carte n'avait pas de rareté chargée
+    filtered_rarity = search_reference_cards(
+        memory_db, SearchFilters(q="Rayquaza ex", set_name="Extension Manifeste", rarity="Ultra Rare")
+    )
+    assert filtered_rarity.total == 0
+    assert filtered_rarity.missing_rarity_count == 1
+    assert filtered_rarity.metadata_diagnostic is not None
+    assert "Ultra Rare" in filtered_rarity.metadata_diagnostic
+    assert "donnée non chargée ≠ preuve d'absence" in filtered_rarity.metadata_diagnostic
+
+    # 3. Avec filtre d'année actif : total=0 mais le diagnostic signale l'année non chargée
+    filtered_year = search_reference_cards(
+        memory_db, SearchFilters(q="Rayquaza ex", set_name="Extension Manifeste", year_min=2023)
+    )
+    assert filtered_year.total == 0
+    assert filtered_year.missing_year_count == 1
+    assert filtered_year.metadata_diagnostic is not None
+    assert "sans année de sortie chargée" in filtered_year.metadata_diagnostic
+
+    # 4. Même diagnostic côté annonces rattachées à une référence incomplète
+    listing_filtered = search_catalog_listings(
+        memory_db, SearchFilters(q="Rayquaza ex", set_name="Extension Manifeste", rarity="Ultra Rare")
+    )
+    assert listing_filtered.total == 0
+    assert listing_filtered.missing_rarity_count == 1
+    assert listing_filtered.metadata_diagnostic is not None
+    assert "annonce" in listing_filtered.metadata_diagnostic
+
+    # 5. Rendu HTML dans /search
+    db_path = tmp_path / "search_diag_web.db"
+    with connect(db_path) as web_conn:
+        apply_migrations(web_conn)
+        web_conn.execute(
+            "INSERT INTO pokemon_reference_sets (id, name, release_date) VALUES ('partialset', 'Extension Manifeste', NULL)"
+        )
+        web_conn.execute(
+            """
+            INSERT INTO pokemon_reference_cards (
+                tcgdex_id, local_id, canonical_local_id, name, normalized_name, set_id, set_name, rarity
+            ) VALUES ('partialset-99', '099', '99', 'Rayquaza ex', 'rayquaza ex', 'partialset', 'Extension Manifeste', NULL)
+            """
+        )
+        web_conn.commit()
+
+    monkeypatch.setenv("POKEMON_DATABASE_PATH", str(db_path))
+    with TestClient(app) as client:
+        res_open = client.get("/search?q=Rayquaza+ex&scope=cards")
+        assert res_open.status_code == 200
+        assert "Rareté non chargée" in res_open.text
+        assert "Année non chargée" in res_open.text
+        assert "Référentiel incomplet" in res_open.text
+
+        res_filtered = client.get("/search?q=Rayquaza+ex&scope=cards&rarity=Rare")
+        assert res_filtered.status_code == 200
+        assert "Référentiel incomplet" in res_filtered.text
+        assert "donnée non chargée ≠ preuve" in res_filtered.text
+
+
+def test_common_listing_clauses_factorization_and_parity(memory_db: sqlite3.Connection) -> None:
+    """T1.3 : mutualisation ciblée des prédicats communs entre /catalog et /search."""
+    from app.catalog import _catalog_filters, build_common_listing_clauses, catalog_data
+    from app.search.service import _build_listings_query
+
+    clauses_cat, params_cat = build_common_listing_clauses(
+        query="Dracaufeu",
+        set_name="Set de Base",
+        source="vinted",
+        ident_status="identified",
+        include_reference_fields=False,
+    )
+    where_cat, where_params_cat = _catalog_filters(
+        query="Dracaufeu",
+        set_name="Set de Base",
+        source="vinted",
+        ident_status="identified",
+    )
+    assert where_cat == f"WHERE {' AND '.join(clauses_cat)}"
+    assert where_params_cat == params_cat
+
+    # /search enrichit la clause texte avec r.name / r.tcgdex_id et conserve ses filtres propres
+    where_search, _, params_search, _ = _build_listings_query(
+        SearchFilters(
+            q="Dracaufeu",
+            set_name="Set de Base",
+            source="vinted",
+            ident_status="identified",
+            rarity="Rare Holo",
+        )
+    )
+    assert "r.tcgdex_id = ?" in where_search
+    assert "c.reference_card_id IS NOT NULL AND r.rarity = ?" in where_search
+    assert params_search[-1] == "Rare Holo"
+
+    # Parité des résultats sur les filtres communs
+    cat_result = catalog_data(
+        memory_db,
+        query="Dracaufeu",
+        set_name="Set de Base",
+        source="vinted",
+        ident_status="identified",
+    )
+    search_result = search_catalog_listings(
+        memory_db,
+        SearchFilters(
+            q="Dracaufeu",
+            set_name="Set de Base",
+            source="vinted",
+            ident_status="identified",
+        ),
+    )
+    assert [row["id"] for row in cat_result["items"]] == [item.id for item in search_result.items]
+
+
+def test_search_and_trends_explain_query_plan_and_representative_volume(tmp_path: Path) -> None:
+    """T0.1 / T1.4 / T5.2 : EXPLAIN QUERY PLAN et mesures sur jeu de données représentatif isolé."""
+    from datetime import UTC, datetime
+    import time
+    from app.search.service import (
+        _build_listings_query,
+        _build_reference_cards_query,
+        get_search_filter_options,
+    )
+    from app.trends.models import TrendsFilters
+    from app.trends.opportunities import get_best_opportunities
+    from app.trends.service import get_listing_activity, get_price_movements
+
+    db_path = tmp_path / "perf_representative.db"
+    with connect(db_path) as conn:
+        apply_migrations(conn)
+        with conn:
+            sources = [
+                ("vinted", "marketplace"),
+                ("ebay", "marketplace"),
+                ("leboncoin", "marketplace"),
+                ("wallapop", "marketplace"),
+                ("manual", "manual_jsonl"),
+            ]
+            for name, kind in sources:
+                conn.execute(
+                    "INSERT OR IGNORE INTO sources (name, kind, enabled) VALUES (?, ?, 1)",
+                    (name, kind),
+                )
+            source_ids = [r[0] for r in conn.execute("SELECT id FROM sources").fetchall()]
+
+            sets_data = [
+                (f"sv{i:02d}", f"Extension Série {i}", f"202{(i % 6)}-0{((i % 9) + 1)}-15", 200, 180)
+                for i in range(1, 21)
+            ]
+            conn.executemany(
+                "INSERT INTO pokemon_reference_sets (id, name, release_date, card_count_total, card_count_official) VALUES (?, ?, ?, ?, ?)",
+                sets_data,
+            )
+
+            rarities = ["Commune", "Peu Commune", "Rare", "Double Rare", "Illustration rare", None]
+            names = ["Dracaufeu", "Pikachu", "Mew", "Mewtwo", "Lugia", "Rayquaza", "Ectoplasma", "Noctali"]
+            cards_data = []
+            for i in range(1, 2001):
+                set_idx = ((i - 1) % 20) + 1
+                k = (i - 1) // 20
+                set_id = f"sv{set_idx:02d}"
+                set_name = f"Extension Série {set_idx}"
+                local_id = f"{k + 1:03d}"
+                base_name = names[k % len(names)]
+                p_name = f"{base_name} ex" if k % 3 == 0 else base_name
+                cards_data.append(
+                    (
+                        f"{set_id}-{i}",
+                        local_id,
+                        local_id.lstrip("0") or "0",
+                        p_name,
+                        p_name.lower(),
+                        set_id,
+                        set_name,
+                        rarities[(k // len(names)) % len(rarities)],
+                    )
+                )
+            conn.executemany(
+                """
+                INSERT INTO pokemon_reference_cards
+                (tcgdex_id, local_id, canonical_local_id, name, normalized_name, set_id, set_name, rarity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                cards_data,
+            )
+
+            batch_id = conn.execute(
+                "INSERT INTO import_batches (source_id, input_checksum, status) VALUES (?, ?, ?)",
+                (source_ids[0], "perf-checksum", "completed"),
+            ).lastrowid
+
+            items_data = []
+            for i in range(1, 4001):
+                src_id = source_ids[i % len(source_ids)]
+                ref_id = (i % 2000) + 1 if i % 5 != 0 else None
+                ident_status = "identified" if ref_id is not None else ("lot" if i % 10 == 0 else "unidentified")
+                is_lot = 1 if ident_status == "lot" else 0
+                set_idx = ((i - 1) % 20) + 1
+                p_name = names[i % len(names)]
+                items_data.append(
+                    (
+                        src_id,
+                        batch_id,
+                        f"ext-{i}",
+                        f"{p_name} {i % 200}/200",
+                        f"Extension Série {set_idx}",
+                        f"{i % 200}/200",
+                        "fr" if i % 2 == 0 else "en",
+                        "Near Mint",
+                        1500 + (i % 150) * 100,
+                        300,
+                        "EUR",
+                        f"seller_{i % 200}",
+                        f"Carte {p_name} Extension Série {set_idx}",
+                        ident_status,
+                        ref_id,
+                        is_lot,
+                        "2026-11-01T10:00:00+00:00",
+                        "2026-11-07T10:00:00+00:00",
+                    )
+                )
+            conn.executemany(
+                """
+                INSERT INTO catalog_items
+                (source_id, import_batch_id, external_id, name, set_name, card_number, language,
+                 condition, price_cents, shipping_cents, currency, seller, original_title,
+                 identification_status, reference_card_id, is_lot, first_seen_at, last_seen_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                items_data,
+            )
+
+            cm_data = [
+                (
+                    100000 + i,
+                    f"perf-set-{(i % 20) + 1}-{i:04d}",
+                    names[i % len(names)],
+                    f"Extension Série {(i % 20) + 1}",
+                    "fr",
+                    2600 + (i % 80) * 150,
+                    2550 + (i % 80) * 150,
+                    2500 + (i % 80) * 150,
+                    2300 + (i % 80) * 150 if i % 2 == 0 else 2700 + (i % 80) * 150,
+                    "EUR",
+                    "2026-11-08T08:00:00Z",
+                    names[i % len(names)].lower(),
+                )
+                for i in range(1, 2001)
+            ]
+            conn.executemany(
+                """
+                INSERT INTO cardmarket_prices
+                (product_id, tcg_dex_id, card_name, expansion_name, language,
+                 trend_price_cents, avg1_price_cents, avg7_price_cents, avg30_price_cents,
+                 currency, fetched_at, name_base)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                cm_data,
+            )
+
+            obs_data = [
+                (
+                    ((i - 1) % 4000) + 1,
+                    f"2026-11-0{(i % 7) + 1}T12:00:00Z",
+                    2000 + (i % 50) * 100,
+                    300,
+                    "EUR",
+                    1,
+                    "collecteur",
+                )
+                for i in range(1, 8001)
+            ]
+            conn.executemany(
+                """
+                INSERT INTO listing_observations
+                (listing_id, observed_at, price_cents, shipping_cents, currency, available, origin)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                obs_data,
+            )
+
+        # Vérification des plans d'exécution (EXPLAIN QUERY PLAN)
+        f_cards = SearchFilters(
+            q="Dracaufeu", set_name="Extension Série 1", rarity="Rare", year_min=2020, year_max=2025
+        )
+        w_c, o_c, p_c = _build_reference_cards_query(f_cards)
+        plan_cards = " | ".join(
+            str(r["detail"])
+            for r in conn.execute(
+                f"EXPLAIN QUERY PLAN SELECT c.id FROM pokemon_reference_cards c JOIN pokemon_reference_sets s ON s.id = c.set_id {w_c} {o_c} LIMIT 25 OFFSET 0",
+                [*p_c],
+            ).fetchall()
+        )
+        assert "USING INDEX" in plan_cards
+
+        f_listings = SearchFilters(
+            q="Dracaufeu",
+            rarity="Rare",
+            price_min_cents=1000,
+            price_max_cents=10000,
+            lot_filter="exclude",
+            ident_status="identified",
+        )
+        w_l, o_l, wp_l, op_l = _build_listings_query(f_listings)
+        plan_listings = " | ".join(
+            str(r["detail"])
+            for r in conn.execute(
+                f"""
+                EXPLAIN QUERY PLAN
+                SELECT c.id FROM catalog_items c
+                JOIN sources s ON s.id = c.source_id
+                LEFT JOIN pokemon_reference_cards r ON r.id = c.reference_card_id
+                LEFT JOIN pokemon_reference_sets r_set ON r_set.id = r.set_id
+                {w_l} {o_l} LIMIT 25 OFFSET 0
+                """,
+                [*wp_l, *op_l],
+            ).fetchall()
+        )
+        assert "USING INDEX" in plan_listings
+
+        plan_obs = " | ".join(
+            str(r["detail"])
+            for r in conn.execute(
+                """
+                EXPLAIN QUERY PLAN
+                SELECT listing_id, COUNT(*)
+                FROM listing_observations
+                WHERE observed_at >= '2026-10-09T12:00:00Z' AND observed_at <= '2026-11-08T12:00:00Z'
+                GROUP BY listing_id
+                """
+            ).fetchall()
+        )
+        assert "USING INDEX" in plan_obs
+
+        # Mesure des requêtes principales sur ce volume représentatif
+        ref_now = datetime(2026, 11, 8, 12, 0, 0, tzinfo=UTC)
+        t0 = time.perf_counter()
+        t_opts_0 = time.perf_counter()
+        opts = get_search_filter_options(conn)
+        ms_opts = (time.perf_counter() - t_opts_0) * 1000
+
+        t_cards_0 = time.perf_counter()
+        cards_res = search_reference_cards(conn, f_cards)
+        ms_cards = (time.perf_counter() - t_cards_0) * 1000
+
+        t_list_0 = time.perf_counter()
+        listings_res = search_catalog_listings(conn, f_listings)
+        ms_listings = (time.perf_counter() - t_list_0) * 1000
+
+        t_mov_0 = time.perf_counter()
+        movements = get_price_movements(conn, period="7_30")
+        ms_movements = (time.perf_counter() - t_mov_0) * 1000
+
+        t_act_0 = time.perf_counter()
+        activity = get_listing_activity(conn, now=ref_now, min_observations=1)
+        ms_activity = (time.perf_counter() - t_act_0) * 1000
+
+        t_opp_0 = time.perf_counter()
+        opportunities = get_best_opportunities(conn, now=ref_now)
+        ms_opportunities = (time.perf_counter() - t_opp_0) * 1000
+
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        print(
+            f"\n[PERF_SUMMARY] plan_cards={plan_cards} | plan_listings={plan_listings} | plan_obs={plan_obs} | "
+            f"opts={ms_opts:.2f}ms cards={ms_cards:.2f}ms listings={ms_listings:.2f}ms "
+            f"movements={ms_movements:.2f}ms activity={ms_activity:.2f}ms opportunities={ms_opportunities:.2f}ms "
+            f"total={elapsed_ms:.2f}ms"
+        )
+
+        assert len(opts["sets"]) >= 20
+        assert cards_res.total >= 1
+        assert listings_res.total >= 1
+        assert len(movements.hausses) >= 1
+        assert len(movements.baisses) >= 1
+        assert len(activity.items) >= 1
+        assert len(opportunities.items) >= 0
+        assert elapsed_ms < 2500
+
+
+def test_ui_actions_inventory_has_no_decorative_noop_buttons() -> None:
+    """TASKING_INTEGRATION_DESIGN T5 : aucun bouton décoratif sans comportement dans les templates."""
+    import re
+
+    allowed_client_buttons = {"menu-button", "sidebar-backdrop"}
+    templates_dir = Path("app/templates")
+    for tpl in sorted(templates_dir.glob("*.html")):
+        content = tpl.read_text(encoding="utf-8")
+        for match in re.finditer(r"<button\b[^>]*>", content):
+            tag = match.group(0)
+            if 'type="submit"' in tag or "type='submit'" in tag:
+                continue
+            btn_id_match = re.search(r'id=["\']([^"\']+)["\']', tag)
+            assert btn_id_match is not None and btn_id_match.group(1) in allowed_client_buttons, (
+                f"{tpl.name}: bouton non-submit sans gestionnaire client déclaré : {tag}"
+            )
+        for match in re.finditer(r"<a\b[^>]*>", content):
+            tag = match.group(0)
+            assert not re.search(r'href=["\'](#|)["\']', tag), (
+                f"{tpl.name}: lien d'action vide ou '#' décoratif : {tag}"
+            )
+
+
+def test_responsive_and_keyboard_qa_for_catalog_search_and_trends(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Recette navigateur aux 5 largeurs (1440, 1024, 768, 390, 320 px) et clavier sur /catalog, /search et /trends."""
+    from fastapi.testclient import TestClient
+    from playwright.sync_api import sync_playwright
+    from app.web import app
+
+    db_path = tmp_path / "responsive_qa.db"
+    with connect(db_path) as conn:
+        apply_migrations(conn)
+        cache = TcgdexCache(conn)
+        cache.seed_initial_if_empty()
+        conn.execute(
+            "INSERT INTO pokemon_reference_sets (id, name, release_date) VALUES ('partial', 'Extension Partielle', NULL)"
+        )
+        conn.execute(
+            """
+            INSERT INTO pokemon_reference_cards (
+                tcgdex_id, local_id, canonical_local_id, name, normalized_name, set_id, set_name, rarity
+            ) VALUES ('partial-1', '001', '1', 'Dracaufeu Test', 'dracaufeu test', 'partial', 'Extension Partielle', NULL)
+            """
+        )
+        update_active_fee_profile(
+            conn,
+            FeeProfileUpdate(
+                buyer_shipping_cents=0,
+                platform_fee_bps=500,
+                seller_fixed_fee_cents=0,
+                shipping_packaging_cents=200,
+                min_net_profit_cents=100,
+                min_roi_bps=500,
+                min_catalog_samples=2,
+            ),
+        )
+        upsert_reference(
+            conn,
+            ReferenceInput(
+                name="Dracaufeu",
+                set_name="Set de Base",
+                card_number="4",
+                language="fr",
+                condition="Near Mint",
+                reference_price_cents=12000,
+                observed_at=date.today(),
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO cardmarket_prices (
+                product_id, tcg_dex_id, card_name, expansion_name, language,
+                trend_price_cents, avg1_price_cents, avg7_price_cents, avg30_price_cents,
+                currency, fetched_at, name_base
+            ) VALUES (9001, 'base1-4', 'Dracaufeu', 'Set de Base', 'fr', 10000, 10200, 9800, 8500, 'EUR', '2026-11-08T08:00:00Z', 'dracaufeu'),
+                     (9002, 'base1-2', 'Tortank', 'Set de Base', 'fr', 4200, 4100, 4200, 5000, 'EUR', '2026-11-08T08:00:00Z', 'tortank')
+            """
+        )
+        conn.commit()
+
+    monkeypatch.setenv("POKEMON_DATABASE_PATH", str(db_path))
+    with TestClient(app) as client:
+        client.post(
+            "/imports",
+            files={
+                "file": (
+                    "qa.jsonl",
+                    (
+                        '{"external_id":"qa-1","name":"Dracaufeu 4/102","set_name":"Set de Base","card_number":"4/102","condition":"Near Mint","price_cents":4500,"currency":"EUR","seller":"VendeurQA","url":"https://www.vinted.fr/items/1"}\n'
+                        '{"external_id":"qa-2","name":"Lot 30 cartes Pokémon","set_name":"Set de Base","price_cents":2000,"currency":"EUR","seller":"LotSeller"}\n'
+                    ).encode("utf-8"),
+                    "text/plain",
+                )
+            },
+        )
+        pages_html = {
+            "catalog": client.get("/catalog").text,
+            "search": client.get("/search?q=Dracaufeu&scope=all").text,
+            "trends": client.get("/trends?min_observations=1").text,
+        }
+
+    css_text = Path("app/static/style.css").read_text(encoding="utf-8")
+    js_text = Path("app/static/forms.js").read_text(encoding="utf-8")
+
+    widths = [1440, 1024, 768, 390, 320]
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+        for name, raw_html in pages_html.items():
+            # Injecte CSS et JS locaux en inline pour un test 100% hors-ligne déterministe
+            hydrated_html = raw_html.replace(
+                "</head>",
+                f"<style>{css_text}</style></head>",
+            ).replace(
+                "</body>",
+                f"<script>{js_text}</script></body>",
+            )
+            page = browser.new_page()
+            for width in widths:
+                page.set_viewport_size({"width": width, "height": 900})
+                page.set_content(hydrated_html, wait_until="domcontentloaded")
+                metrics = page.evaluate(
+                    "() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth })"
+                )
+                assert metrics["scrollWidth"] <= metrics["innerWidth"], (
+                    f"[{name} @ {width}px] Débordement horizontal détecté : "
+                    f"scrollWidth={metrics['scrollWidth']} > innerWidth={metrics['innerWidth']}"
+                )
+                row_overlap = page.evaluate(
+                    """() => {
+                        for (const row of document.querySelectorAll('.product-row')) {
+                            const idEl = row.querySelector('.product-identity');
+                            const decEl = row.querySelector('.decision-wrap');
+                            if (!idEl || !decEl) continue;
+                            const r1 = idEl.getBoundingClientRect();
+                            const r2 = decEl.getBoundingClientRect();
+                            if (r1.width === 0 || r2.width === 0) continue;
+                            const overlaps = !(r1.right <= r2.left + 1 || r1.left >= r2.right - 1 || r1.bottom <= r2.top + 1 || r1.top >= r2.bottom - 1);
+                            if (overlaps) return true;
+                        }
+                        return false;
+                    }"""
+                )
+                assert not row_overlap, f"[{name} @ {width}px] Chevauchement entre .product-identity et .decision-wrap"
+
+                if width in (390, 320):
+                    menu_btn = page.locator("#menu-button")
+                    assert menu_btn.is_visible()
+                    menu_btn.click()
+                    assert menu_btn.get_attribute("aria-expanded") == "true"
+                    page.keyboard.press("Escape")
+                    assert menu_btn.get_attribute("aria-expanded") == "false"
+
+            # Contrôle clavier sur 1440px : focus sur le premier contrôle de formulaire et soumission/navigation
+            page.set_viewport_size({"width": 1440, "height": 900})
+            page.set_content(hydrated_html, wait_until="domcontentloaded")
+            first_control = page.locator("main input:not([type='hidden']), main select").first
+            first_control.focus()
+            focused_tag = page.evaluate("() => document.activeElement && document.activeElement.tagName")
+            assert focused_tag in ("INPUT", "SELECT")
+            page.close()
+        browser.close()
 

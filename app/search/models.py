@@ -34,8 +34,15 @@ LISTING_SORTS: dict[str, str] = {
     "price_desc": "Prix décroissant",
     "name_asc": "Nom (A → Z)",
     "name_desc": "Nom (Z → A)",
+    "net_profit_desc": "Gain net (décroissant)",
+    "roi_desc": "ROI (décroissant)",
 }
 DEFAULT_LISTING_SORT = "relevance"
+
+# Tris de rentabilité calculés par le moteur de rentabilité (hors SQL) :
+# le tri s'effectue en Python sur l'ensemble des annonces filtrées, puis la
+# pagination est appliquée en mémoire pour conserver un ordre stable.
+PROFITABILITY_LISTING_SORTS = ("net_profit_desc", "roi_desc")
 
 
 class SearchFilters(BaseModel):
@@ -229,6 +236,9 @@ class CardSearchSummary(BaseModel):
     total_pages: int = 1
     range_start: int = 0
     range_end: int = 0
+    missing_rarity_count: int = 0
+    missing_year_count: int = 0
+    metadata_diagnostic: str | None = None
 
 
 class ListingSearchResult(BaseModel):
@@ -286,6 +296,9 @@ class ListingSearchSummary(BaseModel):
     total_pages: int = 1
     range_start: int = 0
     range_end: int = 0
+    missing_rarity_count: int = 0
+    missing_year_count: int = 0
+    metadata_diagnostic: str | None = None
 
 
 class SearchResults(BaseModel):

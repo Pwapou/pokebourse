@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from app.identification.detector import extract_features
 from app.identification.evidence import ListingEvidence, Observation
 from app.identification.models import ExtractedFeatures, IdentificationResult
-from app.identification.normalization import canonical_local_id, normalize_text
+from app.identification.normalization import canonical_local_id, normalize_text, valid_card_number
 
 if TYPE_CHECKING:
     from app.identification.matcher import CardMatcher
@@ -21,18 +21,32 @@ def _features(matcher: CardMatcher, observation: Observation) -> ExtractedFeatur
     field = observation.field
     if field == "language":
         code = value.lower().strip()
+        if code in {"und", "inconnu", "inconnue", ""}:
+            return ExtractedFeatures()
         parsed = extract_features(f"langue : {value}")
+        if not parsed.languages and code not in {"fr", "en", "ja", "de", "es", "it", "ko", "zh", "pt", "ru", "zh-tw"}:
+            return ExtractedFeatures()
         languages = parsed.languages or (code,)
         return ExtractedFeatures(language=languages[0] if len(languages) == 1 else None, languages=languages)
     if field == "card_number":
         match = re.fullmatch(r"\s*([A-Za-z0-9]{1,5})(?:\s*/\s*(\d{1,3}))?\s*", value)
-        if match:
+        if match and valid_card_number(value, matcher._number_ids):
             return ExtractedFeatures(card_number=value.strip(), local_id=match[1], set_card_count=match[2])
+        return ExtractedFeatures()
+    if field == "name":
+        from app.identification.aliases import resolve_alias
+        alias = resolve_alias(matcher.cache.connection, value)
+        if alias.status == "exact":
+            card = matcher.cache.get_card_by_id(alias.matches[0]["target_card_id"])
+            if card:
+                return ExtractedFeatures(name=card.name)
+        extracted = extract_features(value, catalog_names=matcher._names)
+        return ExtractedFeatures(name=extracted.name if normalize_text(extracted.name) in matcher._name_ids else None)
     if field == "set_name":
         if normalize_text(value) in {"non identifiee", "inconnue", "inconnu"}:
             return ExtractedFeatures()
         extracted = extract_features(value, catalog_sets=matcher._sets)
-        return ExtractedFeatures(set_name=extracted.set_name or value)
+        return ExtractedFeatures(set_name=extracted.set_name)
     if field in {"variant", "edition", "grading_company", "grade"}:
         if field == "edition":
             return ExtractedFeatures()
@@ -100,7 +114,7 @@ def propose(matcher: CardMatcher, evidence: ListingEvidence, *, allow_lot_overri
     retrieval_text = " ".join(item.value for item, _ in observations)
     primary = matcher._identify_features(base, retrieval_text, allow_lot_override=allow_lot_override)
     result = primary if primary.status in {"identified", "lot"} else matcher._identify_features(combined, retrieval_text, allow_lot_override=allow_lot_override)
-    conflicts = _conflicts([features for _, features in observations])
+    conflicts = _conflicts([features for item, features in observations if item.source != "prefill"])
     diagnostics = {candidate.tcgdex_id: candidate for candidate in result.candidates if candidate.contradictions}
     admissible = [candidate for candidate in result.candidates if not candidate.contradictions]
     if conflicts and result.status != "lot":

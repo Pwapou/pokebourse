@@ -615,13 +615,43 @@ def test_extension_price_parser_rejects_unreadable_prices() -> None:
 
 
 def test_service_worker_accepts_partial_listings() -> None:
-    """Une capture sans prix reste disponible, un prix invalide est refusé."""
-    sw = Path("extension/background/service-worker.js").read_text(encoding="utf-8")
-    assert "Number.isInteger(item.price_cents)" in sw
-    assert "item.price_cents == null" in sw
-    assert "item.price_cents >= 0" in sw
-    assert "!item.set_name" in sw
-    assert "!item.name.trim()" in sw
+    """Le handler MV3 conserve une capture sans identité et refuse prix/URL invalides."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+        page = browser.new_page()
+        page.evaluate("""() => {
+            window.stored = {autoCaptureEnabled: true, listings: []};
+            window.chrome = {
+                runtime: {onInstalled: {addListener() {}}, onMessage: {addListener(handler) {window.handler = handler;}}},
+                storage: {local: {
+                    async get() {return window.stored;},
+                    async set(values) {Object.assign(window.stored, values);}
+                }},
+                action: {async setBadgeText() {}, async setBadgeBackgroundColor() {}}
+            };
+        }""")
+        page.add_script_tag(path="extension/background/service-worker.js")
+        partial = {"external_id": "partial", "url": "https://example.com/partial",
+                   "raw_data": {"title": "Carte photographiée"}, "language": "und"}
+        response = page.evaluate("""payload => new Promise(resolve => {
+            window.handler({action: 'CAPTURE_LISTINGS', payload}, {}, resolve);
+        })""", [partial, {"name": "Historique", "url": "https://example.com/legacy", "price_cents": 0},
+                  {**partial, "external_id": "bad-price", "price_cents": -1},
+                  {**partial, "external_id": "bad-url", "url": ""},
+                  {**partial, "external_id": "no-title", "raw_data": {}},
+                  {**partial, "external_id": "decimal-price", "price_cents": 1.5}])
+        assert response == {"success": True, "addedCount": 2, "totalCount": 2}
+        saved = page.evaluate("window.stored.listings.find(item => item.external_id === 'partial')")
+        assert saved["raw_data"] == partial["raw_data"]
+        assert saved["language"] == "und"
+        assert "name" not in saved and "set_name" not in saved
+        duplicate = page.evaluate("""payload => new Promise(resolve => {
+            window.handler({action: 'CAPTURE_LISTINGS', payload}, {}, resolve);
+        })""", partial)
+        assert duplicate["addedCount"] == 0 and duplicate["totalCount"] == 2
+        browser.close()
 
 
 def test_content_extractors_require_title() -> None:
@@ -837,3 +867,118 @@ def test_vinted_product_jsonld_and_separate_prices() -> None:
         assert item["image_url"] == "https://images1.vinted.net/photo.webp"
         assert item["seller"] == "vendeur-public"
         browser.close()
+
+
+def test_capture_keeps_title_out_of_canonical_name_and_number_noise() -> None:
+    """Le content script garde le titre brut et ne fabrique plus de nom canonique."""
+    content = Path('extension/content/content.js').read_text()
+    assert 'name: title' not in content
+    assert content.count('language: "und"') == 3
+    assert _eval_extension_card_numbers(['Non identifiée', 'Pokémon numéro SM233', 'Pokémon n° 20/82']) == [None, 'SM233', '20/82']
+
+
+def test_extension_text_helpers_and_set_extractor() -> None:
+    """Couverture directe de normalizePlainText, escapeRegExp, hasPotentialCardName et extractSetName."""
+    import subprocess
+    from playwright._impl._driver import compute_driver_executable
+
+    driver = compute_driver_executable()
+    node_path = driver[0] if isinstance(driver, tuple) else driver
+    script = """
+    const {
+      normalizePlainText,
+      escapeRegExp,
+      hasPotentialCardName,
+      extractSetName
+    } = require('./extension/content/content.js');
+    const payload = JSON.parse(process.argv[1]);
+    const out = {
+      normalized: payload.normalizeInputs.map((v) => normalizePlainText(v)),
+      escaped: payload.escapeInputs.map((v) => ({
+        escaped: escapeRegExp(v),
+        matchesLiteral: new RegExp('^' + escapeRegExp(v) + '$').test(String(v || ''))
+      })),
+      hasName: payload.nameInputs.map((v) => hasPotentialCardName(v)),
+      sets: payload.setInputs.map((v) => extractSetName(v))
+    };
+    process.stdout.write(JSON.stringify(out));
+    """
+    payload = {
+        "normalizeInputs": [
+            "Évolutions   à   Paldea",
+            "Collect’Aura   Collect'Aura   Collect`Aura",
+            "  Dracaufeu Édition 1ère  ",
+            "",
+            None,
+        ],
+        "escapeInputs": [
+            ".*+?^${}()|[]\\",
+            "Évolutions [151] (Promo) $10+",
+        ],
+        "nameInputs": [
+            "Cartes 125 disponibles",
+            "Lot 150",
+            "Pokemon 120",
+            "Booster 180",
+            "Coffret 200",
+            "Promo 140",
+            "Réf 175",
+            "Carte pokemon Mentali ex 175",
+            "Dracaufeu ex 199",
+            "Gardevoir ex 175",
+            "Flotte-Mèche 145",
+        ],
+        "setInputs": [
+            "Noctali VMAX Évolution Céleste",
+            "Noctali VMAX Evolution Celeste",
+            "Dracaufeu ex 199/165 Pokémon 151",
+            "Électhor ex 151",
+            "Carte Pokémon réf 1510",
+            "Annonce Pokémon #1151",
+            "Carte Pokémon 2151",
+            "Carte Pokémon ancienne sans extension",
+        ],
+    }
+    completed = subprocess.run(
+        [str(node_path), "-e", script, json.dumps(payload)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    res = json.loads(completed.stdout)
+
+    assert res["normalized"] == [
+        "evolutions a paldea",
+        "collect aura collect aura collect aura",
+        "dracaufeu edition 1ere",
+        "",
+        "",
+    ]
+
+    assert res["escaped"][0]["escaped"] == r"\.\*\+\?\^\$\{\}\(\)\|\[\]\\"
+    assert all(item["matchesLiteral"] for item in res["escaped"])
+
+    assert res["hasName"] == [
+        False,  # Cartes 125 disponibles (mot générique)
+        False,  # Lot 150
+        False,  # Pokemon 120
+        False,  # Booster 180
+        False,  # Coffret 200
+        False,  # Promo 140
+        False,  # Réf 175
+        True,   # Carte pokemon Mentali ex 175 (Pokémon connu)
+        True,   # Dracaufeu ex 199
+        True,   # Gardevoir ex 175 (nom non générique en tête)
+        True,   # Flotte-Mèche 145 (nom composé avec trait d'union)
+    ]
+
+    assert res["sets"] == [
+        "Évolution Céleste",
+        "Évolution Céleste",
+        "151",
+        "151",
+        "Non identifiée",  # 1510 ne doit pas déclencher 151
+        "Non identifiée",  # 1151 ne doit pas déclencher 151
+        "Non identifiée",  # 2151 ne doit pas déclencher 151
+        "Non identifiée",
+    ]

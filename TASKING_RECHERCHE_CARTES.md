@@ -1,6 +1,10 @@
 # Pokébourse — Recherche approfondie et confirmation des cartes
 
-Date : **1er novembre 2026**. Statut : **réalisé et validé (311 tests passants)**.
+Plan initial : **1er novembre 2026**. **Socle réalisé et testé sur les annonces enregistrées** ; le chiffre de 311 tests appartient à la livraison historique et ne décrit pas la suite courante.
+
+**Revue du 8 novembre 2026 :** ordre de reprise et état transversal dans [TASKING_PROJET.md](TASKING_PROJET.md). Les cases mises à jour décrivent les critères vérifiés dans le code et les tests ; les contrôles manuels ou critères non démontrés restent ouverts.
+
+Recherche/confirmation sur fiche et file worker sont présentes ; la confirmation transitoire avant ajout et le nouveau raccordement OCR relèvent désormais d’Identification/T08.2/T09. Les limites anciennes ci-dessous décrivent le périmètre initial, pas toutes les capacités actuelles.
 
 ## 1. Résultat attendu
 
@@ -21,7 +25,7 @@ Exemple de parcours : une carte absente des données locales est importée ; l�
 
 Trouver une référence TCGdex ne fournit pas à lui seul une cote de revente.
 
-## 2. Constats vérifiés dans le dépôt
+## 2. Constats de départ historiques — avant implémentation
 
 - `app/tcgdex/data/seed_data.py` fournit **15 cartes**. Le volume réel installé doit être mesuré : il ne se déduit pas de ce seed.
 - `CardMatcher.identify()` consulte uniquement SQLite ; il n’effectue aucune recherche distante.
@@ -33,6 +37,8 @@ Trouver une référence TCGdex ne fournit pas à lui seul une cote de revente.
 - L’ingestion des collecteurs et `reidentify_catalog_item()` réécrivent l’identification. Une confirmation humaine nécessite une résolution commune à ces chemins.
 - L’import de l’extension passe par `POST /imports` avec une réponse JSON. Celle-ci expose déjà `identification_status`, `identification_reason` et `has_reference_price` ; le popup met surtout en avant la cote.
 - Une migration locale `0011_create_cardmarket_prices.sql` et des travaux Cardmarket sont déjà présents. Ne pas les écraser. Le prochain numéro semble être **0012**, à vérifier au moment de coder.
+
+Les défauts de recherche, normalisation et priorité humaine ci-dessus ont été traités par les tâches cochées T1–T4. Le schéma courant va jusqu’à `0026`, les localisations sont isolées depuis `0024`, et la synchronisation progressive est décrite dans [docs/TCGDEX_SYNC.md](docs/TCGDEX_SYNC.md). Ne pas réutiliser le numéro `0012` comme prochaine migration.
 
 ## 3. Périmètre et règles de conception
 
@@ -59,11 +65,11 @@ Trouver une référence TCGdex ne fournit pas à lui seul une cote de revente.
 9. Le fonctionnement local reste disponible sans Internet. Aucun appel TCGdex direct depuis l’extension ; les requêtes passent par le backend.
 10. Ne pas transmettre titres bruts, descriptions ou informations vendeurs à TCGdex : seulement les critères de carte utiles.
 
-### Limites de cette version
+### Limites de la livraison initiale
 
 Pas d’OCR, d’embeddings, de LightGBM, de recherche web générale ni d’import massif de tout TCGdex. La première version complète le référentiel français. Une langue étrangère explicite reste signalée et ne doit pas être transformée silencieusement en version française. Les alias servent à retrouver des candidats, sans certifier leur langue.
 
-Le support complet des catalogues anglais et japonais fera l’objet d’une évolution séparée : identité par langue, traductions, couverture des extensions et migrations dédiées. Ne pas écraser une référence française en important une autre langue sous le même `tcgdex_id`.
+Depuis Identification/T05, le stockage de localisations et la file par locale existent (`0024`–`0026`). Cela ne qualifie pas encore l’identification et la rentabilité complètes dans toutes ces langues ; vérifier couverture et portée avant activation. Ne pas écraser une référence française en important une autre langue sous le même `tcgdex_id`.
 
 ## 4. Architecture et contrats proposés
 
@@ -251,31 +257,28 @@ docker compose run --rm app pytest
 3. **Parcours utilisateur :** T5 et T6 ; recherche, comparaison, confirmation et distinction identité/cote.
 4. **Livraison :** T7 ; recette, tests et documentation.
 
-La fonctionnalité est terminée quand une carte absente du seed peut être retrouvée via TCGdex simulé, choisie depuis la fiche, puis réingérée et réexaminée sans perdre la confirmation ; quand un lot ne reçoit aucune référence unitaire ; et quand une panne TCGdex laisse l’import et la recherche locale utilisables. Les tâches de ce fichier restent ouvertes jusqu’à preuve de leur réalisation.
+La fonctionnalité est terminée quand une carte absente du seed peut être retrouvée via TCGdex simulé, choisie depuis la fiche, puis réingérée et réexaminée sans perdre la confirmation ; quand un lot ne reçoit aucune référence unitaire ; et quand une panne TCGdex laisse l’import et la recherche locale utilisables. Les cases cochées consignent les acquis de cette livraison, recontrôlés par les suites courantes ; les nouvelles exigences restent dans Identification, sans rouvrir artificiellement cette ancienne liste.
 
 ## 8. Références et modèle de développement
 
 - Documents du dépôt : `AGENTS.md`, `README.md`, `SOURCES.md`, `SUIVI.md`, `TASKING_INTEGRATION_DESIGN.md`, `MACHINE_LEARNING_DESIGN.md`, `extension/README.md`.
 - [Recherche de cartes TCGdex](https://tcgdex.dev/rest/cards) : liste de résultats résumés ; compléter par les détails utiles.
 - [Filtres, tri et pagination TCGdex](https://tcgdex.dev/rest/filtering-sorting-pagination) : construire des requêtes ciblées et paginées, avec paramètres encodés.
-- Recommandation pour réaliser ce chantier : **GPT-6.1 Sol, raisonnement high**, en suivant les tâches successives avec validation à chaque étape. C’est un choix d’ingénierie adapté à la taille du chantier, pas un benchmark de ce dépôt. La [fiche officielle](https://developers.openai.com/api/docs/models/gpt-6.1-sol) le positionne pour le code complexe à un coût inférieur à Astra.
-- **GPT-6 Astra** peut servir à une revue finale concentrée sur les transactions, les accès concurrents, les preuves et la priorité des confirmations. Son rôle de modèle pour les travaux les plus exigeants est décrit dans le [catalogue officiel](https://developers.openai.com/api/docs/models). La disponibilité dépend du sélecteur de modèles du compte.
-
-Ces modèles servent au développement ; ce tasking ne prévoit aucun appel à un LLM dans le fonctionnement de Pokébourse.
+Le choix d’un modèle de développement n’est pas une dépendance du projet. Ce plan ne prévoit aucun appel à un LLM à l’exécution.
 
 ## 9. Prompt de lancement prêt à copier
 
 ```text
 Tu travailles dans /Users/mathieu/Documents/pokebourse.
 
-Implémente TASKING_RECHERCHE_CARTES.md jusqu’à satisfaction de sa définition
-de terminé. Lis AGENTS.md et les documents métier/UI cités avant de modifier
-les modules concernés. Commence par T0 et documente les échecs initiaux.
+Lis TASKING_PROJET.md puis vérifie les acquis de TASKING_RECHERCHE_CARTES.md.
+Traite uniquement les écarts démontrés ou le périmètre explicitement demandé. Lis AGENTS.md et les documents métier/UI cités avant de modifier
+les modules concernés. Ne rejoue pas les tâches cochées comme des fonctionnalités manquantes.
 
 Avance dans l’ordre des dépendances, avec des changements cohérents et des
 tests Docker ciblés à chaque étape, puis la suite complète. Ne coche une
 tâche qu’après avoir vérifié son résultat. Préserve les travaux déjà présents,
-notamment app/cardmarket/ et la migration 0011 ; vérifie le prochain numéro.
+notamment app/cardmarket/ et toutes les migrations publiées ; vérifie le prochain numéro.
 
 Priorités : recherche locale correcte ; confirmation humaine persistante ;
 recherche TCGdex ciblée en arrière-plan ; absence de réseau dans pytest et

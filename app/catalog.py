@@ -376,20 +376,41 @@ def normalize_catalog_verdict(verdict: str) -> str:
     return verdict if verdict in CATALOG_VERDICTS else DEFAULT_CATALOG_VERDICT
 
 
-def _catalog_filters(
-    query: str,
-    set_name: str,
+def build_common_listing_clauses(
+    query: str = "",
+    set_name: str = "",
     source: str = DEFAULT_CATALOG_SOURCE,
     ident_status: str = DEFAULT_CATALOG_IDENT_STATUS,
-) -> tuple[str, list[str]]:
+    *,
+    include_reference_fields: bool = False,
+) -> tuple[list[str], list[Any]]:
+    """Construit les clauses SQL et paramètres communs à `/catalog` et `/search`.
+
+    Seuls les prédicats réellement partagés (`query`, `set_name`, `source`,
+    `ident_status`) sont mutualisés ici. Les jointures et filtres propres à
+    `/search` (rareté et année via `reference_card_id`, état, langue, variante,
+    édition, gradation, bornes de prix, filtre de lot) restent dans le
+    constructeur spécialisé de `app.search.service`.
+    """
     filters: list[str] = []
-    parameters: list[str] = []
+    parameters: list[Any] = []
     if query:
-        filters.append(
-            "(c.name LIKE ? OR c.set_name LIKE ? OR c.card_number LIKE ? "
-            "OR c.seller LIKE ? OR c.external_id LIKE ? OR c.original_title LIKE ?)"
-        )
-        parameters.extend([f"%{query}%"] * 6)
+        q_like = f"%{query}%"
+        if include_reference_fields:
+            filters.append(
+                "("
+                "c.name LIKE ? OR c.original_title LIKE ? OR c.card_number LIKE ? "
+                "OR c.set_name LIKE ? OR c.seller LIKE ? OR c.external_id LIKE ? "
+                "OR r.name LIKE ? OR r.tcgdex_id = ?"
+                ")"
+            )
+            parameters.extend([q_like, q_like, q_like, q_like, q_like, q_like, q_like, query])
+        else:
+            filters.append(
+                "(c.name LIKE ? OR c.set_name LIKE ? OR c.card_number LIKE ? "
+                "OR c.seller LIKE ? OR c.external_id LIKE ? OR c.original_title LIKE ?)"
+            )
+            parameters.extend([q_like] * 6)
     if set_name:
         filters.append("c.set_name = ?")
         parameters.append(set_name)
@@ -405,8 +426,24 @@ def _catalog_filters(
         filters.append("c.identification_status = ?")
         parameters.append(active_ident)
 
+    return filters, parameters
+
+
+def _catalog_filters(
+    query: str,
+    set_name: str,
+    source: str = DEFAULT_CATALOG_SOURCE,
+    ident_status: str = DEFAULT_CATALOG_IDENT_STATUS,
+) -> tuple[str, list[str]]:
+    filters, parameters = build_common_listing_clauses(
+        query=query,
+        set_name=set_name,
+        source=source,
+        ident_status=ident_status,
+        include_reference_fields=False,
+    )
     where = f"WHERE {' AND '.join(filters)}" if filters else ""
-    return where, parameters
+    return where, [str(param) for param in parameters]
 
 
 def _evaluation_path_required(verdict: str, sort: str) -> bool:

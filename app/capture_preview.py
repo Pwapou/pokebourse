@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
 from app.catalog import CatalogImportError, CatalogItem, import_jsonl, validate_public_image_url
-from app.listing_preview import prefill_identity_fields, preview_listing
+from app.listing_preview import LANGUAGES, prefill_identity_fields, preview_form
 from app.manual_listing import _money, _percent
 from app.profitability import ProfitabilityError, parse_euros_to_cents
 from app.storage.database import connect
@@ -63,7 +63,7 @@ def _provenance(captured: str, current: str) -> str:
 
 def _read_form(form: Any) -> tuple[dict[str, str], dict[str, str]]:
     """Retourne (valeurs affichées, valeurs capturées d'origine) du formulaire."""
-    values = {key: _clean(form.get(key, "")) for key in (*_FIELDS, "proposed_name", "proposed_set_name", "proposed_card_number", "ocr_status")}
+    values = {key: _clean(form.get(key, "")) for key in (*_FIELDS, "proposed_name", "proposed_set_name", "proposed_card_number", "ocr_status", "proposal_source_name", "proposal_source_set_name", "proposal_source_card_number")}
     captured = {key: _clean(form.get(f"captured_{key}", "")) for key in _FIELDS}
     return values, captured
 
@@ -87,26 +87,13 @@ def _read_ocr_hints(form: Any) -> dict[str, Any] | None:
     return {"message": "Indices conservés depuis la première lecture de l’image.", "names": names[:6], "numbers": numbers[:6], "status": _clean(form.get("ocr_status", ""))}
 
 
-def _parse_money(values: dict[str, str]) -> tuple[int | None, int | None]:
-    """Convertit prix et port en centimes ; port vide = inconnu (jamais zéro implicite)."""
-    price = parse_euros_to_cents(values["price"], "Prix affiché") if values["price"] else None
-    shipping = parse_euros_to_cents(values["shipping"], "Port") if values["shipping"] else None
-    return price, shipping
-
-
 def _analyse(
     connection: Any, values: dict[str, str], captured: dict[str, str],
     ocr_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Analyse le texte d'abord et transmet les compléments OCR séparément."""
-    price_cents, shipping_cents = _parse_money(values)
-    # Une correction explicite (saisie ou modification) devient une assertion ;
-    # la simple extraction heuristique de l'extension ne déclenche pas de contradiction.
-    assert_fields = {
-        key for key in ("name", "set_name", "card_number")
-        if _provenance(captured[key], values[key]) in ("saisie", "corrigée")
-    }
-    return preview_listing(connection, {
+    """Analyse le texte d’abord et transmet les compléments OCR séparément."""
+    return preview_form(connection, {
+        **values,
         "identity_evidence": form_evidence({**values, "ocr_names": (ocr_result or {}).get("names", ()), "ocr_numbers": (ocr_result or {}).get("numbers", ())}, captured),
         "ocr_status": (ocr_result or {}).get("status"),
         "title": values["title"],
@@ -118,10 +105,8 @@ def _analyse(
         "condition": values["condition"],
         "ocr_names": (ocr_result or {}).get("names", ()),
         "ocr_numbers": (ocr_result or {}).get("numbers", ()),
-        "price_cents": price_cents,
-        "shipping_cents": shipping_cents,
         "currency": values["currency"],
-    }, assert_fields=assert_fields)
+    })
 
 
 def _render(
@@ -242,8 +227,8 @@ async def reanalyse_capture(request: Request) -> HTMLResponse:
 async def confirm_capture(request: Request) -> Response:
     """Enregistre l'annonce confirmée via le flux transactionnel existant.
 
-    Aucune écriture n'a lieu avant ce point. La langue doit avoir été choisie
-    explicitement ; le pseudonyme vendeur est limité aux champs publics autorisés.
+    Aucune écriture n’a lieu avant ce point. Une langue absente reste inconnue ;
+    le pseudonyme vendeur est limité aux champs publics autorisés.
     """
     form = await request.form()
     try:
@@ -251,9 +236,17 @@ async def confirm_capture(request: Request) -> Response:
     except ValueError as error:
         return _render(request, platform="", external_id="", url="", values={}, captured={}, error=str(error))
     values, captured = _read_form(form)
+    preview = None
     try:
-        if not values["language"]:
-            raise ValueError("Choisissez la langue de la carte avant de confirmer.")
+        values["language"] = values["language"] or "und"
+        with connect(request.app.state.settings.database_path) as connection:
+            preview = _analyse(connection, values, captured, _read_ocr_hints(form))
+        if values["language"] not in LANGUAGES:
+            raise ValueError("Langue non admise : choisissez une langue ou Inconnue.")
+        if preview["field_checks"]["card_number"]["status"] == "invalid":
+            raise ValueError(preview["field_checks"]["card_number"]["message"])
+        if preview["identification"]["reason_code"] == "contradiction":
+            raise ValueError("Preuves contradictoires : vérifiez les champs et les candidats du diagnostic avant l’ajout.")
         if not re.fullmatch(r"[A-Za-z]{3}", values["currency"]):
             raise ValueError("Indiquez la devise de l'annonce avec son code à trois lettres, par exemple EUR.")
         if "@" in values["seller"] or re.search(r"(?<!\d)(?:\+?\d[\s.()-]*){9,}(?!\d)", values["seller"]):
@@ -261,8 +254,9 @@ async def confirm_capture(request: Request) -> Response:
         price_cents = parse_euros_to_cents(values["price"], "Prix affiché")
         shipping_cents = parse_euros_to_cents(values["shipping"], "Port") if values["shipping"] else None
         raw_data: dict[str, Any] = {}
-        if values["title"]:
-            raw_data["title"] = values["title"]
+        if captured.get("title") or values["title"]:
+            raw_data["title"] = captured.get("title") or values["title"]
+            raw_data["edited_title"] = values["title"]
         if values["description"]:
             raw_data["description"] = values["description"]
         if values["ocr_status"] in {"available", "unavailable"}:
@@ -303,4 +297,4 @@ async def confirm_capture(request: Request) -> Response:
                        if any(issue.get("loc", (None,))[0] == "image_url" for issue in error.errors())
                        else "Vérifiez le nom, l’extension, la langue et les autres champs saisis.")
         return _render(request, platform=platform, external_id=external_id, url=url,
-                       values=values, captured=captured, error=message)
+                       values=values, captured=captured, preview=preview, error=message, ocr_result=_read_ocr_hints(form))

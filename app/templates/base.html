@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Pokébourse, votre espace local d'analyse du marché des cartes Pokémon.">
     <title>{% block title %}Pokébourse{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261102-ocr">
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=20261108-responsive">
     <script src="{{ url_for('static', path='/forms.js') }}?v=20261102-final" defer></script>
     {% block extra_head %}{% endblock %}
 </head>
@@ -23,7 +23,8 @@
     'agents': 'avancee',
     'backups': 'avancee',
     'imports': 'avancee',
-    'gestion': 'avancee'
+    'gestion': 'avancee',
+    'tasking': 'avancee'
 } %}
 <body>
     <div class="app-shell">
@@ -67,6 +68,10 @@
                         <a class="nav-item nav-sub-item {{ 'active' if page == 'gestion' else '' }}" href="/gestion">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v4h-7V4Zm0 6h7v4h-7v-4ZM4 13h7v7H4v-7Zm9 5h7v2h-7v-2Z"/></svg>
                             Vue d’ensemble
+                        </a>
+                        <a class="nav-item nav-sub-item {{ 'active' if page == 'tasking' else '' }}" href="/tasking">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4V4Zm3 4v2h2V8H7Zm4 0v2h6V8h-6Zm-4 4v2h2v-2H7Zm4 0v2h6v-2h-6Zm-4 4v2h2v-2H7Zm4 0v2h6v-2h-6Z"/></svg>
+                            Suivi du projet
                         </a>
                         <a class="nav-item nav-sub-item {{ 'active' if page == 'sellers' else '' }}" href="/sellers">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>

@@ -135,6 +135,10 @@ class CardMatcher:
             for name, card_ids in self._name_ids.items():
                 if wanted == name or wanted in name or name in wanted:
                     ids.update(card_ids)
+        if features.set_name and not wanted and not features.local_id:
+            ids.update(row["id"] for row in self.cache.connection.execute(
+                "SELECT id FROM pokemon_reference_cards WHERE normalized_set_name=? LIMIT 200",
+                (normalize_text(features.set_name),)))
         if features.local_id:
             ids.update(self._number_ids.get(canonical_local_id(features.local_id), ()))
         fuzzy = {normalize_text(suggestion.name): suggestion for suggestion in suggestions or []}

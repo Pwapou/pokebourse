@@ -57,7 +57,7 @@
 </div>
 <section class="panel" aria-labelledby="queue-title">
     <div class="panel-heading"><h2 id="queue-title">File de lecture</h2><a class="text-link" href="/catalog/labels.jsonl">Exporter les validations JSONL</a></div>
-    <form method="get" class="review-search">
+    <form method="get" action="/annotations" class="review-search">
         <label>Afficher<select name="view">
             {% for value, label in [('all', 'Toutes les tâches'), ('available', 'Lectures disponibles pour moi'), ('waiting', 'Autre opérateur requis'), ('final', 'Décisions à valider')] %}<option value="{{ value }}" {{ 'selected' if view == value else '' }}>{{ label }}</option>{% endfor %}
         </select></label><button class="button secondary" type="submit">Filtrer</button>
